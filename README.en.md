@@ -16,7 +16,7 @@ Write slides in Markdown, group them into sections with folders, and play them a
 - **Six 3D stages**: pile (shuffles when you change sections), cover flow, carousel, helix, sphere and overview.
 - **Three themes**: paper, ink (dark) and slate.
 - **Over a dozen layouts**: split, full-bleed, quote, big number, stat cards, timeline, columns, automatic agenda, bar and line charts, and more.
-- **Presenting tools**: step-by-step reveal, presenter view (notes, next slide, timer), black screen, full screen, clicker support, PDF export.
+- **Presenting tools**: step-by-step reveal, presenter view (notes, next slide, timer), black screen, full screen, clicker support, PDF export, and export to a single HTML file that plays offline with a double-click.
 - **Live reload**: folders opened in Chrome / Edge update on screen as soon as you save a Markdown file (or press `R`).
 - **Motion preference**: reduced transitions when the system asks for reduced motion; switch between "Full" and "Reduced" in the help panel (`?`).
 - **Media**: local images and video; YouTube, Bilibili, Google Drive and Vimeo embeds.

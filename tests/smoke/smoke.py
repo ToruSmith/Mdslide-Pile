@@ -32,6 +32,24 @@ def main():
         page.wait_for_timeout(1600)
         after = page.evaluate("[...document.querySelectorAll('.card')].slice(0, 8).map(c => getComputedStyle(c).transform)")
         assert before != after, '換章節後卡片位置沒有改變(洗牌動畫可能失效)'
+
+        # 匯出單一 HTML,在全新、離線的瀏覽器設定檔用 file:// 開啟
+        import os, tempfile
+        cards = page.locator('.card').count()
+        page.click('[data-act=export]')
+        page.wait_for_selector('.export-panel [data-x=go]:not([disabled])')
+        with page.expect_download() as dl:
+            page.click('.export-panel [data-x=go]')
+        out = os.path.join(tempfile.mkdtemp(), 'deck.html')
+        dl.value.save_as(out)
+        offline = browser.new_context(offline=True, viewport={'width': 1280, 'height': 800})
+        q = offline.new_page()
+        q.on('pageerror', lambda e: errors.append(f'export pageerror: {e}'))
+        q.goto('file://' + out); q.wait_for_timeout(2000)
+        assert q.locator('.card').count() == cards, '匯出的 HTML 卡片數量不對'
+        q.keyboard.press('Enter'); q.wait_for_timeout(800)
+        assert q.locator('.frame .slide').count() == 1, '匯出的 HTML 無法放大投影片'
+        offline.close()
         browser.close()
 
     if errors:

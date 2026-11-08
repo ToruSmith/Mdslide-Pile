@@ -253,3 +253,9 @@ body.dragging::after { content: attr(data-drop); position: fixed; inset: 16px; z
   .hint { display: none; }
   .presenter { grid-template-columns: 1fr; overflow: auto; }
 }
+
+/* 匯出對話框(沿用說明面板的外框) */
+.export-panel .export-text { margin-top: 0; font-size: 14px; color: var(--muted); line-height: 1.6; }
+.export-panel .export-video { display: block; margin-top: 16px; font-size: 14px; cursor: pointer; }
+.export-panel .export-status { margin-top: 12px; font-size: 14px; color: var(--ink); }
+.export-panel .export-actions { margin-top: 20px; text-align: right; }

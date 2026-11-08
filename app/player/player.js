@@ -34,13 +34,14 @@ function motionReduced() {
 }
 
 export class Player {
-  constructor(root, { deck, source, start = 0, onExit, onIndex, theme, onReload }) {
+  constructor(root, { deck, source, start = 0, onExit, onIndex, theme, onReload, onExport }) {
     this.onReload = onReload;
     this.reduced = motionReduced();
     this.root = root;
     this.deck = deck;
     this.source = source;
     this.onExit = onExit;
+    this.onExport = onExport;
     this.onIndex = onIndex;
     this.slides = flatten(deck);
     this.sections = deck.sections;
@@ -66,13 +67,14 @@ export class Player {
     this.root.innerHTML = `
       <div class="player">
         <header class="pbar">
-          <button class="pbtn back" data-act="exit" title="${esc(t('player.backTitle'))}">${esc(t('player.back'))}</button>
+          ${this.onExit ? `<button class="pbtn back" data-act="exit" title="${esc(t('player.backTitle'))}">${esc(t('player.back'))}</button>` : ''}
           <div class="ptitle"><div class="deck-name">${esc(d.title)}</div><div class="sec-name"></div></div>
           <nav class="tabs"></nav>
           <div class="ptools">
             <select class="stage-select" title="${esc(t('player.stageTitle'))}" aria-label="${esc(t('player.stageTitle'))}">${Object.keys(STAGES).map(k => `<option value="${k}">${esc(t('stage.' + k))}</option>`).join('')}</select>
             <button class="pbtn" data-act="theme" title="${esc(t('player.themeTitle'))}">${esc(t('player.theme'))}</button>
-            <button class="pbtn" data-act="check" title="${esc(t('player.checkTitle'))}">${esc(t('player.check'))}</button>
+            ${this.source.list ? `<button class="pbtn" data-act="check" title="${esc(t('player.checkTitle'))}">${esc(t('player.check'))}</button>` : ''}
+            ${this.onExport ? `<button class="pbtn" data-act="export" title="${esc(t('player.exportTitle'))}">${esc(t('player.export'))}</button>` : ''}
             <button class="pbtn" data-act="present" title="${esc(t('player.presentTitle'))}" aria-label="${esc(t('player.presentTitle'))}">▶</button>
             <button class="pbtn" data-act="help" title="${esc(t('player.helpTitle'))}" aria-label="${esc(t('player.helpTitle'))}">?</button>
           </div>
@@ -152,6 +154,7 @@ export class Player {
       if (act === 'present') this.viewing ? this.closeViewer() : this.openViewer();
       if (act === 'help') this.toggleHelp();
       if (act === 'check') this.openCheck();
+      if (act === 'export') this.onExport?.(this);
     });
     this.el.select.value = this.stage;
     this.el.select.addEventListener('change', () => { this.setStage(this.el.select.value); this.el.select.blur(); });

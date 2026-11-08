@@ -12,6 +12,7 @@ import { HttpSource, HandleSource, FileListSource, sourceFromDrop, canPickDirect
 import { listRecent, remember, getRecent, forget, ensurePermission } from './sources/store.js';
 import { renderLibrary } from './ui/library-view.js';
 import { Player } from './player/player.js';
+import { openExportDialog } from './player/export.js';
 import { startPresenter } from './player/presenter.js';
 import { applyTheme } from './player/themes.js';
 import { t, setLang, getLang, normalizeLang } from './core/i18n.js';
@@ -242,6 +243,7 @@ async function openDeck(key, topicId, projectId, start) {
     } : null;
     state.player = new Player(app, {
       deck, source, start, theme: deck.theme || lib.theme, onReload: reload,
+      onExport: openExportDialog,
       onExit: () => { location.hash = backToLibrary; },
       onIndex: i => history.replaceState(null, '', `${base}/${i + 1}`),
     });

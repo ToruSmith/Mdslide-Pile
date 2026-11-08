@@ -400,3 +400,4 @@ Follow the steps in section 7 of the guide to create the folder and files, then 
 - **"Media not found"?** Paths are relative to the deck folder, for example `media/a.jpg`, and letter case must match.
 - **A config file has no effect?** Indent with spaces and put a space after each colon; "✓ Check" on the website shows the line with the problem.
 - **USB drive on another computer?** Open the website in Chrome or Edge and choose the folder again.
+- **Sending the deck to someone, or presenting on a computer without internet?** In the player, click "Export" at the top right to download one `.html` file. It contains the player, styles, slides and images; double-click it to present offline (the pile animation and presenter view still work). Local video and audio are left out by default because they make the file large; tick the box in the dialog to include them. Online videos such as YouTube still need a connection.
