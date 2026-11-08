@@ -13,6 +13,7 @@ const MODULES = [
   'app/core/media.js',
   'app/core/slide.js',
   'app/core/library.js',
+  'app/core/chart.js',
   'app/core/check.js',
   'scripts/node-source.mjs',
 ];

@@ -4,6 +4,7 @@
 import { renderMarkdown, renderInline, escapeHTML as esc } from '../core/markdown.js';
 import { resolveMediaPath, classifyMedia } from '../core/media.js';
 import { PALETTE } from '../core/library.js';
+import { parseChartTable, niceScale } from '../core/chart.js';
 
 const pad = n => String(n).padStart(2, '0');
 
@@ -34,7 +35,7 @@ export function renderSlide(slide, ctx) {
     case 'timeline': inner = timelineSlide(slide.body, md, meta); break;
     case 'columns': inner = columnsSlide(slide.body, md); break;
     case 'agenda': inner = agendaSlide(slide, deck, md); break;
-    case 'chart': inner = chartSlide(slide.body, md, meta, c); break;
+    case 'chart': inner = chartSlide(slide.body, md, meta, c, slide.title); break;
     default: inner = `<div class="md">${md(slide.body)}</div>`;
   }
 
@@ -119,79 +120,87 @@ function agendaSlide(slide, deck, md) {
   return `<div class="md">${head}</div><div class="agenda" style="--cols:${secs.length > 3 ? 2 : 1}">${items.join('')}</div>`;
 }
 
-/** 表格 → 長條圖(chart: bar | hbar | line)。第一欄是標籤,其餘欄是數列。 */
-function chartSlide(body, md, meta, color) {
-  const lines = body.split('\n');
-  const start = lines.findIndex((l, k) => l.includes('|') && /^\s*\|?\s*:?-{2,}/.test(lines[k + 1] || ''));
-  if (start < 0) return `<div class="md">${md(body)}</div>`;
-  let end = start + 2;
-  while (end < lines.length && lines[end].includes('|') && lines[end].trim()) end++;
-  const row = l => l.trim().replace(/^\||\|$/g, '').split('|').map(x => x.trim());
-  const header = row(lines[start]);
-  const rows = lines.slice(start + 2, end).map(row);
-  const series = header.slice(1).map((name, k) => ({ name, values: rows.map(r => parseFloat(String(r[k + 1] ?? '').replace(/[^\d.-]/g, '')) || 0) }));
-  const labels = rows.map(r => r[0]);
-  const before = lines.slice(0, start).join('\n'), after = lines.slice(end).join('\n');
+/** 表格 → 圖表(chart: bar | hbar | line)。第一欄是標籤,其餘欄是數列;支援負值與缺值。 */
+function chartSlide(body, md, meta, color, title) {
+  const t = parseChartTable(body);
+  if (!t) return `<div class="md">${md(body)}</div>`;
   const colors = [color, ...PALETTE.filter(p => p.toLowerCase() !== String(color).toLowerCase())];
   const type = String(meta.chart || 'bar');
   const unit = meta.unit ? String(meta.unit) : '';
-  const svg = type === 'line' ? lineChart(labels, series, colors, unit) : type === 'hbar' ? hbarChart(labels, series, colors, unit) : barChart(labels, series, colors, unit);
-  const legend = series.length > 1 ? `<div class="legend">${series.map((s, k) => `<span><i style="background:${colors[k % colors.length]}"></i>${esc(s.name)}</span>`).join('')}</div>` : '';
-  return `<div class="md">${md(before)}</div>${svg}${legend}${after.trim() ? `<div class="caption md">${md(after)}</div>` : ''}`;
+  const draw = type === 'line' ? lineChart : type === 'hbar' ? hbarChart : barChart;
+  const svg = draw(t.labels, t.series, colors, unit, title);
+  const legend = t.series.length > 1 ? `<div class="legend">${t.series.map((s, k) => `<span><i style="background:${colors[k % colors.length]}"></i>${esc(s.name)}</span>`).join('')}</div>` : '';
+  return `<div class="md">${md(t.before)}</div>${svg}${legend}${t.after.trim() ? `<div class="caption md">${md(t.after)}</div>` : ''}`;
 }
 
 const W = 1056, H = 440;
-const nice = v => { const p = 10 ** Math.floor(Math.log10(v || 1)); return Math.ceil(v / p) * p; };
-const fmt = (v, unit) => `${Number.isInteger(v) ? v : v.toFixed(1)}${unit}`;
+const fmt = (v, unit) => v == null ? '–' : `${Number.isInteger(v) ? v.toLocaleString('en-US') : Number(v.toFixed(2))}${unit}`;
+const svgOpen = title => `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img"><title>${esc(title || '')}</title>`;
+const allValues = series => series.flatMap(s => s.values).filter(v => v != null);
 
-function barChart(labels, series, colors, unit) {
-  const max = nice(Math.max(...series.flatMap(s => s.values), 1));
-  const left = 64, bottom = 56, top = 34, plotH = H - bottom - top, plotW = W - left;
-  const band = plotW / labels.length, gw = Math.min(band * 0.7, 72 * series.length + 12 * (series.length - 1)), bw = (gw - 12 * (series.length - 1)) / series.length;
-  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`;
-  for (let k = 0; k <= 4; k++) { const y = top + plotH - (plotH * k) / 4; s += `<line class="grid" x1="${left}" x2="${W}" y1="${y}" y2="${y}"/><text x="${left - 14}" y="${y + 7}" text-anchor="end" font-size="20" opacity=".55">${fmt((max * k) / 4, '')}</text>`; }
+function barChart(labels, series, colors, unit, title) {
+  const sc = niceScale(Math.min(...allValues(series), 0), Math.max(...allValues(series), 0));
+  const left = 72, bottom = 56, top = 34, plotH = H - bottom - top, plotW = W - left;
+  const Y = v => top + plotH - ((v - sc.lo) / (sc.hi - sc.lo)) * plotH;
+  const band = plotW / Math.max(labels.length, 1);
+  const gap = 12, gw = Math.min(band * 0.7, 72 * series.length + gap * (series.length - 1)), bw = (gw - gap * (series.length - 1)) / series.length;
+  let s = svgOpen(title);
+  for (const v of sc.ticks) s += `<line class="grid" x1="${left}" x2="${W}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${left - 14}" y="${Y(v) + 7}" text-anchor="end" font-size="20" opacity=".55">${esc(fmt(v, ''))}</text>`;
   labels.forEach((lab, i) => {
     const x0 = left + band * i + (band - gw) / 2;
     series.forEach((se, j) => {
-      const v = se.values[i], h = (v / max) * plotH, x = x0 + j * (bw + 12), y = top + plotH - h;
+      const v = se.values[i], x = x0 + j * (bw + gap);
+      if (v == null) { s += `<text x="${x + bw / 2}" y="${Y(0) - 10}" text-anchor="middle" font-size="22" opacity=".6">–</text>`; return; }
+      const y = Math.min(Y(v), Y(0)), h = Math.abs(Y(v) - Y(0));
       s += `<rect x="${x}" y="${y}" width="${bw}" height="${h}" rx="6" fill="${colors[j % colors.length]}"/>`;
-      s += `<text x="${x + bw / 2}" y="${y - 10}" text-anchor="middle" font-size="22" font-weight="700">${esc(fmt(v, unit))}</text>`;
+      s += `<text x="${x + bw / 2}" y="${v < 0 ? Y(v) + 28 : Y(v) - 10}" text-anchor="middle" font-size="22" font-weight="700">${esc(fmt(v, unit))}</text>`;
     });
     s += `<text x="${left + band * i + band / 2}" y="${H - 16}" text-anchor="middle" font-size="22">${esc(lab)}</text>`;
   });
-  return s + `<line class="axis" x1="${left}" x2="${W}" y1="${top + plotH}" y2="${top + plotH}" stroke-width="2"/></svg>`;
+  return s + `<line class="axis" x1="${left}" x2="${W}" y1="${Y(0)}" y2="${Y(0)}" stroke-width="2"/></svg>`;
 }
 
-function hbarChart(labels, series, colors, unit) {
-  const max = nice(Math.max(...series[0].values, 1));
-  const left = 220, plotW = W - left - 110, rowH = Math.min(H / labels.length, 76);
-  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`;
+function hbarChart(labels, series, colors, unit, title) {
+  const vals = series[0]?.values || [];
+  const sc = niceScale(Math.min(...vals.filter(v => v != null), 0), Math.max(...vals.filter(v => v != null), 0));
+  const left = 220, right = 110, plotW = W - left - right, rowH = Math.min(H / Math.max(labels.length, 1), 76);
+  const X = v => left + ((v - sc.lo) / (sc.hi - sc.lo)) * plotW;
+  let s = svgOpen(title);
   labels.forEach((lab, i) => {
-    const v = series[0].values[i], w = (v / max) * plotW, y = i * rowH + (H - rowH * labels.length) / 2;
-    s += `<text x="${left - 20}" y="${y + rowH / 2 + 8}" text-anchor="end" font-size="24">${esc(lab)}</text>`;
-    s += `<rect x="${left}" y="${y + rowH * 0.18}" width="${plotW}" height="${rowH * 0.64}" rx="8" fill="${colors[0]}" opacity=".12"/>`;
-    s += `<rect x="${left}" y="${y + rowH * 0.18}" width="${w}" height="${rowH * 0.64}" rx="8" fill="${colors[0]}"/>`;
-    s += `<text x="${left + w + 14}" y="${y + rowH / 2 + 8}" font-size="24" font-weight="700">${esc(fmt(v, unit))}</text>`;
+    const v = vals[i], y = i * rowH + (H - rowH * labels.length) / 2, bh = rowH * 0.64, by = y + rowH * 0.18, ty = y + rowH / 2 + 8;
+    s += `<text x="${left - 20}" y="${ty}" text-anchor="end" font-size="24">${esc(lab)}</text>`;
+    s += `<rect x="${left}" y="${by}" width="${plotW}" height="${bh}" rx="8" fill="${colors[0]}" opacity=".12"/>`;
+    if (v == null) { s += `<text x="${X(0) + 14}" y="${ty}" font-size="24" opacity=".6">–</text>`; return; }
+    const x = Math.min(X(v), X(0)), w = Math.abs(X(v) - X(0));
+    s += `<rect x="${x}" y="${by}" width="${w}" height="${bh}" rx="8" fill="${colors[0]}"/>`;
+    s += v < 0
+      ? `<text x="${X(v) - 12}" y="${ty}" text-anchor="end" font-size="24" font-weight="700">${esc(fmt(v, unit))}</text>`
+      : `<text x="${X(v) + 14}" y="${ty}" font-size="24" font-weight="700">${esc(fmt(v, unit))}</text>`;
   });
+  if (sc.lo < 0) s += `<line class="axis" x1="${X(0)}" x2="${X(0)}" y1="0" y2="${H}" stroke-width="2"/>`;
   return s + '</svg>';
 }
 
-function lineChart(labels, series, colors, unit) {
-  const max = nice(Math.max(...series.flatMap(s => s.values), 1));
-  const left = 64, bottom = 56, top = 34, plotH = H - bottom - top, plotW = W - left - 40;
+function lineChart(labels, series, colors, unit, title) {
+  const sc = niceScale(Math.min(...allValues(series), 0), Math.max(...allValues(series), 0));
+  const left = 72, bottom = 56, top = 34, plotH = H - bottom - top, plotW = W - left - 40;
   const X = i => left + 20 + (labels.length > 1 ? (plotW * i) / (labels.length - 1) : plotW / 2);
-  const Y = v => top + plotH - (v / max) * plotH;
-  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`;
-  for (let k = 0; k <= 4; k++) { const y = top + plotH - (plotH * k) / 4; s += `<line class="grid" x1="${left}" x2="${W}" y1="${y}" y2="${y}"/><text x="${left - 14}" y="${y + 7}" text-anchor="end" font-size="20" opacity=".55">${fmt((max * k) / 4, '')}</text>`; }
+  const Y = v => top + plotH - ((v - sc.lo) / (sc.hi - sc.lo)) * plotH;
+  let s = svgOpen(title);
+  for (const v of sc.ticks) s += `<line class="grid" x1="${left}" x2="${W}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${left - 14}" y="${Y(v) + 7}" text-anchor="end" font-size="20" opacity=".55">${esc(fmt(v, ''))}</text>`;
   series.forEach((se, j) => {
     const col = colors[j % colors.length];
-    s += `<polyline fill="none" stroke="${col}" stroke-width="6" stroke-linejoin="round" stroke-linecap="round" points="${se.values.map((v, i) => `${X(i)},${Y(v)}`).join(' ')}"/>`;
-    se.values.forEach((v, i) => { s += `<circle cx="${X(i)}" cy="${Y(v)}" r="9" fill="${col}"/>`; });
-    const lv = se.values.at(-1);
-    s += `<text x="${X(se.values.length - 1)}" y="${Y(lv) - 20}" text-anchor="middle" font-size="22" font-weight="700">${esc(fmt(lv, unit))}</text>`;
+    // 缺值處斷開線段
+    let seg = [];
+    const flush = () => { if (seg.length > 1) s += `<polyline fill="none" stroke="${col}" stroke-width="6" stroke-linejoin="round" stroke-linecap="round" points="${seg.join(' ')}"/>`; seg = []; };
+    se.values.forEach((v, i) => { if (v == null) flush(); else seg.push(`${X(i)},${Y(v)}`); });
+    flush();
+    se.values.forEach((v, i) => { if (v != null) s += `<circle cx="${X(i)}" cy="${Y(v)}" r="9" fill="${col}"/>`; });
+    const li = se.values.map(v => v != null).lastIndexOf(true);
+    if (li >= 0) { const lv = se.values[li]; s += `<text x="${X(li)}" y="${lv < 0 ? Y(lv) + 34 : Y(lv) - 20}" text-anchor="middle" font-size="22" font-weight="700">${esc(fmt(lv, unit))}</text>`; }
   });
   labels.forEach((lab, i) => { s += `<text x="${X(i)}" y="${H - 16}" text-anchor="middle" font-size="22">${esc(lab)}</text>`; });
-  return s + `<line class="axis" x1="${left}" x2="${W}" y1="${top + plotH}" y2="${top + plotH}" stroke-width="2"/></svg>`;
+  return s + `<line class="axis" x1="${left}" x2="${W}" y1="${Y(0)}" y2="${Y(0)}" stroke-width="2"/></svg>`;
 }
 
 /** 把內文拆成:清單前的文字、第一層清單項目(含子項目)、清單後的文字。 */

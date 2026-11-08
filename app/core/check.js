@@ -4,6 +4,7 @@
 
 import { scanLibrary, loadDeck } from './library.js';
 import { resolveMediaPath } from './media.js';
+import { parseChartTable } from './chart.js';
 
 export const MAX_SLIDES = 45;
 
@@ -26,6 +27,11 @@ export async function checkDeck(source, project) {
   const all = deck.sections.flatMap(s => s.slides);
 
   for (const sl of all) {
+    if (sl.layout === 'chart') {
+      const t = parseChartTable(sl.body);
+      if (!t) problems.push({ path: sl.file, message: 'chart 版型找不到表格' });
+      else for (const b of t.bad) problems.push({ path: sl.file, message: `圖表第 ${b.row} 列第 ${b.col} 欄「${b.text}」不是數字,會顯示為空白` });
+    }
     for (const m of sl.media) {
       if (m.remote) continue;
       const path = resolveMediaPath(m.src, { projectPath: project.path, filePath: sl.file });
