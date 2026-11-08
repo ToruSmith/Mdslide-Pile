@@ -7,3 +7,6 @@ updates:
       interval: monthly
     commit-message:
       prefix: ci
+    groups:            # 所有 Actions 更新合併成一個 PR,不會一次冒出好幾個
+      actions:
+        patterns: ['*']
