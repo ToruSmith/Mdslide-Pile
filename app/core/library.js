@@ -14,6 +14,7 @@
 import { parseYaml, YamlError } from './yaml.js';
 import { join, isHidden, isMarkdown, RESERVED_DIRS, splitOrder, byOrder } from './names.js';
 import { parseSlideFile } from './slide.js';
+import { safeColor } from './color.js';
 
 export const SCHEMA_VERSION = 1;
 export const PALETTE = ['#c0674a', '#5f8a64', '#4f73a6', '#b08a3a', '#8a5fa6', '#3f8f8f', '#b0566e', '#6b7a8f'];
@@ -86,7 +87,7 @@ export async function scanLibrary(source) {
   if (kind === 'topic') {
     const conf = (await readYaml(source, CONFIG.topic, issues)) || {};
     const projects = await readProjects(source, '', rootEntries, conf, '_', issues);
-    const topic = makeTopic('_', '', { name: label, ...conf }, projects, 0);
+    const topic = makeTopic('_', '', { name: label, ...conf, color: color(conf.color, null, CONFIG.topic, issues) }, projects, 0);
     return finish({ kind, title: topic.title, description: topic.description, theme: conf.theme, topics: [topic] });
   }
 
@@ -97,7 +98,7 @@ export async function scanLibrary(source) {
     const entries = await listSafe(source, d.name);
     const conf = (await readYaml(source, join(d.name, CONFIG.topic), issues)) || {};
     const projects = await readProjects(source, d.name, entries, conf, d.name, issues);
-    return makeTopic(d.name, d.name, conf, projects, i);
+    return makeTopic(d.name, d.name, { ...conf, color: color(conf.color, null, join(d.name, CONFIG.topic), issues) }, projects, i);
   }));
   return finish({ kind, title: site.title || label, description: site.description || '', theme: site.theme, topics });
 
@@ -154,13 +155,21 @@ async function readProject(source, path, folder, topicId, issues) {
     event: str(conf.event),
     tags: Array.isArray(conf.tags) ? conf.tags.map(String) : [],
     theme: str(conf.theme),
-    accent: str(conf.accent || (Array.isArray(conf.sections) && conf.sections[0]?.color) || ''),
+    accent: color(conf.accent, null, join(path, CONFIG.deck), issues) || safeColor(Array.isArray(conf.sections) && conf.sections[0]?.color) || '',
     coverImage: str(conf.cover_image || conf.coverImage),
     config: conf,
   };
 }
 
 const str = v => (v == null ? '' : String(v));
+
+/** 設定檔裡的顏色:不合法就回報並改用預設值。 */
+function color(value, fallback, path, issues) {
+  if (value == null || value === '') return fallback;
+  const c = safeColor(value);
+  if (!c) issues.push({ path, message: `顏色「${value}」格式不正確,已改用預設顏色` });
+  return c || fallback;
+}
 
 /** 第 2 層:封面。只列出專案資料夾,必要時讀第一張投影片。 */
 export async function loadCover(source, project) {
@@ -215,8 +224,9 @@ export async function loadDeck(source, project) {
       slides.push(...r.slides.filter(sl => !sl.meta.hidden));
     }
     const title = c.title || (s.folder ? splitOrder(s.folder).label : '');
-    const color = c.color || (s.folder ? PALETTE[colorIndex++ % PALETTE.length] : project.accent || PALETTE[PALETTE.length - 1]);
-    const section = { id: s.folder || '_intro', folder: s.folder, path: s.path, title, subtitle: str(c.subtitle), color, slides };
+    const auto = s.folder ? PALETTE[colorIndex++ % PALETTE.length] : project.accent || PALETTE[PALETTE.length - 1];
+    const secColor = color(c.color, auto, join(project.path, CONFIG.deck), issues);
+    const section = { id: s.folder || '_intro', folder: s.folder, path: s.path, title, subtitle: str(c.subtitle), color: secColor, slides };
     if (autoCovers && s.folder && sections.filter(x => x.folder).length > 1 && c.cover !== false) {
       slides.unshift({ file: s.path, index: -1, meta: {}, layout: 'section', body: '', notes: str(c.notes), media: [], title, auto: true });
     }

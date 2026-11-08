@@ -14,6 +14,11 @@ export async function hydrate(root, source, { full = false } = {}) {
       else { el.preload = full ? 'auto' : 'metadata'; el.src = url; }
     }, () => missing(el, path)));
   }
+  for (const el of root.querySelectorAll('img[data-thumb]:not([data-ready])')) {
+    el.dataset.ready = '1';
+    el.onerror = () => el.remove(); // 縮圖載入失敗(例如離線)就直接移除,露出預設底色
+    el.src = el.dataset.thumb;
+  }
   const slides = root.matches?.('.slide[data-bg]') ? [root] : [...root.querySelectorAll('.slide[data-bg]:not([data-ready])')];
   for (const s of slides) {
     s.dataset.ready = '1';

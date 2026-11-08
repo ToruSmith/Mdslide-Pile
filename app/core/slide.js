@@ -2,6 +2,7 @@
 
 import { parseYaml, YamlError } from './yaml.js';
 import { classifyMedia } from './media.js';
+import { safeColor } from './color.js';
 
 /** 所有支援的版型。新增版型時,記得同步更新 製作專案指南.md 與 app/player/render.js。 */
 export const LAYOUTS = ['auto', 'text', 'center', 'split', 'split-left', 'full', 'quote', 'number', 'stats', 'timeline', 'columns', 'agenda', 'chart', 'title', 'section', 'end'];
@@ -82,6 +83,11 @@ function parseSegment(seg, { path, index, fileMeta, issues }) {
     else bodyLines.push(l);
   }
   const body = bodyLines.join('\n').replace(/^\n+|\n+$/g, '');
+
+  if (meta.color != null && !safeColor(meta.color)) {
+    issues.push({ path, message: `顏色「${meta.color}」格式不正確,已改用章節顏色` });
+    delete meta.color;
+  }
 
   let layout = String(meta.layout || 'auto').toLowerCase();
   if (!LAYOUTS.includes(layout)) {

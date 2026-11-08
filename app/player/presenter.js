@@ -25,6 +25,7 @@ export function startPresenter(root) {
     const frame = box.querySelector('.pv-frame');
     frame.innerHTML = html || '<div class="pv-end">(最後一張)</div>';
     frame.querySelectorAll('[data-media]').forEach(el => { const u = media[el.dataset.media]; if (u) el.src = u; });
+    frame.querySelectorAll('img[data-thumb]').forEach(el => { el.onerror = () => el.remove(); el.src = el.dataset.thumb; });
     frame.querySelectorAll('.slide[data-bg]').forEach(el => { const u = media[el.dataset.bg]; if (u) el.style.backgroundImage = `url("${u}")`; });
     const sc = box.clientWidth / 1280;
     frame.style.transform = `scale(${sc})`;

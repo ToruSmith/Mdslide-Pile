@@ -7,21 +7,28 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-const MODULES = [
-  'app/core/names.js',
-  'app/core/yaml.js',
-  'app/core/media.js',
-  'app/core/slide.js',
-  'app/core/library.js',
-  'app/core/chart.js',
-  'app/core/check.js',
-  'scripts/node-source.mjs',
-];
+// 入口:從這兩個檔案開始,依 import 自動找出所有需要的模組並排好順序(不用手動維護清單)
+const ENTRIES = ['app/core/check.js', 'scripts/node-source.mjs'];
+
+async function collect() {
+  const order = [], seen = new Set();
+  const visit = async rel => {
+    if (seen.has(rel)) return;
+    seen.add(rel);
+    const src = await readFile(root + rel, 'utf8');
+    for (const m of src.matchAll(/^import\s+[^;]*?from\s+['"](\.{1,2}\/[^'"]+)['"]/gm)) {
+      await visit(new URL(m[1], 'file:///' + rel).pathname.slice(1));
+    }
+    order.push(rel); // 相依的模組先放
+  };
+  for (const e of ENTRIES) await visit(e);
+  return order;
+}
 
 export async function bundle() {
   const nodeImports = new Set();
   const parts = [];
-  for (const m of MODULES) {
+  for (const m of await collect()) {
     let src = await readFile(root + m, 'utf8');
     src = src.replace(/^import\s+[^;]*?from\s+['"]([^'"]+)['"];?\s*$/gm, (line, from) => {
       if (from.startsWith('node:')) nodeImports.add(line.trim());

@@ -12,64 +12,6 @@ import * as fsp from 'node:fs/promises';
 import * as nodePath from 'node:path';
 import { fileURLToPath as __toPath } from 'node:url';
 
-// ───────── app/core/names.js ─────────
-// 檔名與路徑的共用規則。瀏覽器與 Node 腳本都會用到,請保持零依賴。
-
-/** 以 `/` 串接路徑片段,忽略空字串。 */
-function join(...parts) {
-  return parts.filter(p => p !== '' && p != null).join('/').replace(/\/+/g, '/');
-}
-
-/** 取得副檔名(小寫、不含點)。 */
-function ext(name) {
-  const i = name.lastIndexOf('.');
-  return i > 0 ? name.slice(i + 1).toLowerCase() : '';
-}
-
-/** 底線或點開頭 = 草稿或系統檔,解析時略過(設定檔另外處理)。 */
-function isHidden(name) {
-  return name.startsWith('.') || name.startsWith('_');
-}
-
-/** 保留名稱:這些資料夾只放素材,不會被當成章節。 */
-const RESERVED_DIRS = new Set(['media', 'assets', 'images', 'img', 'video', 'videos', 'node_modules']);
-
-/** 不當成投影片的 MD 檔(說明文件)。 */
-function isDocFile(name) {
-  return /^(readme|agents|claude|license|changelog)(\..*)?$/i.test(name);
-}
-
-function isMarkdown(name) {
-  return ext(name) === 'md' && !isHidden(name) && !isDocFile(name);
-}
-
-/**
- * 拆出排序前綴:`01-問題` → { order: 1, label: '問題' }。
- * 沒有前綴時 order 為 null,label 為原名(去掉副檔名)。
- */
-function splitOrder(name) {
-  const base = name.replace(/\.(md|ya?ml)$/i, '');
-  // 日期前綴 `2026-11-筆記`、`2026-11-20 讀書會`:不是排序數字,而是日期
-  const d = base.match(/^(\d{4}-\d{2}(?:-\d{2})?)[\s._-]+(.+)$/);
-  if (d) return { order: null, date: d[1], label: d[2].trim() };
-  const m = base.match(/^(\d+)[\s._-]+(.+)$/);
-  return m ? { order: Number(m[1]), label: m[2].trim() } : { order: null, label: base };
-}
-
-/** 依前綴數字排序,沒有前綴的依名稱排在後面。 */
-function byOrder(a, b) {
-  const A = splitOrder(a.name), B = splitOrder(b.name);
-  if (A.order != null && B.order != null && A.order !== B.order) return A.order - B.order;
-  if (A.order != null && B.order == null) return -1;
-  if (A.order == null && B.order != null) return 1;
-  return a.name.localeCompare(b.name, 'zh-Hant', { numeric: true });
-}
-
-/** 連結是否為外部網址。 */
-function isURL(s) {
-  return /^(https?:)?\/\//i.test(s) || /^data:/i.test(s);
-}
-
 // ───────── app/core/yaml.js ─────────
 // 精簡 YAML 解析器:只支援設定檔需要的子集,零依賴。
 //
@@ -230,6 +172,64 @@ function splitTopLevel(s) {
   return out;
 }
 
+// ───────── app/core/names.js ─────────
+// 檔名與路徑的共用規則。瀏覽器與 Node 腳本都會用到,請保持零依賴。
+
+/** 以 `/` 串接路徑片段,忽略空字串。 */
+function join(...parts) {
+  return parts.filter(p => p !== '' && p != null).join('/').replace(/\/+/g, '/');
+}
+
+/** 取得副檔名(小寫、不含點)。 */
+function ext(name) {
+  const i = name.lastIndexOf('.');
+  return i > 0 ? name.slice(i + 1).toLowerCase() : '';
+}
+
+/** 底線或點開頭 = 草稿或系統檔,解析時略過(設定檔另外處理)。 */
+function isHidden(name) {
+  return name.startsWith('.') || name.startsWith('_');
+}
+
+/** 保留名稱:這些資料夾只放素材,不會被當成章節。 */
+const RESERVED_DIRS = new Set(['media', 'assets', 'images', 'img', 'video', 'videos', 'node_modules']);
+
+/** 不當成投影片的 MD 檔(說明文件)。 */
+function isDocFile(name) {
+  return /^(readme|agents|claude|license|changelog)(\..*)?$/i.test(name);
+}
+
+function isMarkdown(name) {
+  return ext(name) === 'md' && !isHidden(name) && !isDocFile(name);
+}
+
+/**
+ * 拆出排序前綴:`01-問題` → { order: 1, label: '問題' }。
+ * 沒有前綴時 order 為 null,label 為原名(去掉副檔名)。
+ */
+function splitOrder(name) {
+  const base = name.replace(/\.(md|ya?ml)$/i, '');
+  // 日期前綴 `2026-11-筆記`、`2026-11-20 讀書會`:不是排序數字,而是日期
+  const d = base.match(/^(\d{4}-\d{2}(?:-\d{2})?)[\s._-]+(.+)$/);
+  if (d) return { order: null, date: d[1], label: d[2].trim() };
+  const m = base.match(/^(\d+)[\s._-]+(.+)$/);
+  return m ? { order: Number(m[1]), label: m[2].trim() } : { order: null, label: base };
+}
+
+/** 依前綴數字排序,沒有前綴的依名稱排在後面。 */
+function byOrder(a, b) {
+  const A = splitOrder(a.name), B = splitOrder(b.name);
+  if (A.order != null && B.order != null && A.order !== B.order) return A.order - B.order;
+  if (A.order != null && B.order == null) return -1;
+  if (A.order == null && B.order != null) return 1;
+  return a.name.localeCompare(b.name, 'zh-Hant', { numeric: true });
+}
+
+/** 連結是否為外部網址。 */
+function isURL(s) {
+  return /^(https?:)?\/\//i.test(s) || /^data:/i.test(s);
+}
+
 // ───────── app/core/media.js ─────────
 // 判斷媒體類型:本機圖片 / 本機影片 / 線上嵌入(YouTube、Bilibili、Google Drive、Vimeo)。
 
@@ -298,8 +298,26 @@ function resolveMediaPath(src, { projectPath, filePath }) {
   return parts.join('/');
 }
 
+// ───────── app/core/color.js ─────────
+// 顏色值白名單。設定檔與投影片裡的顏色會直接放進 style 屬性,
+// 只接受下列格式,避免 `red;background:url(...)` 這類內容注入樣式。
+//   #rgb  #rrggbb  #rrggbbaa   rgb()/rgba()/hsl()/hsla()(只含數字)   英文顏色名稱(red、teal…)
+
+const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+const FUNC = /^(?:rgb|rgba|hsl|hsla)\(\s*[\d.\s,/%+-]+(?:deg)?[\d.\s,/%+-]*\)$/i;
+const NAMED = /^[a-z]{3,24}$/i;
+
+/** 合法就回傳整理過的顏色字串,否則回傳 null。 */
+function safeColor(value) {
+  if (value == null) return null;
+  const v = String(value).trim();
+  if (!v || v.length > 64) return null;
+  return HEX.test(v) || FUNC.test(v) || NAMED.test(v) ? v : null;
+}
+
 // ───────── app/core/slide.js ─────────
 // 把一個 MD 檔解析成一張或多張投影片的資料(還不是 HTML)。
+
 
 
 
@@ -383,6 +401,11 @@ function parseSegment(seg, { path, index, fileMeta, issues }) {
   }
   const body = bodyLines.join('\n').replace(/^\n+|\n+$/g, '');
 
+  if (meta.color != null && !safeColor(meta.color)) {
+    issues.push({ path, message: `顏色「${meta.color}」格式不正確,已改用章節顏色` });
+    delete meta.color;
+  }
+
   let layout = String(meta.layout || 'auto').toLowerCase();
   if (!LAYOUTS.includes(layout)) {
     issues.push({ path, message: `未知的版型「${layout}」,改用自動判斷。可用:${LAYOUTS.join(', ')}` });
@@ -427,6 +450,7 @@ function coerce(v) {
 //   list(path)     → Promise<{ name, kind: 'file'|'dir' }[]>   path '' 代表根目錄
 //   readText(path) → Promise<string>
 //   mediaURL(path) → Promise<string>
+
 
 
 
@@ -502,7 +526,7 @@ async function scanLibrary(source) {
   if (kind === 'topic') {
     const conf = (await readYaml(source, CONFIG.topic, issues)) || {};
     const projects = await readProjects(source, '', rootEntries, conf, '_', issues);
-    const topic = makeTopic('_', '', { name: label, ...conf }, projects, 0);
+    const topic = makeTopic('_', '', { name: label, ...conf, color: color(conf.color, null, CONFIG.topic, issues) }, projects, 0);
     return finish({ kind, title: topic.title, description: topic.description, theme: conf.theme, topics: [topic] });
   }
 
@@ -513,7 +537,7 @@ async function scanLibrary(source) {
     const entries = await listSafe(source, d.name);
     const conf = (await readYaml(source, join(d.name, CONFIG.topic), issues)) || {};
     const projects = await readProjects(source, d.name, entries, conf, d.name, issues);
-    return makeTopic(d.name, d.name, conf, projects, i);
+    return makeTopic(d.name, d.name, { ...conf, color: color(conf.color, null, join(d.name, CONFIG.topic), issues) }, projects, i);
   }));
   return finish({ kind, title: site.title || label, description: site.description || '', theme: site.theme, topics });
 
@@ -570,13 +594,21 @@ async function readProject(source, path, folder, topicId, issues) {
     event: str(conf.event),
     tags: Array.isArray(conf.tags) ? conf.tags.map(String) : [],
     theme: str(conf.theme),
-    accent: str(conf.accent || (Array.isArray(conf.sections) && conf.sections[0]?.color) || ''),
+    accent: color(conf.accent, null, join(path, CONFIG.deck), issues) || safeColor(Array.isArray(conf.sections) && conf.sections[0]?.color) || '',
     coverImage: str(conf.cover_image || conf.coverImage),
     config: conf,
   };
 }
 
 const str = v => (v == null ? '' : String(v));
+
+/** 設定檔裡的顏色:不合法就回報並改用預設值。 */
+function color(value, fallback, path, issues) {
+  if (value == null || value === '') return fallback;
+  const c = safeColor(value);
+  if (!c) issues.push({ path, message: `顏色「${value}」格式不正確,已改用預設顏色` });
+  return c || fallback;
+}
 
 /** 第 2 層:封面。只列出專案資料夾,必要時讀第一張投影片。 */
 async function loadCover(source, project) {
@@ -631,8 +663,9 @@ async function loadDeck(source, project) {
       slides.push(...r.slides.filter(sl => !sl.meta.hidden));
     }
     const title = c.title || (s.folder ? splitOrder(s.folder).label : '');
-    const color = c.color || (s.folder ? PALETTE[colorIndex++ % PALETTE.length] : project.accent || PALETTE[PALETTE.length - 1]);
-    const section = { id: s.folder || '_intro', folder: s.folder, path: s.path, title, subtitle: str(c.subtitle), color, slides };
+    const auto = s.folder ? PALETTE[colorIndex++ % PALETTE.length] : project.accent || PALETTE[PALETTE.length - 1];
+    const secColor = color(c.color, auto, join(project.path, CONFIG.deck), issues);
+    const section = { id: s.folder || '_intro', folder: s.folder, path: s.path, title, subtitle: str(c.subtitle), color: secColor, slides };
     if (autoCovers && s.folder && sections.filter(x => x.folder).length > 1 && c.cover !== false) {
       slides.unshift({ file: s.path, index: -1, meta: {}, layout: 'section', body: '', notes: str(c.notes), media: [], title, auto: true });
     }

@@ -218,3 +218,36 @@ test('markdown:XSS 回歸', () => {
   }
   assert.match(renderMarkdown('[a](JaVaScRiPt:alert(1))'), /^<p><a href="#"[^>]*>a<\/a><\/p>$/);
 });
+
+import { safeColor } from '../app/core/color.js';
+import { renderSlide } from '../app/player/render.js';
+
+test('safeColor:白名單', () => {
+  for (const ok of ['#abc', '#a1b2c3', '#a1b2c3d4', 'red', 'Teal', 'rgb(1, 2, 3)', 'rgba(1,2,3,.5)', 'hsl(120deg 50% 40%)', 'hsl(120, 50%, 40%)']) assert.equal(safeColor(ok), ok, ok);
+  for (const bad of ['red;background:url(//evil/x)', 'url(x)', 'expression(alert(1))', '#ggg', '#abcd', 'var(--x)', 'rgb(1,2,3);x:y', '', null, 'a'.repeat(30)]) assert.equal(safeColor(bad), null, String(bad));
+});
+
+test('顏色注入:投影片 color 不合法會被移除並回報', () => {
+  const { slides, issues } = parseSlideFile('<!-- color: red;background:url(//evil/x) -->\n# x', { path: 'a.md' });
+  assert.equal(slides[0].meta.color, undefined);
+  assert.equal(issues.length, 1);
+  const deck = { title: '', path: '', sections: [{ title: '', color: 'red;x:url(y)', slides: [] }] };
+  const html = renderSlide({ layout: 'text', body: 'x', meta: { color: 'blue;background:url(//evil)' }, media: [], file: 'a', sec: 0, i: 0 }, { deck, mode: 'thumb', globalIndex: 0, total: 1 });
+  assert.ok(!html.includes('url('), html.slice(0, 120));
+});
+
+test('顏色注入:設定檔裡的顏色不合法會回報並改用預設', async () => {
+  const src = memorySource({
+    '_site.yml': 'title: x',
+    't/_topic.yml': 'color: "red;background:url(x)"',
+    't/p/deck.yml': 'title: P\naccent: "url(x)"\nsections:\n  - folder: 01-a\n    color: "#zzz"',
+    't/p/01-a/a.md': '# A',
+  });
+  const lib = await scanLibrary(src);
+  assert.ok(!lib.topics[0].color.includes('url'));
+  assert.equal(lib.topics[0].projects[0].accent, '');
+  assert.equal(lib.issues.length, 2);
+  const deck = await loadDeck(src, lib.topics[0].projects[0]);
+  assert.match(deck.sections[0].color, /^#[0-9a-f]{6}$/i);
+  assert.equal(deck.issues.length, 1);
+});

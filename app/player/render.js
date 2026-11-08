@@ -5,6 +5,7 @@ import { renderMarkdown, renderInline, escapeHTML as esc } from '../core/markdow
 import { resolveMediaPath, classifyMedia } from '../core/media.js';
 import { PALETTE } from '../core/library.js';
 import { parseChartTable, niceScale } from '../core/chart.js';
+import { safeColor } from '../core/color.js';
 
 const pad = n => String(n).padStart(2, '0');
 
@@ -20,7 +21,7 @@ export function renderSlide(slide, ctx) {
   const md = s => renderMarkdown(s, { image });
   const layout = slide.layout;
   const meta = slide.meta || {};
-  const c = meta.color || section.color || deck.accent || PALETTE[0];
+  const c = safeColor(meta.color) || safeColor(section.color) || safeColor(deck.accent) || PALETTE[0];
 
   let inner = '';
   switch (layout) {
@@ -68,7 +69,7 @@ function mediaFigure(m, ctx, pathCtx, meta, showCaption = true) {
   const fit = meta.fit === 'contain' ? ' contain' : '';
   const cap = showCaption && m.caption ? `<figcaption>${esc(m.caption)}</figcaption>` : '';
   if (m.kind === 'embed') {
-    const thumb = m.thumb ? `<img src="${esc(m.thumb)}" alt="" loading="lazy" onerror="this.remove()">` : '';
+    const thumb = m.thumb ? `<img data-thumb="${esc(m.thumb)}" alt="">` : ''; // 由 hydrate.js 載入,失敗時移除
     return `<figure class="media" data-embed="${esc(m.embed)}"><div class="poster">${thumb}<div class="play"></div><div class="provider">${esc(m.provider)}</div></div>${ctx.mode === 'full' ? '' : cap}</figure>`;
   }
   const path = resolveMediaPath(m.src, pathCtx);
@@ -116,7 +117,7 @@ function columnsSlide(body, md) {
 function agendaSlide(slide, deck, md) {
   const secs = deck.sections.filter(s => s.folder);
   const head = slide.body.trim() ? md(slide.body) : '<h1>大綱</h1>';
-  const items = secs.map((s, k) => `<div class="ag" style="--sc:${esc(s.color)}"><b>${pad(k + 1)}</b><span>${esc(s.title)}${s.subtitle ? `<small>${esc(s.subtitle)}</small>` : ''}</span></div>`);
+  const items = secs.map((s, k) => `<div class="ag" style="--sc:${esc(safeColor(s.color) || PALETTE[0])}"><b>${pad(k + 1)}</b><span>${esc(s.title)}${s.subtitle ? `<small>${esc(s.subtitle)}</small>` : ''}</span></div>`);
   return `<div class="md">${head}</div><div class="agenda" style="--cols:${secs.length > 3 ? 2 : 1}">${items.join('')}</div>`;
 }
 
