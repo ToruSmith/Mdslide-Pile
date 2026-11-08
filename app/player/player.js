@@ -435,13 +435,20 @@ export class Player {
     const k = e.key;
     if (this.ink.enabled && (e.metaKey || e.ctrlKey) && (k === 'z' || k === 'Z')) { e.preventDefault(); this.ink.undo(); return; }
     if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (this.el.black.classList.contains('on')) { e.preventDefault(); this.el.black.classList.remove('on'); return; }
-    if (this.el.help.classList.contains('on') && k !== '?') { this.toggleHelp(false); if (k === 'Escape') return; }
-    if (this.reader && this.readerKey(k)) { e.preventDefault(); return; }
-    if (this.reader) return;
-    if (this.closeLight) { e.preventDefault(); this.closeLight(); return; }
-    const handled = this.command(k);
-    if (handled) e.preventDefault();
+    if (this.handleKey(k)) e.preventDefault();
+  }
+
+  /** 一個按鍵該做什麼。主畫面的鍵盤和講者視窗送來的按鍵都走這裡,行為才會一致。
+   *  remote = 來自講者視窗。回傳 true 表示已處理。 */
+  handleKey(k, { remote = false } = {}) {
+    if (this.el.black.classList.contains('on')) { this.el.black.classList.remove('on'); return true; } // 黑屏時按任何鍵(含 B)回來
+    if (this.el.help.classList.contains('on') && k !== '?') { this.toggleHelp(false); if (k === 'Escape') return true; }
+    if (this.reader) {
+      if (remote && k === ' ') k = 'PageDown'; // 講者視窗沒辦法捲動閱讀頁:空白鍵當成下一張
+      return this.readerKey(k);
+    }
+    if (this.closeLight) { this.closeLight(); return true; }
+    return this.command(k);
   }
 
   command(k) {
@@ -656,7 +663,12 @@ export class Player {
     if (this.el.player.querySelector('.rotate-hint')) this.closeRotateHint?.();
     this.el.player.classList.add('reading');
     this.reader = openReader(this, this.focus, {
-      onIndex: gi => this.onIndex?.(gi, true),
+      onIndex: gi => {
+        this.onIndex?.(gi, true);
+        this.focus = gi; // 講者視窗跟著顯示正在讀的那一張
+        this.cur = this.slides[gi].sec;
+        this.broadcast();
+      },
       onPrint: () => this.print({ handout: true }),
       onClose: gi => {
         this.reader = null;
@@ -698,7 +710,7 @@ export class Player {
   onPresenterMessage(m) {
     if (!m) return;
     if (m.type === 'hello') { this.presenterSeen = true; this.broadcast(); }
-    if (m.type === 'key') this.command(m.key);
+    if (m.type === 'key') this.handleKey(m.key, { remote: true });
     if (m.type === 'ink' && m.op) this.ink.apply(m.op);
   }
 

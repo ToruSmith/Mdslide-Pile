@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Mdslide Pile 書庫檢查工具(單檔版 v1.6.2)
+// Mdslide Pile 書庫檢查工具(單檔版 v1.6.3)
 // 由 scripts/bundle-check.mjs 自動產生,請不要手動修改。原始碼:https://github.com/ToruSmith/Mdslide-Pile
 //
 // 用法(需要 Node.js 18 以上):
@@ -233,7 +233,7 @@ const LOCALE_ZH_HANT = {
   'pv.next': '下一張',
   'pv.notes': '備註',
   'pv.waiting': '等待主視窗…(在主視窗按 S 開啟)',
-  'pv.keys': '← → 翻頁 · ↑ ↓ 換章 · Enter 放大 · B 黑屏 · 這個視窗的按鍵會同步到主視窗',
+  'pv.keys': '← → 翻頁 · ↑ ↓ 換章 · Enter 放大 · B 黑屏(再按一次回來)· 這個視窗的按鍵會同步到主視窗(全螢幕除外)',
   'pv.last': '(最後一張)',
   'pv.steps': ' · 逐步 {a}/{b}',
   'pv.notViewing': ' · <em>主畫面未放大</em>',
@@ -286,6 +286,7 @@ const LOCALE_ZH_HANT = {
   'update.ready': '網站已更新到新版。',
   'update.reload': '重新整理',
   'update.later': '稍後',
+  'pv.fullscreenHint': '全螢幕要在觀眾畫面按 F(或點一下觀眾畫面再按),瀏覽器不允許從講者視窗代為切換。',
 };
 
 // ───────── app/core/locales/en.js ─────────
@@ -508,7 +509,7 @@ const LOCALE_EN = {
   'pv.next': 'Next',
   'pv.notes': 'Notes',
   'pv.waiting': 'Waiting for the main window… (press S there)',
-  'pv.keys': '← → slides · ↑ ↓ sections · Enter zoom · B black · keys here are sent to the main window',
+  'pv.keys': '← → slides · ↑ ↓ sections · Enter zoom · B black screen (press again to return) · keys here control the main window (except full screen)',
   'pv.last': '(last slide)',
   'pv.steps': ' · step {a}/{b}',
   'pv.notViewing': ' · <em>main screen not zoomed</em>',
@@ -561,6 +562,7 @@ const LOCALE_EN = {
   'update.ready': 'A new version of the site is ready.',
   'update.reload': 'Reload',
   'update.later': 'Later',
+  'pv.fullscreenHint': 'Press F on the audience window to go full screen (click it first). Browsers do not allow the presenter view to do it.',
 };
 
 // ───────── app/core/i18n.js ─────────

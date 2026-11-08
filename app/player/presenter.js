@@ -23,11 +23,20 @@ export function startPresenter(root) {
         <div class="pv-meta"></div>
         <div class="pv-label">${t('pv.notes')}</div><div class="pv-notes"><p class="empty">${t('pv.waiting')}</p></div>
         <div class="pv-keys">${t('pv.keys')}</div>
+        <div class="pv-flash" role="status"></div>
       </aside>
     </div>`;
   const $ = s => root.querySelector(s);
   const ch = new BroadcastChannel('mdslide-presenter');
   let startedAt = Date.now();
+  let flashTimer = 0;
+  const flash = msg => {
+    const el = root.querySelector('.pv-flash');
+    el.textContent = msg;
+    el.classList.add('on');
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(() => el.classList.remove('on'), 4000);
+  };
   // 在講者視窗畫的內容同步到觀眾畫面,反過來也一樣
   const ink = new Ink({ onOp: op => ch.postMessage({ type: 'ink', op }), onChange: () => {
     root.querySelectorAll('.pv-ink [data-ink]').forEach(b => b.classList.toggle('on', b.dataset.ink === (ink.enabled ? ink.tool : 'none')));
@@ -73,6 +82,8 @@ export function startPresenter(root) {
   window.addEventListener('keydown', e => {
     if (ink.enabled && (e.metaKey || e.ctrlKey) && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); return ink.undo(); }
     if (e.metaKey || e.ctrlKey || e.altKey) return;
+    // 瀏覽器只允許在觀眾畫面本身按鍵或點擊時進入全螢幕,講者視窗代按會被拒絕
+    if (e.key === 'f' || e.key === 'F') { flash(t('pv.fullscreenHint')); return; }
     ch.postMessage({ type: 'key', key: e.key });
     if (e.key === ' ' || e.key.startsWith('Arrow')) e.preventDefault();
   });

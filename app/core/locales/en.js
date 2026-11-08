@@ -217,7 +217,7 @@ export const LOCALE_EN = {
   'pv.next': 'Next',
   'pv.notes': 'Notes',
   'pv.waiting': 'Waiting for the main window… (press S there)',
-  'pv.keys': '← → slides · ↑ ↓ sections · Enter zoom · B black · keys here are sent to the main window',
+  'pv.keys': '← → slides · ↑ ↓ sections · Enter zoom · B black screen (press again to return) · keys here control the main window (except full screen)',
   'pv.last': '(last slide)',
   'pv.steps': ' · step {a}/{b}',
   'pv.notViewing': ' · <em>main screen not zoomed</em>',
@@ -270,4 +270,5 @@ export const LOCALE_EN = {
   'update.ready': 'A new version of the site is ready.',
   'update.reload': 'Reload',
   'update.later': 'Later',
+  'pv.fullscreenHint': 'Press F on the audience window to go full screen (click it first). Browsers do not allow the presenter view to do it.',
 };

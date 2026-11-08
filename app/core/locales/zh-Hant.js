@@ -217,7 +217,7 @@ export const LOCALE_ZH_HANT = {
   'pv.next': '下一張',
   'pv.notes': '備註',
   'pv.waiting': '等待主視窗…(在主視窗按 S 開啟)',
-  'pv.keys': '← → 翻頁 · ↑ ↓ 換章 · Enter 放大 · B 黑屏 · 這個視窗的按鍵會同步到主視窗',
+  'pv.keys': '← → 翻頁 · ↑ ↓ 換章 · Enter 放大 · B 黑屏(再按一次回來)· 這個視窗的按鍵會同步到主視窗(全螢幕除外)',
   'pv.last': '(最後一張)',
   'pv.steps': ' · 逐步 {a}/{b}',
   'pv.notViewing': ' · <em>主畫面未放大</em>',
@@ -270,4 +270,5 @@ export const LOCALE_ZH_HANT = {
   'update.ready': '網站已更新到新版。',
   'update.reload': '重新整理',
   'update.later': '稍後',
+  'pv.fullscreenHint': '全螢幕要在觀眾畫面按 F(或點一下觀眾畫面再按),瀏覽器不允許從講者視窗代為切換。',
 };
