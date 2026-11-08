@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 單元測試
+        run: node --test tests/*.test.mjs
+      - name: 檢查內建書庫
+        run: node scripts/check.mjs content
+      - name: 確認 dist/ 與原始碼同步
+        run: |
+          node scripts/bundle-check.mjs
+          git diff --exit-code dist/
+
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 安裝無頭瀏覽器(只在 CI 臨時安裝,不寫進專案)
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
+      - name: 瀏覽器冒煙測試
+        run: |
+          node scripts/build-catalog.mjs
+          python -m http.server 8000 &
+          sleep 2
+          python tests/smoke/smoke.py http://localhost:8000/
