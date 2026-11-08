@@ -89,21 +89,23 @@ async function mountPage(fig, source) {
   try {
     if (source.kind === 'repo') {
       f.setAttribute('sandbox', PAGE_FLAGS.split(' ').filter(x => f.sandbox?.supports?.(x) ?? true).join(' '));
-      f.src = await source.mediaURL(path);
-    } else {
-      const html = await readPage(path, source);
-      f.src = HOST;
-      fig.prepend(f);
+      const url = await source.mediaURL(path);
+      fig.prepend(f); // 先放進畫面再設定網址:有些瀏覽器不會載入還沒放進畫面的框框
       fig.querySelector('.poster')?.remove();
-      sendPage(f.contentWindow, html, f.title);
+      f.src = url;
       return;
     }
+    {
+      const html = await readPage(path, source);
+      fig.prepend(f);
+      fig.querySelector('.poster')?.remove();
+      f.src = HOST;
+      sendPage(f.contentWindow, html, f.title);
+    }
   } catch {
+    f.remove();
     missing(fig.querySelector('.poster') || fig, path);
-    return;
   }
-  fig.querySelector('.poster')?.remove();
-  fig.prepend(f);
 }
 
 /** 在新分頁開啟(本機資料夾也能用)。 */

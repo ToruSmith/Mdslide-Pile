@@ -67,8 +67,13 @@ def main():
         page_at = page.evaluate("[...document.querySelectorAll('.card')].findIndex(c => c.querySelector('[data-page]'))")
         if page_at >= 0:
             page.evaluate("n => { location.hash = location.hash.replace(/[/][0-9]+$/, '/' + n) }", page_at + 1); page.wait_for_timeout(900)
-            page.keyboard.press('Enter'); page.wait_for_timeout(2000)
+            page.keyboard.press('Enter'); page.wait_for_timeout(1200)
             demo = page.frame_locator('.frame figure.page iframe')
+            try:
+                demo.locator('#out').wait_for(timeout=15000)
+            except Exception:
+                info = page.evaluate("() => { const f = document.querySelector('.frame figure.page iframe'); return f ? [f.src, f.getAttribute('sandbox')] : 'no iframe' }")
+                raise AssertionError(f'互動網頁沒有載入:{info}')
             before_v = demo.locator('#out').inner_text()
             demo.locator('#years').fill('35'); page.wait_for_timeout(300)
             assert demo.locator('#out').inner_text() != before_v, '互動網頁沒有反應'
