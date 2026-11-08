@@ -76,6 +76,16 @@ def main():
             page.locator('.frame h1').first.click(); page.wait_for_timeout(500)  # 點回投影片:拿回鍵盤,不翻頁
             assert page.url == here, '從互動網頁點回投影片時不應翻頁'
             page.keyboard.press('Escape'); page.wait_for_timeout(700)
+        # 編輯模式(E):倉庫模式是唯讀,預覽要跟著打字更新
+        page.keyboard.press('e'); page.wait_for_timeout(1200)
+        assert page.locator('.editor').count() == 1, '編輯模式沒有打開'
+        assert page.locator('.efile').inner_text().endswith('.md'), f"編輯的不是 MD 檔:{page.locator('.efile').inner_text()}"
+        page.fill('.etext', '# 預覽測試\n\n- 一點\n'); page.wait_for_timeout(600)
+        assert page.locator('.escale h1').inner_text() == '預覽測試', '預覽沒有跟著更新'
+        page.once('dialog', lambda d: d.accept())
+        page.keyboard.press('Escape'); page.wait_for_timeout(800)
+        assert page.locator('.editor').count() == 0, '編輯模式沒有關閉'
+
         # 閱讀模式(M)
         page.keyboard.press('m'); page.wait_for_timeout(1000)
         assert page.locator('.reader .ritem').count() == page.locator('.card').count(), '閱讀模式的張數不對'

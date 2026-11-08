@@ -54,6 +54,7 @@ app/
     export.js            匯出單一 HTML(import map + data: 網址,不需打包工具)
     ink.js               畫筆與雷射筆(SVG,投影片座標 1280×720;主畫面與講者視窗互相同步)
     reader.js            閱讀模式(整份往下捲 + 備註;網址結尾 /read)
+    editor.js            編輯模式(Markdown + 即時預覽、新增 / 封存、replaceNotes)
     lightbox.js          點圖片放大
     presenter.js         講者視窗
     themes.js            主題名稱登記
@@ -83,6 +84,9 @@ tests/                   node:test 單元測試;smoke/smoke.py 是瀏覽器冒�
 資料流:`source` → `core/library.js` → 簡報資料 → `player/render.js` → HTML → `hydrate.js` 補上媒體。
 
 資料來源介面(新增來源時只要實作這些):`label`、`list(path)`、`readText(path)`、`mediaURL(path)`、`releaseMedia()`。
+可寫入的來源(目前只有 HandleSource)另外提供:`canWrite`、`writeText(path, text, { expect })`、`stat(path)`、`archive(path, dir)`。
+
+**寫入的安全規則(不可放寬,`tests/write.test.mjs` 在把關)**:只寫書庫資料夾裡的 `.md` / `.yml`,路徑不能有 `..`;一定要先 `ensureWritable()` 取得使用者授權;寫入前比對 `stat()`,不符就丟 `stale` 讓使用者決定;**永遠不呼叫 `removeEntry` 刪除使用者的投影片**,刪除一律是 `archive()`(搬到 `_封存/`,同名加編號)。
 
 ## 常見修改
 

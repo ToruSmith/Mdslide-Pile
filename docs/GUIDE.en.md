@@ -401,6 +401,12 @@ Follow the steps in section 7 of the guide to create the folder and files, then 
 ## 8. FAQ
 
 - **Wrong order on screen?** Check the number prefixes. They sort numerically (`2-` before `10-`), but two digits (`02-`) also keep file explorers in the same order.
+- **Can I edit the content on the site?** Yes. Zoom into a slide and press `E` (or "Edit" in the toolbar): Markdown on the left, live preview on the right, `Ctrl+S` saves back to the file in your folder (needs a local folder opened in Chrome / Edge; the browser asks once for permission to write).
+  - The toolbar also has "+ New slide" (numbering continues automatically) and "Archive", which moves the file to `_封存/` inside the deck folder — **it is not deleted** and you can move it back yourself.
+  - Automatic cover and section pages have no file of their own, so `E` edits `deck.yml` instead.
+  - If another program changes the file while you are editing, you are asked which version to keep before anything is overwritten.
+  - The presenter view (`S`) can edit the current slide's notes directly; the deck reloads after saving.
+  - Other browsers and the built-in library cannot save: "Save" downloads the edited file instead, and the built-in library also offers "Edit on GitHub".
 - **How do I see my edits?** Folders opened in Chrome / Edge update automatically (within about 1.5 seconds), or press `R`. In other browsers, choose the folder again.
 - **A slide is missing?** Does its file name start with `_`? Does its front matter say `hidden: true`?
 - **"Media not found"?** Paths are relative to the deck folder, for example `media/a.jpg`, and letter case must match.

@@ -21,7 +21,8 @@ export function startPresenter(root) {
         <div class="pv-clock"><div><small>${t('pv.elapsed')}</small><b class="elapsed">00:00</b></div><div><small>${t('pv.now')}</small><b class="now">--:--</b></div><button class="reset">${t('pv.reset')}</button></div>
         <div class="pv-label">${t('pv.next')}</div><div class="pv-box next"><div class="pv-frame"></div></div>
         <div class="pv-meta"></div>
-        <div class="pv-label">${t('pv.notes')}</div><div class="pv-notes"><p class="empty">${t('pv.waiting')}</p></div>
+        <div class="pv-label pv-notes-row"><span>${t('pv.notes')}</span><span class="pv-notes-tools"><span class="saved"></span><button class="pv-edit-notes" hidden>${esc(t('pv.editNotes'))}</button></span></div>
+        <div class="pv-notes"><p class="empty">${t('pv.waiting')}</p></div>
         <div class="pv-keys">${t('pv.keys')}</div>
         <div class="pv-flash" role="status"></div>
       </aside>
@@ -62,12 +63,45 @@ export function startPresenter(root) {
     box.style.height = `${720 * sc}px`;
   };
 
+  // 備註可以直接在這裡改:主視窗負責寫檔(講者視窗碰不到資料夾)
+  let editing = false, notesGi = -1;
+  const btn = root.querySelector('.pv-edit-notes');
+  const stopEditing = () => { editing = false; btn.textContent = t('pv.editNotes'); if (last) render(last); };
+  btn.addEventListener('click', () => {
+    if (!editing) {
+      editing = true;
+      notesGi = last?.gi ?? -1;
+      btn.textContent = t('pv.saveNotes');
+      const box = $('.pv-notes');
+      box.innerHTML = '<textarea class="pv-notes-edit"></textarea>';
+      box.querySelector('textarea').value = last?.notesText || '';
+      box.querySelector('textarea').focus();
+      box.querySelector('textarea').addEventListener('keydown', ev => {
+        ev.stopPropagation();
+        if ((ev.metaKey || ev.ctrlKey) && (ev.key === 's' || ev.key === 'S')) { ev.preventDefault(); btn.click(); }
+        if (ev.key === 'Escape') stopEditing();
+      });
+      return;
+    }
+    const text = root.querySelector('.pv-notes-edit')?.value ?? '';
+    root.querySelector('.saved').textContent = t('pv.savingNotes');
+    ch.postMessage({ type: 'notes', gi: notesGi, text });
+  });
+
   let last = null;
   ch.onmessage = e => {
+    if (e.data?.type === 'notesResult') {
+      root.querySelector('.saved').textContent = e.data.ok ? t('pv.notesSaved') : t('pv.notesFailed');
+      setTimeout(() => { root.querySelector('.saved').textContent = ''; }, 4000);
+      if (e.data.ok) stopEditing();
+      return;
+    }
     const m = e.data;
     if (m?.type === 'ink' && m.op) return ink.apply(m.op);
     if (m?.type !== 'state') return;
     last = m;
+    btn.hidden = !m.canEdit; // 只有能寫檔的來源才顯示「改備註」
+    if (editing && m.gi !== notesGi) stopEditing(); // 換張投影片就結束編輯
     applyTheme(m.theme);
     startedAt = m.startedAt || startedAt;
     place($('.pv-box.cur'), m.cur, m.media);
@@ -75,8 +109,9 @@ export function startPresenter(root) {
     ink.mount($('.pv-box.cur .pv-frame'), m.gi);
     place($('.pv-box.next'), m.next, m.media);
     $('.pv-meta').innerHTML = `<b>${m.n}</b> / ${m.total} · ${esc(m.section || m.title)}${m.steps ? esc(t('pv.steps', { a: m.step, b: m.steps })) : ''}${m.viewing ? '' : t('pv.notViewing')}`;
-    $('.pv-notes').innerHTML = m.notes || `<p class="empty">${t('pv.noNotes')}</p>`;
+    if (!editing) $('.pv-notes').innerHTML = m.notes || `<p class="empty">${t('pv.noNotes')}</p>`;
   };
+  const render = m => { $('.pv-notes').innerHTML = m.notes || `<p class="empty">${t('pv.noNotes')}</p>`; };
   ch.postMessage({ type: 'hello' });
 
   window.addEventListener('keydown', e => {

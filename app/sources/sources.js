@@ -89,6 +89,66 @@ export class HandleSource {
   /** 重新整理:清掉快取,下次會重新讀資料夾。 */
   refresh() { this.listCache.clear(); this.dirCache = new Map([['', this.handle]]); }
 
+  // ---------------- 寫入(編輯模式) ----------------
+  // 安全規則:
+  //   1. 一定要使用者授權才寫得了(瀏覽器會跳出詢問)。
+  //   2. 只寫 .md 與 .yml,而且只在這個書庫資料夾裡面。
+  //   3. 寫之前先比對「打開時的檔案狀態」,別的程式改過就停下來問使用者。
+  //   4. 刪除一律改成搬到 _封存/,不真的刪檔。
+  get canWrite() { return true; }
+
+  /** 要求寫入權限;使用者沒答應就回傳 false。 */
+  async ensureWritable() {
+    const q = await this.handle.queryPermission?.({ mode: 'readwrite' });
+    if (q === 'granted') return true;
+    return (await this.handle.requestPermission?.({ mode: 'readwrite' })) === 'granted';
+  }
+
+  /** 檔案目前的狀態(修改時間與大小),用來判斷有沒有被別的程式改過。 */
+  async stat(path) {
+    try { const f = await this.file(path); return `${f.lastModified}:${f.size}`; } catch { return null; }
+  }
+
+  /**
+   * 寫入文字檔。expect = 打開時的 stat();不符就丟出 'stale'(檔案被別的程式改過)。
+   * 瀏覽器會先寫暫存檔,關閉時才取代原檔,所以寫到一半中斷不會弄壞原檔。
+   */
+  async writeText(path, text, { expect = undefined } = {}) {
+    checkPath(path);
+    if (!(await this.ensureWritable())) throw new Error('denied');
+    if (expect !== undefined && (await this.stat(path)) !== expect) throw new Error('stale');
+    const i = path.lastIndexOf('/');
+    const d = await this.dir(i < 0 ? '' : path.slice(0, i));
+    const h = await d.getFileHandle(path.slice(i + 1), { create: true });
+    const w = await h.createWritable();
+    try {
+      await w.write(text);
+    } finally {
+      await w.close();
+    }
+    this.listCache.delete(i < 0 ? '' : path.slice(0, i));
+    return this.stat(path);
+  }
+
+  /** 搬到同一個簡報資料夾下的 _封存/(不真的刪檔)。回傳新位置。 */
+  async archive(path, archiveDir) {
+    checkPath(path);
+    const text = await this.readText(path);
+    const name = path.slice(path.lastIndexOf('/') + 1);
+    if (!(await this.ensureWritable())) throw new Error('denied');
+    const parts = archiveDir.split('/').filter(Boolean);
+    let d = this.handle;
+    for (const part of parts) d = await d.getDirectoryHandle(part, { create: true });
+    let target = name;
+    for (let n = 2; await exists(d, target); n++) target = name.replace(/(\.[^.]*)?$/, `-${n}$&`); // 同名就加編號
+    const w = await (await d.getFileHandle(target, { create: true })).createWritable();
+    try { await w.write(text); } finally { await w.close(); }
+    const i = path.lastIndexOf('/');
+    await (await this.dir(i < 0 ? '' : path.slice(0, i))).removeEntry(name);
+    this.refresh();
+    return `${archiveDir}/${target}`;
+  }
+
   /**
    * 監看簡報資料夾:每隔一段時間比對 .md 與設定檔的修改時間(只讀檔案資訊,不讀內容),
    * 以及子資料夾的增減;有變化就呼叫 onChange。分頁不在前景時暫停。回傳停止監看的函式。
@@ -121,6 +181,16 @@ export class HandleSource {
     tick();
     return () => { stopped = true; clearTimeout(timer); };
   }
+}
+
+/** 只允許寫入書庫資料夾裡的 .md / .yml,路徑不能跳出去。 */
+function checkPath(path) {
+  if (!/^[^/][^\0]*$/.test(path) || path.split('/').some(p => !p || p === '.' || p === '..')) throw new Error('bad path');
+  if (!/\.(md|ya?ml)$/i.test(path)) throw new Error('bad type');
+}
+
+async function exists(dir, name) {
+  try { await dir.getFileHandle(name); return true; } catch { return false; }
 }
 
 /** 本機模式(所有瀏覽器):<input webkitdirectory> 或拖放取得的檔案清單。只讀到檔名,內容等需要時才讀。 */

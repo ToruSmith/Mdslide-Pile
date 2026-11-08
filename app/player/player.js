@@ -12,6 +12,7 @@ import { openCheckPanel } from '../ui/check-view.js';
 import { Ink, PEN_COLORS, inkMarkup } from './ink.js';
 import { zoomableImage, openLightbox } from './lightbox.js';
 import { openReader } from './reader.js';
+import { openEditor, replaceNotes } from './editor.js';
 
 const EASE = 'cubic-bezier(.65, 0, .35, 1)';
 const pad = n => String(n).padStart(2, '0');
@@ -444,6 +445,10 @@ export class Player {
   /** 一個按鍵該做什麼。主畫面的鍵盤和講者視窗送來的按鍵都走這裡,行為才會一致。
    *  remote = 來自講者視窗。回傳 true 表示已處理。 */
   handleKey(k, { remote = false } = {}) {
+    if (this.editor) { // 編輯模式:文字框自己處理按鍵,只有 Esc 在任何地方都能關閉
+      if (k === 'Escape') { this.editor.close(); return true; }
+      return false;
+    }
     if (this.el.black.classList.contains('on')) { this.el.black.classList.remove('on'); return true; } // 黑屏時按任何鍵(含 B)回來
     if (this.el.help.classList.contains('on') && k !== '?') { this.toggleHelp(false); if (k === 'Escape') return true; }
     if (this.reader) {
@@ -476,6 +481,7 @@ export class Player {
       case 'd': case 'D': this.toggleInk(); break;
       case 'x': case 'X': if (!this.ink.enabled) return false; this.ink.clear(); break;
       case 'm': case 'M': this.openReading(); break;
+      case 'e': case 'E': this.openEditing(); break;
       case 'l': case 'L': this.cycleStage(); break;
       case 't': case 'T': this.cycleTheme(); break;
       case 'b': case 'B': case '.': this.el.black.classList.add('on'); break;
@@ -696,6 +702,41 @@ export class Player {
 
   closeReading() { this.reader?.close(); }
 
+  /** 講者視窗送來的備註:換掉那個檔案裡對應那一段的 Note: 區塊,再寫回去。 */
+  async saveNotes(gi, text) {
+    const slide = this.slides[gi];
+    const reply = ok => this.channel?.postMessage({ type: 'notesResult', ok });
+    if (!slide || !this.source.canWrite) return reply(false);
+    try {
+      const before = await this.source.readText(slide.file);
+      const next = replaceNotes(before, slide.index ?? 0, text);
+      await this.source.writeText(slide.file, next, { expect: await this.source.stat(slide.file) });
+      reply(true);
+      if (this.onReload) await this.reload();
+    } catch {
+      reply(false);
+    }
+  }
+
+  // ---------------- 編輯模式(E) ----------------
+  async openEditing() {
+    if (this.editor || !this.source.readText) return;
+    const slide = this.slides[this.focus];
+    if (!slide) return;
+    // 自動產生的封面與章節頁沒有自己的 MD 檔,改成編輯 deck.yml(標題就寫在那裡)
+    const auto = !(slide.index >= 0) || !/\.md$/i.test(slide.file || '');
+    const path = auto ? `${this.deck.path}/deck.yml` : slide.file;
+    this.reader?.close();
+    if (this.ink.enabled) this.toggleInk(false);
+    this.closeLight?.();
+    this.el.player.classList.add('editing');
+    this.editor = openEditor(this, {
+      onSaved: () => this.onReload && this.reload().then(d => d && this.replaceDeck(d)),
+      onClose: () => { this.editor = null; this.el.player.classList.remove('editing'); },
+    });
+    if (!(await this.editor.load(path, { segment: auto ? 0 : slide.index, note: auto ? t('editor.autoSlide') : '' }))) this.editor.close();
+  }
+
   /** 閱讀模式的按鍵:捲動類交給閱讀模式;黑屏、全螢幕、主題、講者視窗等照常;
    *  放大、畫筆、換排列、跳章節則先回到投影片再執行。回傳 true 表示已處理。 */
   readerKey(k) {
@@ -727,6 +768,7 @@ export class Player {
     if (m.type === 'hello') { this.presenterSeen = true; this.broadcast(); }
     if (m.type === 'key') this.handleKey(m.key, { remote: true });
     if (m.type === 'ink' && m.op) this.ink.apply(m.op);
+    if (m.type === 'notes') this.saveNotes(m.gi, m.text);
   }
 
   async broadcast() {
@@ -741,8 +783,8 @@ export class Player {
     this.channel.postMessage({
       type: 'state', title: this.deck.title, section: this.sections[s.sec]?.title || '',
       n: gi + 1, total: this.slides.length, cur, next, media, theme: currentTheme(),
-      ink: this.ink.get(gi), gi,
-      notes: s.notes ? renderMarkdown(s.notes) : '', steps: this.steps.length, step: this.stepIndex, viewing: this.viewing, startedAt: this.startedAt,
+      ink: this.ink.get(gi), gi, canEdit: !!this.source.canWrite,
+      notes: s.notes ? renderMarkdown(s.notes) : '', notesText: s.notes || '', steps: this.steps.length, step: this.stepIndex, viewing: this.viewing, startedAt: this.startedAt,
     });
   }
 

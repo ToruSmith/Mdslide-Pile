@@ -30,6 +30,7 @@ Write slides in Markdown, group them into sections with folders, and play them a
 **Making decks**
 - **Folders are the structure**: library → topic → deck → section → slide. Every config file is optional.
 - **Over a dozen layouts**: split, full-bleed, quote, big number, stat cards, timeline, columns, automatic agenda, bar and line charts, and more; footnotes and code highlighting too.
+- **Editing** (`E`): Markdown on the left, live preview on the right, `Ctrl+S` saves back to the file in your folder; add slides, archive (never delete) and edit notes from the presenter view.
 - **Live reload**: folders opened in Chrome / Edge update on screen as soon as you save a Markdown file (or press `R`).
 - **Checker**: the "Check" button on the site, or double-click the checker in your library, to find anything that breaks the rules.
 - **Media**: local images and video; YouTube, Bilibili, Google Drive and Vimeo embeds.
@@ -149,11 +150,11 @@ Want a ready-made library? Download `Mdslide-library-v….zip` from [Releases](h
 | `Enter` | Zoom in / out | `M` | Reading view |
 | `Esc` | Zoom out, back to library | `L` | Switch stage |
 | `1`–`9` | Jump to section | `T` | Switch theme |
-| `D` | Pen and laser pointer | `S` | Presenter view |
-| `X` | Clear drawings on this slide | `P` | Print / save as PDF |
-| `B` | Black screen | `F` | Full screen |
-| `K` | Play / pause local video when zoomed | `R` | Reload the deck |
-| `?` | Help | | |
+| `D` | Pen and laser pointer | `E` | Edit this slide's source |
+| `X` | Clear drawings on this slide | `S` | Presenter view |
+| `B` | Black screen | `P` | Print / save as PDF |
+| `K` | Play / pause local video when zoomed | `F` | Full screen |
+| `?` | Help | `R` | Reload the deck |
 
 Phones and tablets: swipe left/right for slides and up/down for sections; tap an image to enlarge it; a hint suggests turning the phone sideways.
 
