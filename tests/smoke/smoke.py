@@ -15,7 +15,10 @@ def main():
     errors = []
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        page = browser.new_page(viewport={'width': 1440, 'height': 900})
+        ctx = browser.new_context(viewport={'width': 1440, 'height': 900}, accept_downloads=True)
+        # 內容安全政策(CSP):任何違規都算錯誤
+        ctx.add_init_script("window.__csp=[];document.addEventListener('securitypolicyviolation',e=>window.__csp.push(e.violatedDirective+' '+e.blockedURI))")
+        page = ctx.new_page()
         page.on('pageerror', lambda e: errors.append(f'pageerror: {e}'))
         page.on('console', lambda m: errors.append(f'console: {m.text}') if m.type == 'error' and not any(k in m.text for k in IGNORE) else None)
 
@@ -32,6 +35,7 @@ def main():
         page.wait_for_timeout(1600)
         after = page.evaluate("[...document.querySelectorAll('.card')].slice(0, 8).map(c => getComputedStyle(c).transform)")
         assert before != after, '換章節後卡片位置沒有改變(洗牌動畫可能失效)'
+        errors.extend('csp: ' + v for v in page.evaluate('window.__csp'))
 
         # 匯出單一 HTML,在全新、離線的瀏覽器設定檔用 file:// 開啟
         import os, tempfile
@@ -50,6 +54,17 @@ def main():
         q.keyboard.press('Enter'); q.wait_for_timeout(800)
         assert q.locator('.frame .slide').count() == 1, '匯出的 HTML 無法放大投影片'
         offline.close()
+
+        # 離線快取:service worker 接手後,斷網重新整理首頁仍可開啟
+        page.goto(BASE); page.evaluate('navigator.serviceWorker.ready'); page.wait_for_timeout(1500)
+        if page.evaluate('!!navigator.serviceWorker.controller'):
+            ctx.set_offline(True)
+            page.reload(); page.wait_for_timeout(1500)
+            assert page.locator('.hero').count() == 1, '離線時首頁沒有從快取載入'
+            ctx.set_offline(False)
+        else:
+            errors.append('service worker 沒有接手頁面')
+        errors.extend('csp: ' + v for v in page.evaluate('window.__csp'))
         browser.close()
 
     if errors:

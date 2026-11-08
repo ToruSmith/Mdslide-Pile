@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 // 產生 catalog.json:content/ 的資料夾清單,讓網站在 GitHub Pages 上能列出內建簡報。
+// 同時產生 shell-manifest.js:網站本身的檔案清單與內容雜湊,給 sw.js 預先快取用
+// (雜湊變了,瀏覽器就會安裝新版 service worker)。
 // GitHub Actions 部署時會自動執行;本機想用 http 伺服器預覽時也可以手動執行:
 //   node scripts/build-catalog.mjs
 
 import { writeFile } from 'node:fs/promises';
+import { shellFiles, shellManifest } from './shell-files.mjs';
 import { nodeSource, walkTree, detectNodeLang } from './node-source.mjs';
 import { t, setLang } from '../app/core/i18n.js';
 
@@ -29,5 +32,6 @@ for (const tp of lib.topics) for (const p of tp.projects) {
 }
 
 await writeFile(out, JSON.stringify({ version: 1, title: lib.title, generated: new Date().toISOString(), tree }) + '\n');
+await writeFile('shell-manifest.js', shellManifest(await shellFiles('.')));
 console.log(t('catalog.done', { topics: lib.topics.length, decks, slides }));
 for (const i of issues) console.warn(`  ⚠ ${i.path}:${i.message}`);

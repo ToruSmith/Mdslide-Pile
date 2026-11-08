@@ -3,9 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https:; media-src 'self' blob: https:; frame-src https://www.youtube-nocookie.com https://player.bilibili.com https://drive.google.com https://player.vimeo.com; connect-src 'self' blob:; font-src 'self' data:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
 <title>Mdslide Pile · 把資料夾變成會動的簡報</title>
 <meta name="description" content="網站是遊戲機,你的資料夾是遊戲片:用 Markdown 寫投影片,在瀏覽器裡以 3D 牌堆播放。">
 <meta name="theme-color" content="#f3eee4">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon.svg">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect x='14' y='22' width='40' height='26' rx='4' fill='%23e9e2d4' transform='rotate(-8 34 35)'/><rect x='10' y='18' width='40' height='26' rx='4' fill='%23b4654a'/></svg>">
 <link rel="stylesheet" href="app/styles/themes.css">
 <link rel="stylesheet" href="app/styles/slides.css">
