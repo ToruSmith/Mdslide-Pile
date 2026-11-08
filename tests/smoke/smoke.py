@@ -10,7 +10,9 @@ from playwright.sync_api import sync_playwright
 BASE = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8000/'
 ENGINE = sys.argv[2] if len(sys.argv) > 2 else 'chromium'
 # 外部網站(YouTube 縮圖等)在 CI 或離線時可能連不上,不算錯誤
-IGNORE = ('ytimg.com', 'youtube', 'bilibili', 'ERR_TUNNEL', 'ERR_NAME_NOT_RESOLVED', 'ERR_INTERNET_DISCONNECTED', 'net::ERR')
+# 外部嵌入網站(影片、CodePen 等)的錯誤取決於測試機的網路,不算網站本身的問題
+IGNORE = ('ytimg.com', 'youtube', 'bilibili', 'codepen', 'vimeo', 'ERR_TUNNEL', 'ERR_NAME_NOT_RESOLVED', 'ERR_INTERNET_DISCONNECTED', 'net::ERR')
+LOCAL = ('localhost', '127.0.0.1')
 
 def main():
     errors = []
@@ -21,7 +23,12 @@ def main():
         ctx.add_init_script("window.__csp=[];document.addEventListener('securitypolicyviolation',e=>window.__csp.push(e.violatedDirective+' '+e.blockedURI))")
         page = ctx.new_page()
         page.on('pageerror', lambda e: errors.append(f'pageerror: {e}'))
-        page.on('console', lambda m: errors.append(f'console: {m.text}') if m.type == 'error' and not any(k in m.text for k in IGNORE) else None)
+        def on_console(m):
+            src = (m.location or {}).get('url', '')
+            if m.type != 'error' or any(k in m.text for k in IGNORE): return
+            if src and not any(h in src for h in LOCAL): return  # 錯誤來自外部網站的框框
+            errors.append(f'console: {m.text}')
+        page.on('console', on_console)
 
         page.goto(BASE); page.wait_for_timeout(1500)
         assert page.locator('.hero').count() == 1, '首頁沒有載入'
