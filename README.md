@@ -117,6 +117,8 @@
 - `檢查書庫.cmd`:Windows 雙擊執行
 - `檢查書庫.command`:Mac 雙擊執行
 
+想直接拿一個現成的書庫:到 [Releases](https://github.com/ToruSmith/Mdslide-Pile/releases/latest) 下載 `Mdslide-library-v….zip`,解壓後的「Mdslide書庫」資料夾已經放好三個主題、兩份範例簡報與上面的檢查工具。
+
 ## 快捷鍵
 
 | 按鍵 | 功能 | 按鍵 | 功能 |

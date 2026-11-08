@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // 組出「範例書庫」資料夾:starter/ 的說明 + content/ 的主題(不含官方範例)+ dist/ 的檢查工具。
-// 發布新版時由 .github/workflows/release.yml 執行並打包成 Mdslide書庫.zip。
+// 發布新版時由 .github/workflows/release.yml 執行並打包成 Mdslide-library-vX.Y.Z.zip(解壓後是「Mdslide書庫」資料夾)。
 //   node scripts/build-starter.mjs <輸出資料夾>      例:node scripts/build-starter.mjs build/Mdslide書庫
 
 import { cp, readdir, rm, mkdir } from 'node:fs/promises';

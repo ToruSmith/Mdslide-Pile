@@ -128,4 +128,4 @@ python3 -m http.server 8000           # 開 http://localhost:8000
 
 1. `package.json`、`app/main.js` 的 `VERSION`、`CHANGELOG.md` 改成新版本號(`tests/version.test.mjs` 會檢查三處一致)。
 2. 推送到 `main`,等 CI 通過、網站部署完成。
-3. 在 GitHub 網頁 Actions →「發布新版」→ Run workflow(或推送標籤 `git tag v1.4.0 && git push origin v1.4.0`)。`.github/workflows/release.yml` 會建立標籤與 GitHub Release,附上 `Mdslide書庫.zip`(範例書庫 + 檢查工具)與 `mdslide-check.mjs`,說明取自 CHANGELOG 該版本的段落。
+3. 在 GitHub 網頁 Actions →「發布新版」→ Run workflow(或推送標籤 `git tag v1.4.0 && git push origin v1.4.0`)。`.github/workflows/release.yml` 會建立標籤與 GitHub Release,附上 `Mdslide-library-vX.Y.Z.zip`(範例書庫 + 檢查工具;GitHub 會拿掉附件檔名的中文,所以用英文檔名)與 `mdslide-check.mjs`,說明取自 CHANGELOG 該版本的段落。

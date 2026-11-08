@@ -6,7 +6,7 @@
 - **目錄搜尋**:多個關鍵字(空白分開)全部符合才顯示,也比對資料夾名稱與日期;找不到時有提示;按 `/` 直接搜尋
 - **新簡報骨架**:`node scripts/new-deck.mjs <資料夾> --title "標題"` 一次建好 `deck.yml`、三個章節與起手投影片(中英文)
 - **離線提示**:連不上網路時打開內建範例,顯示看得懂的說明,不再是「Failed to fetch」
-- **發布流程**:推送版本標籤會自動建立 GitHub Release,附上範例書庫 `Mdslide書庫.zip` 與最新的 `mdslide-check.mjs`
+- **發布流程**:推送版本標籤會自動建立 GitHub Release,附上範例書庫 `Mdslide-library-v1.4.0.zip`(解壓後是「Mdslide書庫」資料夾)與最新的 `mdslide-check.mjs`
 - **測試與部署**:測試全部通過才部署;冒煙測試涵蓋 Chromium、Firefox、WebKit 與手機模擬;PR 會逐張比對官方範例的畫面;Dependabot 每月提醒更新 Actions
 
 ## 1.3.1 — 2026-11-08

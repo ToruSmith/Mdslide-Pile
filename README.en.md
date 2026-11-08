@@ -120,6 +120,8 @@ The single-file tool ([`dist/`](dist/)):
 - `檢查書庫.cmd`: double-click on Windows
 - `檢查書庫.command`: double-click on Mac
 
+Want a ready-made library? Download `Mdslide-library-v….zip` from [Releases](https://github.com/ToruSmith/Mdslide-Pile/releases/latest). The unzipped "Mdslide書庫" folder contains three topics, two example decks and the check tools above.
+
 ## Shortcuts
 
 | Key | Action | Key | Action |
