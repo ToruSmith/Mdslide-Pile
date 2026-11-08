@@ -1,10 +1,13 @@
 name: 發布新版
 
-# 推送版本標籤(例如 git tag v1.4.0 && git push origin v1.4.0)時:
-# 跑測試 → 組出範例書庫 → 打包 Mdslide書庫.zip → 建立 GitHub Release(說明取自 CHANGELOG)
+# 兩種觸發方式(結果相同):
+#   1. 在 GitHub 網頁:Actions → 發布新版 → Run workflow(版本號取自 package.json,會自動建立標籤)
+#   2. 推送版本標籤:git tag v1.4.0 && git push origin v1.4.0
+# 流程:跑測試 → 組出範例書庫 → 打包 Mdslide書庫.zip → 建立 GitHub Release(說明取自 CHANGELOG)
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -23,8 +26,13 @@ jobs:
           node scripts/check.mjs content
           node scripts/bundle-check.mjs
           git diff --exit-code dist/
-      - name: 標籤與版本號一致
-        run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
+      - name: 決定版本標籤
+        run: |
+          TAG="v$(node -p "require('./package.json').version")"
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "$TAG" ]; then
+            echo "標籤 $GITHUB_REF_NAME 與 package.json 的 $TAG 不一致"; exit 1
+          fi
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
       - name: 組出範例書庫並打包
         run: |
           node scripts/build-starter.mjs build/Mdslide書庫
@@ -32,10 +40,10 @@ jobs:
           cd build && python3 -m zipfile -c Mdslide書庫.zip Mdslide書庫/
       - name: 從 CHANGELOG 取出這一版的說明
         run: |
-          v="${GITHUB_REF_NAME#v}"
+          v="${TAG#v}"
           awk -v v="$v" '$0 ~ "^## "v" " {on=1; next} /^## / {on=0} on' CHANGELOG.md > build/notes.md
           test -s build/notes.md
       - name: 建立 Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" build/Mdslide書庫.zip dist/mdslide-check.mjs --title "$GITHUB_REF_NAME" --notes-file build/notes.md
+        run: gh release create "$TAG" build/Mdslide書庫.zip dist/mdslide-check.mjs --title "$TAG" --notes-file build/notes.md --target "$GITHUB_SHA"
