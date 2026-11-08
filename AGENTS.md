@@ -61,6 +61,7 @@ scripts/
   build-catalog.mjs      產生 catalog.json 與 shell-manifest.js(部署時執行)
   shell-files.mjs        網站本身的檔案清單與雜湊(給 sw.js)
   check.mjs              檢查資料夾是否符合規則(命令列)
+  new-deck.mjs           建立新簡報骨架(內容文字在 locale 的 scaffold.*)
   bundle-check.mjs       產生 dist/mdslide-check.mjs 單檔版
   node-source.mjs        Node 版資料來源
 dist/                    自動產生的單檔檢查工具與雙擊捷徑(不要手動修改)
@@ -100,6 +101,7 @@ tests/                   node:test 單元測試;smoke/smoke.py 是瀏覽器冒�
 ```bash
 node --test tests/*.test.mjs          # 單元測試
 node scripts/check.mjs content        # 檢查內建書庫
+node scripts/new-deck.mjs <資料夾>     # 建立新簡報骨架
 node scripts/build-catalog.mjs        # 產生 catalog.json(倉庫模式需要)
 python3 -m http.server 8000           # 開 http://localhost:8000
 ```

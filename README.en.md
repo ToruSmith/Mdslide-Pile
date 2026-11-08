@@ -161,6 +161,7 @@ All you need is Node 18 or later and any static server; no `npm install`:
 node --test tests/*.test.mjs
 node scripts/build-catalog.mjs
 python3 -m http.server 8000
+node scripts/new-deck.mjs content/02-work/2026-11-Q4-update   # create a new deck skeleton
 ```
 
-See [AGENTS.md](AGENTS.md) for details. Pushing to `main` deploys to GitHub Pages automatically (the first time, set Settings → Pages → Source to **GitHub Actions**).
+See [AGENTS.md](AGENTS.md) for details. Pushing to `main` deploys to GitHub Pages automatically once all tests pass (including browser tests in Chromium, Firefox and WebKit) (the first time, set Settings → Pages → Source to **GitHub Actions**).

@@ -351,7 +351,7 @@ These are not syntax rules; they are what makes a deck look professional:
 
 ### Steps
 
-1. Choose the deck folder name: `YYYY-MM-short-name`, inside the right topic.
+1. Choose the deck folder name: `YYYY-MM-short-name`, inside the right topic. Inside the repository, `node scripts/new-deck.mjs <folder> --title "Title"` creates `deck.yml`, three sections and starter slides in one go; then rewrite the content.
 2. Write `deck.yml` first: `mdslide: 1`, `title`, `subtitle`, `date`, `theme`, `lang`, `kicker` (with the data date for current events), `cover_notes`, and `sections` with title, color and `notes` for each section.
 3. Plan sections and slides per section using the table in section 6.
 4. One file per slide: `01-xxx.md`; add front matter only when needed.

@@ -158,6 +158,7 @@
 node --test tests/*.test.mjs
 node scripts/build-catalog.mjs
 python3 -m http.server 8000
+node scripts/new-deck.mjs content/02-工作報告/2026-11-Q4週報   # 建立新簡報骨架
 ```
 
-詳細請看 [AGENTS.md](AGENTS.md)。推送到 `main` 後會自動部署到 GitHub Pages(第一次需要在 Settings → Pages 把 Source 設成 **GitHub Actions**)。
+詳細請看 [AGENTS.md](AGENTS.md)。推送到 `main` 後,測試(含 Chrome、Firefox、Safari 核心的瀏覽器測試)全部通過才會自動部署到 GitHub Pages(第一次需要在 Settings → Pages 把 Source 設成 **GitHub Actions**)。
