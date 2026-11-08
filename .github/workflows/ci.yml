@@ -34,7 +34,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - name: 安裝無頭瀏覽器(只在 CI 臨時安裝,不寫進專案)
@@ -59,7 +59,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - name: 安裝無頭瀏覽器、Pillow 與中文字型(只在 CI 臨時安裝)
