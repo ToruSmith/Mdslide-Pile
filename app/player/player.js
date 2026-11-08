@@ -139,13 +139,17 @@ export class Player {
   bind() {
     this.handlers = {
       key: e => this.onKey(e),
-      resize: () => this.layout('resize'),
+      resize: () => { this.layout('resize'); if (this.viewing) this.el.frame.style.transform = this.fit().t; }, // 手機轉向時放大的投影片也要重新置中
+      touchStart: e => this.onTouchStart(e),
+      touchEnd: e => this.onTouchEnd(e),
       wheel: e => this.onWheel(e),
       msg: e => this.onPresenterMessage(e.data),
     };
     window.addEventListener('keydown', this.handlers.key);
     window.addEventListener('resize', this.handlers.resize);
     this.el.stage.addEventListener('wheel', this.handlers.wheel, { passive: false });
+    this.el.player.addEventListener('touchstart', this.handlers.touchStart, { passive: true });
+    this.el.player.addEventListener('touchend', this.handlers.touchEnd, { passive: true });
     this.channel?.addEventListener('message', this.handlers.msg);
     this.root.querySelector('.pbar').addEventListener('click', e => {
       const act = e.target.closest('[data-act]')?.dataset.act;
@@ -158,7 +162,7 @@ export class Player {
     });
     this.el.select.value = this.stage;
     this.el.select.addEventListener('change', () => { this.setStage(this.el.select.value); this.el.select.blur(); });
-    this.el.frame.addEventListener('click', e => { e.stopPropagation(); if (!e.target.closest('video, audio, iframe, a')) this.next(); });
+    this.el.frame.addEventListener('click', e => { e.stopPropagation(); if (Date.now() - (this.swipedAt || 0) < 400) return; if (!e.target.closest('video, audio, iframe, a')) this.next(); });
     this.el.viewer.addEventListener('click', () => this.closeViewer());
     this.el.help.addEventListener('click', e => {
       const m = e.target.closest('[data-motion]')?.dataset.motion;
@@ -450,9 +454,34 @@ export class Player {
     this.toastTimer = setTimeout(() => el.classList.remove('on'), 1600);
   }
 
+  // ---------------- 觸控(手機、平板) ----------------
+  // 左右滑 = 上一張 / 下一張;沒放大時上下滑 = 換章節。點一下仍然是原本的點擊。
+  onTouchStart(e) {
+    if (e.touches.length !== 1 || e.target.closest('.pbar, .help-panel, .issues, video, audio, iframe, select')) { this.touch = null; return; }
+    const p = e.touches[0];
+    this.touch = { x: p.clientX, y: p.clientY, at: Date.now() };
+  }
+
+  onTouchEnd(e) {
+    const s = this.touch;
+    this.touch = null;
+    if (!s || e.changedTouches.length !== 1 || Date.now() - s.at > 800) return;
+    const p = e.changedTouches[0];
+    const dx = p.clientX - s.x, dy = p.clientY - s.y;
+    const min = Math.max(40, Math.min(window.innerWidth, window.innerHeight) * 0.08);
+    if (Math.abs(dx) >= min && Math.abs(dx) > Math.abs(dy) * 1.3) {
+      this.swipedAt = Date.now();
+      dx < 0 ? this.next() : this.prev();
+    } else if (!this.viewing && Math.abs(dy) >= min && Math.abs(dy) > Math.abs(dx) * 1.3) {
+      this.swipedAt = Date.now();
+      this.setSection(this.cur + (dy < 0 ? 1 : -1));
+    }
+  }
+
   // ---------------- 放大檢視 ----------------
   fit() {
-    const sc = Math.min(window.innerWidth * 0.92 / 1280, (window.innerHeight - 96) / 720);
+    const pad = window.innerHeight < 500 ? 24 : 96; // 手機橫放時高度很小,少留一點邊
+    const sc = Math.min(window.innerWidth * 0.92 / 1280, (window.innerHeight - pad) / 720);
     return { sc, t: `translate(${(window.innerWidth - 1280 * sc) / 2}px, ${(window.innerHeight - 720 * sc) / 2 - 6}px) scale(${sc})` };
   }
 

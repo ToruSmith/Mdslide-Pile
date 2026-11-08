@@ -120,7 +120,7 @@ body.dragging::after { content: attr(data-drop); position: fixed; inset: 16px; z
 .player { position: fixed; inset: 0; overflow: hidden; background: radial-gradient(ellipse at 50% 45%, var(--bg) 40%, var(--bg-deep)); }
 .player::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 50%, transparent 55%, var(--vignette)); z-index: 1; }
 [data-theme="ink"] .player { background: radial-gradient(ellipse at 50% 38%, #1b1f2a 0%, var(--bg) 55%, var(--bg-deep)); }
-.stage { position: absolute; inset: 0; perspective: 1600px; perspective-origin: 50% 42%; }
+.stage { touch-action: pinch-zoom; position: absolute; inset: 0; perspective: 1600px; perspective-origin: 50% 42%; }
 .world { position: absolute; left: 50%; top: 53%; transform-style: preserve-3d; }
 .card { position: absolute; width: 288px; height: 162px; left: -144px; top: -81px; border-radius: 6px; overflow: hidden; cursor: pointer; background: var(--slide-bg);
   box-shadow: 0 1px 2px rgb(var(--shadow) / .12), 0 10px 28px rgb(var(--shadow) / .16); backface-visibility: hidden; outline: 3px solid transparent; outline-offset: 4px; transition: outline-color .25s; }
@@ -241,7 +241,10 @@ body.dragging::after { content: attr(data-drop); position: fixed; inset: 16px; z
   .topbar nav a { white-space: nowrap; padding: 6px 8px; font-size: 13px; }
   .deck-name { display: none; }
   .sec-name { font-size: 17px; }
-  .ptools .pbtn[data-act="help"] { display: none; }
+  /* 手機只留播放需要的按鈕;檢查與匯出請用電腦 */
+  .ptools .pbtn[data-act="help"], .ptools .pbtn[data-act="check"], .ptools .pbtn[data-act="export"] { display: none; }
+  .pbtn.back { white-space: nowrap; }
+  .stage-select { max-width: 120px; }
   .home { padding: 32px 20px 60px; }
   .hero { grid-template-columns: 1fr; }
   .hero-art { height: 220px; }
@@ -252,6 +255,17 @@ body.dragging::after { content: attr(data-drop); position: fixed; inset: 16px; z
   .tabs { display: none; }
   .hint { display: none; }
   .presenter { grid-template-columns: 1fr; overflow: auto; }
+}
+
+/* 很窄的手機直放:標題讓給按鈕(章節名稱在卡片上看得到) */
+@media (max-width: 480px) {
+  .ptitle { display: none; }
+  .pbar { grid-template-columns: auto 1fr; gap: 10px; }
+  .ptools { justify-self: end; }
+}
+/* 手機橫放:放大時把進度條收起來,讓投影片用滿高度 */
+@media (max-height: 500px) {
+  .player.viewing .pfoot { opacity: 0; }
 }
 
 /* 匯出對話框(沿用說明面板的外框) */

@@ -59,6 +59,20 @@ def main():
         assert q.locator('.frame .slide').count() == 1, '匯出的 HTML 無法放大投影片'
         offline.close()
 
+        # 手機:左右滑換頁(TouchEvent 建構子只有 Chromium 桌面版能用,其他引擎略過)
+        if ENGINE == 'chromium':
+            mob = browser.new_context(**p.devices['iPhone 13'])
+            m = mob.new_page()
+            m.on('pageerror', lambda e: errors.append(f'mobile pageerror: {e}'))
+            m.goto(page.url.rsplit('/', 1)[0] + '/1'); m.wait_for_timeout(2000)
+            m.evaluate("""() => { const el = document.querySelector('.stage'); const mk = x => new Touch({ identifier: 1, target: el, clientX: x, clientY: 400 });
+              el.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, touches: [mk(300)], changedTouches: [mk(300)] }));
+              el.dispatchEvent(new TouchEvent('touchend', { bubbles: true, touches: [], changedTouches: [mk(60)] })); }""")
+            m.wait_for_timeout(800)
+            assert m.url.endswith('/2'), f'手機左滑沒有換到下一張:{m.url}'
+            assert m.evaluate("document.querySelector('.pbar').scrollWidth <= innerWidth"), '手機工具列超出畫面'
+            mob.close()
+
         # 連不上網路時打開內建範例:顯示看得懂的提示,不是「Failed to fetch」
         net = browser.new_context()
         r = net.new_page()

@@ -18,6 +18,7 @@ Write slides in Markdown, group them into sections with folders, and play them a
 - **Over a dozen layouts**: split, full-bleed, quote, big number, stat cards, timeline, columns, automatic agenda, bar and line charts, and more.
 - **Presenting tools**: step-by-step reveal, presenter view (notes, next slide, timer), black screen, full screen, clicker support, PDF export, and export to a single HTML file that plays offline with a double-click.
 - **Live reload**: folders opened in Chrome / Edge update on screen as soon as you save a Markdown file (or press `R`).
+- **Phones and tablets**: swipe left/right to change slides and up/down to change sections; zoomed slides re-center when you rotate.
 - **Motion preference**: reduced transitions when the system asks for reduced motion; switch between "Full" and "Reduced" in the help panel (`?`).
 - **Media**: local images and video; YouTube, Bilibili, Google Drive and Vimeo embeds.
 - **Works offline**: after one visit, the site plays local decks without a network.
