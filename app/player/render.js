@@ -47,11 +47,15 @@ export function renderSlide(slide, ctx) {
 
   const showFoot = meta.footer !== false && !['title', 'section', 'end'].includes(layout);
   const sec = section.title || '';
-  const foot = showFoot ? `<div class="foot"><span>${esc(sec || deck.title)}</span><span class="page">${ctx.globalIndex + 1} / ${ctx.total}</span></div>` : '';
+  const brand = deck.brand || {};
+  const logo = brand.logo ? `<img class="logo" data-media="${esc(resolveMediaPath(brand.logo, { projectPath: deck.path, filePath: deck.path + '/deck.yml' }))}" alt="">` : '';
+  const foot = showFoot ? `<div class="foot"><span class="foot-brand">${logo}${esc(brand.footer || sec || deck.title)}</span><span class="page">${ctx.globalIndex + 1} / ${ctx.total}</span></div>` : '';
+  // 品牌字型:只接受已驗證的字型名稱(library.js),接在主題字型前面
+  const fonts = (brand.fontDisplay ? `;--brand-display:${brand.fontDisplay},` : '') + (brand.fontBody ? `;--brand-body:${brand.fontBody},` : '');
   const bg = meta.background ? ` data-bg="${esc(resolveMediaPath(String(meta.background), pathCtx))}"` : '';
   inner = inner.replace(/<p>((?:資料來源|來源|資料截至|註|備考|Source|Sources|Data as of|Note)\s*[:：]?)/g, '<p class="source">$1'); // i18n-ok:語法關鍵字
   const extra = (layout === 'title' && deck.coverImage ? ' has-image' : '') + (meta.class ? ' ' + esc(meta.class) : '');
-  return `<div class="slide l-${layout}${extra}" lang="${esc(lang)}" style="--c:${esc(c)}"${bg}>${inner}${foot}</div>`;
+  return `<div class="slide l-${layout}${extra}" lang="${esc(lang)}" style="--c:${esc(c)}${esc(fonts)}"${bg}>${inner}${foot}</div>`;
 }
 
 function titleSlide(deck, ctx, image) {

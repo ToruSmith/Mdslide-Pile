@@ -84,3 +84,23 @@ test('各版型都能輸出且帶 l-<版型> class', () => {
     assert.match(render(l, '# x\n- y'), new RegExp(`class="slide l-${l}`));
   }
 });
+
+import { scanLibrary } from '../app/core/library.js';
+import { memorySource } from './helpers.mjs';
+
+test('brand:頁尾文字、標誌與字型', () => {
+  const d = { ...deck, brand: { logo: 'media/logo.svg', footer: 'ACME · 內部', fontDisplay: '"Inter"', fontBody: '' } };
+  const h = renderSlide({ layout: 'text', body: '# x', meta: {}, media: [], file: 'p/01-s/a.md', sec: 0, i: 0 }, { deck: d, mode: 'thumb', globalIndex: 0, total: 1 });
+  assert.match(h, /<span class="foot-brand"><img class="logo" data-media="p\/media\/logo\.svg" alt="">ACME · 內部<\/span>/);
+  assert.match(h, /--brand-display:&quot;Inter&quot;,/);
+  assert.ok(!h.includes('--brand-body'));
+});
+
+test('brand:不合法的字型名稱會回報並忽略', async () => {
+  const src = memorySource({ 'deck.yml': 'title: X\nbrand:\n  font_display: "x;}body{background:url(//evil)"\n  font_body: Inter, Noto Sans TC', '01-a/a.md': '# a' });
+  const lib = await scanLibrary(src);
+  const b = lib.topics[0].projects[0].brand;
+  assert.equal(b.fontDisplay, '');
+  assert.equal(b.fontBody, '"Inter", "Noto Sans TC"');
+  assert.equal(lib.issues.length, 1);
+});

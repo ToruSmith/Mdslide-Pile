@@ -92,6 +92,11 @@ end: Thank you                 # adds an automatic closing slide (optional)
 end_notes: Q&A                 # speaker notes for the closing slide
 cover_notes: |                 # speaker notes for the title slide
   Pause for three seconds first.
+brand:                         # branding (optional)
+  logo: media/logo.svg         # logo at the left of the footer on content slides (inside the deck folder)
+  footer: ACME · Internal      # footer text (replaces the section name)
+  font_display: Georgia        # heading font (a font name only; it must be installed)
+  font_body: Inter             # body font
 sections:                      # only overrides section properties; order always follows folder prefixes
   - folder: 01-problem
     title: "Problem: notes keep piling up"
@@ -101,6 +106,8 @@ sections:                      # only overrides section properties; order always
   - folder: 99-appendix
     hidden: true               # keep the files but do not play them
 ```
+
+`brand` fonts accept font names only (letters, digits, spaces, `-`, `_`, `.`; separate several with commas). No external fonts are downloaded, and for safety custom CSS files in a deck folder are not supported.
 
 Every field is optional. Defaults: the title comes from the folder name, section colors are assigned automatically, the theme is `paper` and the stage is `pile`.
 

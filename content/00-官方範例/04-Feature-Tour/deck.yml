@@ -8,6 +8,9 @@ event: Example deck
 date: 2026-11-08
 theme: paper
 tags: [example, english, feature tour]
+brand:
+  logo: media/logo.svg
+  footer: Mdslide Pile · Feature tour
 layout:
   stage: pile
 sections:

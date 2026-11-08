@@ -1056,8 +1056,24 @@ async function readProject(source, path, folder, topicId, issues) {
     accent: color(conf.accent, null, join(path, CONFIG.deck), issues) || safeColor(Array.isArray(conf.sections) && conf.sections[0]?.color) || '',
     coverImage: str(conf.cover_image || conf.coverImage),
     lang: detectDeckLang(conf.lang, conf.title, conf.subtitle, conf.kicker, folder, ...(Array.isArray(conf.sections) ? conf.sections.map(s => s && (s.title || s.folder)) : [])),
+    brand: readBrand(conf.brand, join(path, CONFIG.deck), issues),
     config: conf,
   };
+}
+
+/** 字型名稱白名單:只允許文字、數字、空白、連字號、底線、點(不能放引號、括號、url())。 */
+const FONT_NAME = /^[\p{L}\p{N} ._-]{1,60}$/u;
+
+/** deck.yml 的 brand 欄位:logo、footer、font_display、font_body。不合法的字型名稱會回報並忽略。 */
+function readBrand(b, path, issues) {
+  if (!b || typeof b !== 'object') return null;
+  const font = v => {
+    if (v == null || v === '') return '';
+    const names = String(v).split(',').map(s => s.trim()).filter(Boolean);
+    if (!names.length || names.some(n => !FONT_NAME.test(n))) { issues.push({ path, message: t('issue.brandFont', { value: v }) }); return ''; }
+    return names.map(n => `"${n}"`).join(', ');
+  };
+  return { logo: str(b.logo), footer: str(b.footer), fontDisplay: font(b.font_display), fontBody: font(b.font_body) };
 }
 
 const str = v => (v == null ? '' : String(v));
@@ -1282,6 +1298,9 @@ async function checkDeck(source, project) {
   }
   if (project.coverImage && !(await exists(source, resolveMediaPath(project.coverImage, { projectPath: project.path, filePath: project.path + '/deck.yml' })))) {
     problems.push({ path: project.path || t('check.deckFolder'), message: t('check.missingCover', { src: project.coverImage }) });
+  }
+  if (project.brand?.logo && !/^(https?:|data:)/.test(project.brand.logo) && !(await exists(source, resolveMediaPath(project.brand.logo, { projectPath: project.path, filePath: project.path + '/deck.yml' })))) {
+    problems.push({ path: project.path || t('check.deckFolder'), message: t('check.missingLogo', { src: project.brand.logo }) });
   }
   if (all.length > MAX_SLIDES) problems.push({ path: project.path || t('check.deckFolder'), message: t('check.tooMany', { n: all.length }) });
 
