@@ -2,12 +2,14 @@
 
 import { parseYaml, YamlError } from './yaml.js';
 import { classifyMedia } from './media.js';
+import { safeColor } from './color.js';
+import { t } from './i18n.js';
 
 /** 所有支援的版型。新增版型時,記得同步更新 製作專案指南.md 與 app/player/render.js。 */
 export const LAYOUTS = ['auto', 'text', 'center', 'split', 'split-left', 'full', 'quote', 'number', 'stats', 'timeline', 'columns', 'agenda', 'chart', 'title', 'section', 'end'];
 
 const MEDIA_LINE = /^\s*!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"([^"]*)")?\s*\)\s*$/;
-const NOTE_LINE = /^\s*(?:note|notes|備註|講者備註)\s*[:：]\s*(.*)$/i;
+const NOTE_LINE = /^\s*(?:note|notes|備註|講者備註)\s*[:：]\s*(.*)$/i; // i18n-ok:語法關鍵字,不是介面文字
 const META_LINE = /^\s*<!--\s*([\w-]+)\s*:\s*(.*?)\s*-->\s*$/;
 
 /**
@@ -24,7 +26,7 @@ export function parseSlideFile(text, { path }) {
   const fm = src.match(/^---\n([\s\S]*?)\n---[ \t]*(\n|$)/);
   if (fm) {
     try { fileMeta = parseYaml(fm[1]) || {}; }
-    catch (e) { issues.push({ path, message: `開頭設定(front matter)${e instanceof YamlError ? e.message : '無法解析'}` }); }
+    catch (e) { issues.push({ path, message: t('issue.frontMatter', { detail: e instanceof YamlError ? e.message : t('issue.frontMatterParse') }) }); }
     src = src.slice(fm[0].length);
   }
 
@@ -83,9 +85,14 @@ function parseSegment(seg, { path, index, fileMeta, issues }) {
   }
   const body = bodyLines.join('\n').replace(/^\n+|\n+$/g, '');
 
+  if (meta.color != null && !safeColor(meta.color)) {
+    issues.push({ path, message: t('issue.slideColor', { value: meta.color }) });
+    delete meta.color;
+  }
+
   let layout = String(meta.layout || 'auto').toLowerCase();
   if (!LAYOUTS.includes(layout)) {
-    issues.push({ path, message: `未知的版型「${layout}」,改用自動判斷。可用:${LAYOUTS.join(', ')}` });
+    issues.push({ path, message: t('issue.layout', { layout, list: LAYOUTS.join(', ') }) });
     layout = 'auto';
   }
   if (layout === 'auto') layout = autoLayout(body, media);

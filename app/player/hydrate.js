@@ -3,6 +3,7 @@
 
 import { isURL } from '../core/names.js';
 import { escapeHTML } from '../core/markdown.js';
+import { t } from '../core/i18n.js';
 
 export async function hydrate(root, source, { full = false } = {}) {
   const jobs = [];
@@ -13,6 +14,11 @@ export async function hydrate(root, source, { full = false } = {}) {
       if (el.tagName === 'IMG') { el.decoding = 'async'; el.src = url; el.onerror = () => missing(el, path); }
       else { el.preload = full ? 'auto' : 'metadata'; el.src = url; }
     }, () => missing(el, path)));
+  }
+  for (const el of root.querySelectorAll('img[data-thumb]:not([data-ready])')) {
+    el.dataset.ready = '1';
+    el.onerror = () => el.remove(); // 縮圖載入失敗(例如離線)就直接移除,露出預設底色
+    el.src = el.dataset.thumb;
   }
   const slides = root.matches?.('.slide[data-bg]') ? [root] : [...root.querySelectorAll('.slide[data-bg]:not([data-ready])')];
   for (const s of slides) {
@@ -41,7 +47,8 @@ function missing(el, path) {
   const fig = el.closest('figure');
   const box = document.createElement('div');
   box.className = 'missing';
-  box.innerHTML = `找不到素材<br><small>${escapeHTML(path)}</small>`;
+  const lang = el.closest('[lang]')?.getAttribute('lang'); // 依簡報語言,不是介面語言
+  box.innerHTML = `${escapeHTML(t('slide.missingMedia', null, lang))}<br><small>${escapeHTML(path)}</small>`;
   if (fig) { el.remove(); fig.append(box); } else el.replaceWith(box);
 }
 

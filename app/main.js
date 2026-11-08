@@ -6,19 +6,38 @@
 //   #/<書庫>/<主題>/<簡報>/<第幾張>
 //   #/presenter                講者視窗
 
-import { scanLibrary, loadDeck } from './core/library.js';
+import { scanLibrary, loadDeck, refreshProject } from './core/library.js';
 import { escapeHTML as esc } from './core/markdown.js';
 import { HttpSource, HandleSource, FileListSource, sourceFromDrop, canPickDirectory } from './sources/sources.js';
 import { listRecent, remember, getRecent, forget, ensurePermission } from './sources/store.js';
 import { renderLibrary } from './ui/library-view.js';
 import { Player } from './player/player.js';
+import { openExportDialog } from './player/export.js';
 import { startPresenter } from './player/presenter.js';
 import { applyTheme } from './player/themes.js';
+import { t, setLang, getLang, normalizeLang } from './core/i18n.js';
 
-export const VERSION = '1.2.0';
+export const VERSION = '1.3.0';
 const REPO_URL = 'https://github.com/ToruSmith/Mdslide-Pile';
 
 const app = document.getElementById('app');
+
+// ---------------- 介面語言 ----------------
+// 順序:使用者選擇(localStorage)→ 瀏覽器語言(zh 開頭 = 繁中,其他 = 英文)→ 繁中
+const LANG_KEY = 'mdslide-lang';
+function pickLang() {
+  let saved = null;
+  try { saved = normalizeLang(localStorage.getItem(LANG_KEY)); } catch { /* 隱私模式 */ }
+  if (saved) return saved;
+  const nav = navigator.language;
+  return nav ? (normalizeLang(nav) === 'zh-Hant' ? 'zh-Hant' : 'en') : 'zh-Hant';
+}
+function applyLang(lang) {
+  setLang(lang);
+  document.documentElement.lang = getLang();
+  document.body.dataset.drop = t('drop.hint');
+}
+applyLang(pickLang());
 const state = { sources: new Map(), libs: new Map(), player: null, playerKey: '', cleanup: null, session: null };
 
 // ---------------- 路由 ----------------
@@ -48,6 +67,8 @@ function leavePlayer() {
   state.playerKey = '';
   state.cleanup?.();
   state.cleanup = null;
+  state.stopWatch?.();
+  state.stopWatch = null;
 }
 
 // ---------------- 資料來源 ----------------
@@ -58,11 +79,11 @@ async function getSource(key) {
   else if (key === 'session') src = state.session;
   else if (key.startsWith('local/')) {
     const rec = await getRecent(key.slice(6));
-    if (!rec) throw new UserError('找不到這個書庫的紀錄,請重新開啟資料夾。');
+    if (!rec) throw new UserError(t('err.noRecord'));
     if (!(await ensurePermission(rec.handle))) return { needsPermission: rec };
     src = new HandleSource(rec.handle, rec.id);
   }
-  if (!src) throw new UserError('這次開啟的資料夾已經失效(重新整理頁面後需要再選一次)。');
+  if (!src) throw new UserError(t('err.sessionGone'));
   state.sources.set(key, src);
   return src;
 }
@@ -79,24 +100,26 @@ function header(active = '') {
   return `<header class="topbar">
     <a class="brand" href="#/"><span class="logo"><i></i><i></i><i></i></span>Mdslide Pile</a>
     <nav>
-      <a href="#/repo" class="${active === 'repo' ? 'on' : ''}">內建範例</a>
-      <a href="#/" class="${active === 'home' ? 'on' : ''}">我的書庫</a>
+      <a href="#/repo" class="${active === 'repo' ? 'on' : ''}">${t('nav.repo')}</a>
+      <a href="#/" class="${active === 'home' ? 'on' : ''}">${t('nav.home')}</a>
       <a href="${REPO_URL}" target="_blank" rel="noopener">GitHub</a>
+      <button class="lang-toggle" aria-label="${esc(t('lang.label'))}" title="${esc(t('lang.label'))}"><b class="${getLang() === 'zh-Hant' ? 'on' : ''}">${t('lang.zhShort')}</b> / <b class="${getLang() === 'en' ? 'on' : ''}">EN</b></button>
     </nav>
   </header>`;
 }
 
-function loading(msg = '讀取中…') {
+function loading(msg = t('loading')) {
   app.innerHTML = `<div class="loading"><div class="spinner"><i></i><i></i><i></i></div><p>${esc(msg)}</p></div>`;
 }
 
 function showError(err) {
   console.error(err);
-  app.innerHTML = `${header()}<div class="error-box"><h2>出了點問題</h2><p>${esc(err instanceof UserError ? err.message : (err.message || String(err)))}</p><a class="btn" href="#/">回首頁</a></div>`;
+  app.innerHTML = `${header()}<div class="error-box"><h2>${t('err.title')}</h2><p>${esc(err instanceof UserError ? err.message : (err.message || String(err)))}</p><a class="btn" href="#/">${t('nav.backHome')}</a></div>`;
 }
 
 async function home() {
   applyTheme('paper');
+  document.title = t('doc.title');
   const recent = await listRecent();
   let repoOK = true;
   try { await getSource('repo'); } catch { repoOK = false; }
@@ -105,25 +128,25 @@ async function home() {
     <main class="home">
       <section class="hero">
         <div class="hero-text">
-          <div class="eyebrow">把資料夾變成會動的簡報</div>
-          <h1>網站是遊戲機,<br>你的資料夾是遊戲片。</h1>
-          <p>簡報檔案留在你的電腦或隨身碟裡,這裡只負責播放。不用安裝、不用上傳。</p>
+          <div class="eyebrow">${t('home.eyebrow')}</div>
+          <h1>${t('home.title')}</h1>
+          <p>${t('home.lead')}</p>
           <div class="actions">
-            <button class="btn primary open-folder">開啟本機資料夾</button>
-            ${repoOK ? '<a class="btn ghost" href="#/repo">看內建範例</a>' : ''}
+            <button class="btn primary open-folder">${t('home.open')}</button>
+            ${repoOK ? `<a class="btn ghost" href="#/repo">${t('home.repo')}</a>` : ''}
           </div>
-          <p class="small">${canPickDirectory() ? '也可以直接把資料夾拖進這個視窗。Chrome / Edge 會記住你開過的書庫。' : '也可以直接把資料夾拖進這個視窗。這個瀏覽器無法記住資料夾,重新整理後需要再選一次;用 Chrome 或 Edge 體驗最好。'}</p>
+          <p class="small">${canPickDirectory() ? t('home.tipPicker') : t('home.tipNoPicker')}</p>
         </div>
         <div class="hero-art" aria-hidden="true">${Array.from({ length: 9 }, (_, i) => `<i style="--i:${i}"></i>`).join('')}</div>
       </section>
-      ${recent.length ? `<section class="recent"><h2>最近開啟的書庫</h2><ul>${recent.map(r => `
-        <li><a href="#/local/${r.id}"><b>${esc(r.name)}</b><small>${new Date(r.lastOpened).toLocaleString('zh-TW', { dateStyle: 'medium', timeStyle: 'short' })}</small></a><button class="forget" data-id="${r.id}" title="從清單移除(不會刪除檔案)">×</button></li>`).join('')}</ul></section>` : ''}
+      ${recent.length ? `<section class="recent"><h2>${t('home.recent')}</h2><ul>${recent.map(r => `
+        <li><a href="#/local/${r.id}"><b>${esc(r.name)}</b><small>${new Date(r.lastOpened).toLocaleString(getLang() === 'en' ? 'en-US' : 'zh-TW', { dateStyle: 'medium', timeStyle: 'short' })}</small></a><button class="forget" data-id="${r.id}" title="${esc(t('home.forget'))}" aria-label="${esc(t('home.forget'))}">×</button></li>`).join('')}</ul></section>` : ''}
       <section class="howto">
-        <div><b>1</b><h3>準備資料夾</h3><p>一個資料夾一份簡報,子資料夾是章節,每個 .md 檔是一張投影片。</p></div>
-        <div><b>2</b><h3>開啟</h3><p>開啟整個書庫、一個主題,或單一簡報資料夾都可以,會自動判斷。</p></div>
-        <div><b>3</b><h3>上台</h3><p>Enter 放大、方向鍵翻頁、S 開講者視窗、P 存成 PDF。</p></div>
+        <div><b>1</b><h3>${t('home.step1.title')}</h3><p>${t('home.step1.text')}</p></div>
+        <div><b>2</b><h3>${t('home.step2.title')}</h3><p>${t('home.step2.text')}</p></div>
+        <div><b>3</b><h3>${t('home.step3.title')}</h3><p>${t('home.step3.text')}</p></div>
       </section>
-      <p class="foot-note">規則說明:<a href="${REPO_URL}/blob/main/製作專案指南.md" target="_blank" rel="noopener">製作專案指南.md</a> · v${VERSION}</p>
+      <p class="foot-note">${t('home.rules')}<a href="${REPO_URL}/blob/main/${t('home.guidePath')}" target="_blank" rel="noopener">${t('home.guideName')}</a> · v${VERSION}</p>
       <input type="file" class="dir-input" webkitdirectory directory multiple hidden>
     </main>`;
 
@@ -162,7 +185,7 @@ async function useSession(source) {
 }
 
 async function showLibrary(key) {
-  loading('讀取書庫目錄…');
+  loading(t('loading.library'));
   try {
     const source = await getSource(key);
     if (source.needsPermission) return permissionScreen(source.needsPermission);
@@ -170,14 +193,14 @@ async function showLibrary(key) {
     const urlKey = key;
     if (lib.kind === 'deck' && lib.topics[0]?.projects.length === 1) {
       // 開的是單一簡報資料夾:直接進播放器
-      const t = lib.topics[0], p = t.projects[0];
-      location.replace(`#/${urlKey}/${encodeURIComponent(t.id)}/${encodeURIComponent(p.id)}`);
+      const tp = lib.topics[0], p = tp.projects[0];
+      location.replace(`#/${urlKey}/${encodeURIComponent(tp.id)}/${encodeURIComponent(p.id)}`);
       return;
     }
     state.cleanup = renderLibrary(app, {
       lib, source, sourceKey: urlKey.split('/').map(encodeURIComponent).join('/'),
       header: header(key === 'repo' ? 'repo' : 'home'),
-      onOpen: (t, p) => { location.hash = `#/${urlKey}/${encodeURIComponent(t)}/${encodeURIComponent(p)}`; },
+      onOpen: (topic, p) => { location.hash = `#/${urlKey}/${encodeURIComponent(topic)}/${encodeURIComponent(p)}`; },
       onRefresh: key === 'repo' ? null : () => { source.refresh?.(); state.libs.delete(key); showLibrary(key); },
     });
     document.title = `${lib.title} · Mdslide Pile`;
@@ -185,35 +208,65 @@ async function showLibrary(key) {
 }
 
 function permissionScreen(rec) {
-  app.innerHTML = `${header('home')}<div class="error-box"><h2>重新連線「${esc(rec.name)}」</h2><p>為了保護你的檔案,瀏覽器每次重新開啟都需要再確認一次讀取權限。<br>如果是隨身碟,請先確認已經插上。</p><button class="btn primary grant">允許讀取</button> <a class="btn ghost" href="#/">回首頁</a></div>`;
+  app.innerHTML = `${header('home')}<div class="error-box"><h2>${t('perm.title', { name: esc(rec.name) })}</h2><p>${t('perm.text')}</p><button class="btn primary grant">${t('perm.grant')}</button> <a class="btn ghost" href="#/">${t('nav.backHome')}</a></div>`;
   app.querySelector('.grant').onclick = async () => {
     try {
       if (await ensurePermission(rec.handle, true)) { await remember(rec.handle); route(); }
-    } catch (e) { showError(new UserError('無法讀取這個資料夾,可能已被移動或隨身碟未插上。')); }
+    } catch (e) { showError(new UserError(t('err.cannotRead'))); }
   };
 }
 
 async function openDeck(key, topicId, projectId, start) {
-  loading('讀取簡報…');
+  loading(t('loading.deck'));
   try {
     const source = await getSource(key);
     if (source.needsPermission) return permissionScreen(source.needsPermission);
     const lib = await getLibrary(key, source);
-    const project = lib.topics.find(t => t.id === topicId)?.projects.find(p => p.id === projectId);
-    if (!project) throw new UserError('找不到這份簡報,可能已經改名或移除。');
+    const project = lib.topics.find(tp => tp.id === topicId)?.projects.find(p => p.id === projectId);
+    if (!project) throw new UserError(t('err.noDeck'));
     const deck = await loadDeck(source, project);
-    if (!deck.sections.length) throw new UserError('這份簡報裡沒有投影片。');
+    if (!deck.sections.length) throw new UserError(t('err.emptyDeck'));
     const base = `#/${key.split('/').map(encodeURIComponent).join('/')}/${encodeURIComponent(topicId)}/${encodeURIComponent(projectId)}`;
     const backToLibrary = lib.kind === 'deck' ? '#/' : `#/${key}`;
     state.playerKey = `${key}/${topicId}/${projectId}`;
+    // 即時重新載入:只有 Chrome / Edge 的資料夾(HandleSource)偵測得到檔案變動
+    let current = project, busy = false;
+    const reload = source.kind === 'handle' ? async () => {
+      if (busy) return null;
+      busy = true;
+      try {
+        source.refresh();
+        state.libs.delete(key); // 回到目錄時重新讀取(標題可能改了)
+        current = await refreshProject(source, current);
+        return await loadDeck(source, current);
+      } finally { busy = false; }
+    } : null;
     state.player = new Player(app, {
-      deck, source, start, theme: deck.theme || lib.theme,
+      deck, source, start, theme: deck.theme || lib.theme, onReload: reload,
+      onExport: openExportDialog,
       onExit: () => { location.hash = backToLibrary; },
       onIndex: i => history.replaceState(null, '', `${base}/${i + 1}`),
     });
     document.title = `${deck.title} · Mdslide Pile`;
+    if (reload) {
+      const dirs = [...new Set([deck.path, ...deck.sections.map(s => s.path)])];
+      state.stopWatch = source.watch(dirs, async () => {
+        const next = await reload();
+        if (next && state.player) state.player.replaceDeck(next);
+      });
+    }
   } catch (e) { showError(e); }
 }
+
+// ---------------- 切換語言 ----------------
+document.addEventListener('click', e => {
+  if (!e.target.closest('.lang-toggle')) return;
+  const next = getLang() === 'zh-Hant' ? 'en' : 'zh-Hant';
+  try { localStorage.setItem(LANG_KEY, next); } catch { /* 隱私模式 */ }
+  applyLang(next);
+  state.libs.clear(); // 目錄裡的提醒訊息是讀取時產生的,換語言要重讀
+  route();
+});
 
 // ---------------- 拖放資料夾 ----------------
 window.addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('dragging'); });
@@ -224,7 +277,7 @@ window.addEventListener('drop', async e => {
   if (state.player) return;
   try {
     const src = await sourceFromDrop(e.dataTransfer);
-    if (src) useSession(src); else showError(new UserError('請拖入「資料夾」,不是單一檔案。'));
+    if (src) useSession(src); else showError(new UserError(t('err.dropFolder')));
   } catch (err) { showError(err); }
 });
 

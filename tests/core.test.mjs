@@ -54,7 +54,7 @@ test('markdown: 區塊與行內語法,並跳脫 HTML', () => {
   assert.match(h, /<td style="text-align:right">2<\/td>/);
   assert.match(h, /&lt;script&gt;/);
   assert.match(h, /第一行<br>第二行 <mark>亮<\/mark>/);
-  assert.match(h, /<pre data-lang="js"><code>const a = 1 &lt; 2<\/code><\/pre>/);
+  assert.match(h, /<pre data-lang="js"><code><span class="tk-k">const<\/span> a = <span class="tk-n">1<\/span> &lt; <span class="tk-n">2<\/span><\/code><\/pre>/);
 });
 
 test('slide: front matter、--- 拆張、備註、媒體、自動版型', () => {
@@ -178,4 +178,101 @@ test('library: 單一簡報資料夾(零設定)', async () => {
   const deck = await loadDeck(src, lib.topics[0].projects[0]);
   assert.equal(deck.title, '我的報告');
   assert.deepEqual(flatten(deck).map(s => s.title), ['我的報告', '開場', '你好', '結尾', '再見']);
+});
+
+test('markdown:網址可含成對括號', () => {
+  const h = renderMarkdown('[維基](https://en.wikipedia.org/wiki/Foo_(bar))');
+  assert.match(h, /href="https:\/\/en\.wikipedia\.org\/wiki\/Foo_\(bar\)"/);
+  assert.ok(!h.includes('</a>)'));
+});
+
+test('markdown:裸網址不做強調處理', () => {
+  assert.equal(renderMarkdown('https://a.com/x__y__z'), '<p>https://a.com/x__y__z</p>');
+});
+
+test('markdown:連結內可以放圖片', () => {
+  const h = renderMarkdown('[![x](a.png)](https://x.com)');
+  assert.match(h, /<a href="https:\/\/x\.com"[^>]*><img data-media="a\.png" alt="x"><\/a>/);
+});
+
+test('markdown:__ 粗體要在字詞邊界,* 維持原樣', () => {
+  assert.equal(renderMarkdown('snake__case__name'), '<p>snake__case__name</p>');
+  assert.equal(renderMarkdown('__粗體__ 與 **粗體**'), '<p><strong>粗體</strong> 與 <strong>粗體</strong></p>');
+});
+
+test('markdown:XSS 回歸', () => {
+  const cases = [
+    '<img src=x onerror=alert(1)>',
+    '<script>alert(1)</script>',
+    '[a](javascript:alert(1))',
+    '[a](JaVaScRiPt:alert(1))',
+    '[a](  javascript:alert(1) )',
+    '[a](data:text/html,<script>alert(1)</script>)',
+    '[a](vbscript:msgbox(1))',
+    '[a](" onmouseover="alert(1))',
+    '![x](" onerror="alert(1))',
+  ];
+  for (const c of cases) {
+    const h = renderMarkdown(c);
+    assert.ok(!/<script|<img src|href="\s*(javascript|vbscript|data):|\son\w+="/i.test(h), `${c} → ${h}`);
+  }
+  assert.match(renderMarkdown('[a](JaVaScRiPt:alert(1))'), /^<p><a href="#"[^>]*>a<\/a><\/p>$/);
+});
+
+import { safeColor } from '../app/core/color.js';
+import { renderSlide } from '../app/player/render.js';
+
+test('safeColor:白名單', () => {
+  for (const ok of ['#abc', '#a1b2c3', '#a1b2c3d4', 'red', 'Teal', 'rgb(1, 2, 3)', 'rgba(1,2,3,.5)', 'hsl(120deg 50% 40%)', 'hsl(120, 50%, 40%)']) assert.equal(safeColor(ok), ok, ok);
+  for (const bad of ['red;background:url(//evil/x)', 'url(x)', 'expression(alert(1))', '#ggg', '#abcd', 'var(--x)', 'rgb(1,2,3);x:y', '', null, 'a'.repeat(30)]) assert.equal(safeColor(bad), null, String(bad));
+});
+
+test('顏色注入:投影片 color 不合法會被移除並回報', () => {
+  const { slides, issues } = parseSlideFile('<!-- color: red;background:url(//evil/x) -->\n# x', { path: 'a.md' });
+  assert.equal(slides[0].meta.color, undefined);
+  assert.equal(issues.length, 1);
+  const deck = { title: '', path: '', sections: [{ title: '', color: 'red;x:url(y)', slides: [] }] };
+  const html = renderSlide({ layout: 'text', body: 'x', meta: { color: 'blue;background:url(//evil)' }, media: [], file: 'a', sec: 0, i: 0 }, { deck, mode: 'thumb', globalIndex: 0, total: 1 });
+  assert.ok(!html.includes('url('), html.slice(0, 120));
+});
+
+test('顏色注入:設定檔裡的顏色不合法會回報並改用預設', async () => {
+  const src = memorySource({
+    '_site.yml': 'title: x',
+    't/_topic.yml': 'color: "red;background:url(x)"',
+    't/p/deck.yml': 'title: P\naccent: "url(x)"\nsections:\n  - folder: 01-a\n    color: "#zzz"',
+    't/p/01-a/a.md': '# A',
+  });
+  const lib = await scanLibrary(src);
+  assert.ok(!lib.topics[0].color.includes('url'));
+  assert.equal(lib.topics[0].projects[0].accent, '');
+  assert.equal(lib.issues.length, 2);
+  const deck = await loadDeck(src, lib.topics[0].projects[0]);
+  assert.match(deck.sections[0].color, /^#[0-9a-f]{6}$/i);
+  assert.equal(deck.issues.length, 1);
+});
+
+import { highlight } from '../app/core/highlight.js';
+import { undefinedFootnotes } from '../app/core/markdown.js';
+
+test('腳註:依引用順序編號,定義放在最後,未定義顯示 ?', () => {
+  const h = renderMarkdown('第二[^b] 第一[^a] 再一次[^b] 不存在[^x]\n\n[^a]: 甲來源\n[^b]: 乙來源');
+  assert.match(h, /第二<sup class="fn">1<\/sup> 第一<sup class="fn">2<\/sup> 再一次<sup class="fn">1<\/sup> 不存在<sup class="fn missing">\?<\/sup>/);
+  assert.match(h, /<div class="footnotes"><p class="source"><sup>1<\/sup> 乙來源<\/p><p class="source"><sup>2<\/sup> 甲來源<\/p><\/div>$/);
+  assert.deepEqual(undefinedFootnotes('a[^1] b[^2] `c[^3]`\n[^1]: x'), ['2']);
+  assert.deepEqual(undefinedFootnotes('```\n[^z]\n```'), []);
+});
+
+test('程式碼上色:關鍵字、字串、註解、數字;HTML 一律跳脫', () => {
+  const h = highlight('const s = "<script>"; // 註解\nreturn 42', 'js');
+  assert.match(h, /<span class="tk-k">const<\/span>/);
+  assert.match(h, /<span class="tk-s">&quot;&lt;script&gt;&quot;<\/span>/);
+  assert.match(h, /<span class="tk-c">\/\/ 註解<\/span>/);
+  assert.match(h, /<span class="tk-n">42<\/span>/);
+  assert.ok(!h.includes('<script'));
+  for (const [lang, code, kw] of [['python', 'def f(): # x', 'def'], ['sql', 'SELECT * FROM t', 'SELECT'], ['bash', 'echo "hi"', 'echo'], ['json', '{"a": true}', 'true'], ['ts', 'interface A {}', 'interface']]) {
+    assert.match(highlight(code, lang), new RegExp(`<span class="tk-k">${kw}</span>`), lang);
+  }
+  assert.equal(highlight('<b>', 'unknown'), '&lt;b&gt;');
+  assert.match(renderMarkdown('```py\nx = 1 # <b>\n```'), /<pre data-lang="py"><code>x = <span class="tk-n">1<\/span> <span class="tk-c"># &lt;b&gt;<\/span><\/code><\/pre>/);
 });

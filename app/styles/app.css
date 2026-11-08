@@ -22,6 +22,9 @@ kbd { font: inherit; font-size: 12px; border: 1px solid var(--line); border-bott
 .logo i:nth-child(3) { background: var(--accent); }
 .topbar nav { display: flex; gap: 6px; }
 .topbar nav a { text-decoration: none; font-size: 14px; color: var(--muted); padding: 7px 12px; border-radius: 8px; }
+.lang-toggle { border: 1px solid var(--line); background: none; border-radius: 8px; padding: 6px 10px; margin-left: 6px; cursor: pointer; font-size: 13px; color: var(--muted); }
+.lang-toggle b { font-weight: 400; }
+.lang-toggle b.on { font-weight: 700; color: var(--ink); }
 .topbar nav a:hover, .topbar nav a.on { color: var(--ink); background: color-mix(in srgb, var(--line) 45%, transparent); }
 
 /* ---------- 首頁 ---------- */
@@ -110,7 +113,7 @@ kbd { font: inherit; font-size: 12px; border: 1px solid var(--line); border-bott
 .error-box { max-width: 560px; margin: 12vh auto; padding: 40px; text-align: center; background: var(--surface); border-radius: 16px; border: 1px solid var(--line); }
 .error-box h2 { font-family: var(--font-display); margin-bottom: 14px; }
 .error-box p { color: var(--muted); line-height: 1.8; margin-bottom: 24px; }
-body.dragging::after { content: "放開來開啟這個資料夾"; position: fixed; inset: 16px; z-index: 100; display: grid; place-items: center; font-size: 22px; color: var(--ink);
+body.dragging::after { content: attr(data-drop); position: fixed; inset: 16px; z-index: 100; display: grid; place-items: center; font-size: 22px; color: var(--ink);
   border: 3px dashed var(--accent); border-radius: 20px; background: color-mix(in srgb, var(--bg) 85%, transparent); pointer-events: none; }
 
 /* ---------- 播放器 ---------- */
@@ -160,6 +163,14 @@ body.dragging::after { content: "放開來開啟這個資料夾"; position: fixe
 .help-card dl { display: grid; grid-template-columns: auto 1fr; gap: 9px 20px; font-size: 14px; }
 .help-card dd { color: var(--muted); }
 .help-card p { margin-top: 18px; font-size: 13px; color: var(--muted); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.motion-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 13px; color: var(--muted); }
+.motion-row span { margin-right: 6px; }
+.motion-row button { border: 1px solid var(--line); background: none; border-radius: 999px; padding: 4px 12px; cursor: pointer; color: var(--muted); font-size: 13px; }
+.motion-row button.on { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+/* 鍵盤操作時的焦點框(滑鼠點擊不會出現) */
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.card:focus-visible { outline-color: var(--c, var(--accent)); }
 .toast { position: absolute; z-index: 45; left: 50%; bottom: 60px; transform: translate(-50%, 20px); background: var(--ink); color: var(--bg); padding: 9px 18px; border-radius: 999px; font-size: 14px; opacity: 0; transition: all .3s; pointer-events: none; }
 .toast.on { opacity: 1; transform: translate(-50%, 0); }
 
@@ -242,3 +253,9 @@ body.dragging::after { content: "放開來開啟這個資料夾"; position: fixe
   .hint { display: none; }
   .presenter { grid-template-columns: 1fr; overflow: auto; }
 }
+
+/* 匯出對話框(沿用說明面板的外框) */
+.export-panel .export-text { margin-top: 0; font-size: 14px; color: var(--muted); line-height: 1.6; }
+.export-panel .export-video { display: block; margin-top: 16px; font-size: 14px; cursor: pointer; }
+.export-panel .export-status { margin-top: 12px; font-size: 14px; color: var(--ink); }
+.export-panel .export-actions { margin-top: 20px; text-align: right; }

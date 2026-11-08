@@ -14,6 +14,8 @@
 import { parseYaml, YamlError } from './yaml.js';
 import { join, isHidden, isMarkdown, RESERVED_DIRS, splitOrder, byOrder } from './names.js';
 import { parseSlideFile } from './slide.js';
+import { safeColor } from './color.js';
+import { t, detectDeckLang } from './i18n.js';
 
 export const SCHEMA_VERSION = 1;
 export const PALETTE = ['#c0674a', '#5f8a64', '#4f73a6', '#b08a3a', '#8a5fa6', '#3f8f8f', '#b0566e', '#6b7a8f'];
@@ -77,7 +79,7 @@ export async function scanLibrary(source) {
   const issues = [];
   const kind = await detectRootKind(source);
   const rootEntries = await source.list('');
-  const label = source.label || '書庫';
+  const label = source.label || t('lib.defaultLabel');
 
   if (kind === 'deck') {
     const project = await readProject(source, '', label, '_', issues);
@@ -86,7 +88,7 @@ export async function scanLibrary(source) {
   if (kind === 'topic') {
     const conf = (await readYaml(source, CONFIG.topic, issues)) || {};
     const projects = await readProjects(source, '', rootEntries, conf, '_', issues);
-    const topic = makeTopic('_', '', { name: label, ...conf }, projects, 0);
+    const topic = makeTopic('_', '', { name: label, ...conf, color: color(conf.color, null, CONFIG.topic, issues) }, projects, 0);
     return finish({ kind, title: topic.title, description: topic.description, theme: conf.theme, topics: [topic] });
   }
 
@@ -97,7 +99,7 @@ export async function scanLibrary(source) {
     const entries = await listSafe(source, d.name);
     const conf = (await readYaml(source, join(d.name, CONFIG.topic), issues)) || {};
     const projects = await readProjects(source, d.name, entries, conf, d.name, issues);
-    return makeTopic(d.name, d.name, conf, projects, i);
+    return makeTopic(d.name, d.name, { ...conf, color: color(conf.color, null, join(d.name, CONFIG.topic), issues) }, projects, i);
   }));
   return finish({ kind, title: site.title || label, description: site.description || '', theme: site.theme, topics });
 
@@ -154,13 +156,43 @@ async function readProject(source, path, folder, topicId, issues) {
     event: str(conf.event),
     tags: Array.isArray(conf.tags) ? conf.tags.map(String) : [],
     theme: str(conf.theme),
-    accent: str(conf.accent || (Array.isArray(conf.sections) && conf.sections[0]?.color) || ''),
+    accent: color(conf.accent, null, join(path, CONFIG.deck), issues) || safeColor(Array.isArray(conf.sections) && conf.sections[0]?.color) || '',
     coverImage: str(conf.cover_image || conf.coverImage),
+    lang: detectDeckLang(conf.lang, conf.title, conf.subtitle, conf.kicker, folder, ...(Array.isArray(conf.sections) ? conf.sections.map(s => s && (s.title || s.folder)) : [])),
+    brand: readBrand(conf.brand, join(path, CONFIG.deck), issues),
     config: conf,
   };
 }
 
+/** 字型名稱白名單:只允許文字、數字、空白、連字號、底線、點(不能放引號、括號、url())。 */
+const FONT_NAME = /^[\p{L}\p{N} ._-]{1,60}$/u;
+
+/** deck.yml 的 brand 欄位:logo、footer、font_display、font_body。不合法的字型名稱會回報並忽略。 */
+function readBrand(b, path, issues) {
+  if (!b || typeof b !== 'object') return null;
+  const font = v => {
+    if (v == null || v === '') return '';
+    const names = String(v).split(',').map(s => s.trim()).filter(Boolean);
+    if (!names.length || names.some(n => !FONT_NAME.test(n))) { issues.push({ path, message: t('issue.brandFont', { value: v }) }); return ''; }
+    return names.map(n => `"${n}"`).join(', ');
+  };
+  return { logo: str(b.logo), footer: str(b.footer), fontDisplay: font(b.font_display), fontBody: font(b.font_body) };
+}
+
 const str = v => (v == null ? '' : String(v));
+
+/** 設定檔裡的顏色:不合法就回報並改用預設值。 */
+function color(value, fallback, path, issues) {
+  if (value == null || value === '') return fallback;
+  const c = safeColor(value);
+  if (!c) issues.push({ path, message: t('issue.color', { value }) });
+  return c || fallback;
+}
+
+/** 重新讀取一份簡報的 deck.yml(即時重新載入用)。 */
+export async function refreshProject(source, project) {
+  return readProject(source, project.path, project.folder, project.topicId, []);
+}
 
 /** 第 2 層:封面。只列出專案資料夾,必要時讀第一張投影片。 */
 export async function loadCover(source, project) {
@@ -206,17 +238,18 @@ export async function loadDeck(source, project) {
   for (const s of sections) {
     const c = confSections.find(x => x.folder === s.folder || x.folder === splitOrder(s.folder).label) || {};
     if (c.hidden) continue;
-    const texts = await Promise.all(s.files.map(f => limit(() => source.readText(f)).then(t => [f, t], () => [f, null])));
+    const texts = await Promise.all(s.files.map(f => limit(() => source.readText(f)).then(text => [f, text], () => [f, null])));
     const slides = [];
-    for (const [f, t] of texts) {
-      if (t == null) { issues.push({ path: f, message: '讀取失敗' }); continue; }
-      const r = parseSlideFile(t, { path: f });
+    for (const [f, text] of texts) {
+      if (text == null) { issues.push({ path: f, message: t('issue.readFailed') }); continue; }
+      const r = parseSlideFile(text, { path: f });
       issues.push(...r.issues);
       slides.push(...r.slides.filter(sl => !sl.meta.hidden));
     }
     const title = c.title || (s.folder ? splitOrder(s.folder).label : '');
-    const color = c.color || (s.folder ? PALETTE[colorIndex++ % PALETTE.length] : project.accent || PALETTE[PALETTE.length - 1]);
-    const section = { id: s.folder || '_intro', folder: s.folder, path: s.path, title, subtitle: str(c.subtitle), color, slides };
+    const auto = s.folder ? PALETTE[colorIndex++ % PALETTE.length] : project.accent || PALETTE[PALETTE.length - 1];
+    const secColor = color(c.color, auto, join(project.path, CONFIG.deck), issues);
+    const section = { id: s.folder || '_intro', folder: s.folder, path: s.path, title, subtitle: str(c.subtitle), color: secColor, slides };
     if (autoCovers && s.folder && sections.filter(x => x.folder).length > 1 && c.cover !== false) {
       slides.unshift({ file: s.path, index: -1, meta: {}, layout: 'section', body: '', notes: str(c.notes), media: [], title, auto: true });
     }
@@ -234,8 +267,8 @@ export async function loadDeck(source, project) {
     if (last) last.slides.push({ file: project.path, index: -1, meta: {}, layout: 'end', body: '', notes: str(conf.end_notes), media: [], title: String(conf.end), auto: true });
   }
 
-  if (!built.some(s => s.slides.some(sl => !sl.auto))) issues.push({ path: project.path, message: '這個資料夾裡沒有找到任何投影片(.md 檔)' });
-  if (conf.mdslide && Number(conf.mdslide) > SCHEMA_VERSION) issues.push({ path: join(project.path, CONFIG.deck), message: `此簡報需要較新版本的工具(mdslide: ${conf.mdslide})` });
+  if (!built.some(s => s.slides.some(sl => !sl.auto))) issues.push({ path: project.path, message: t('issue.noSlides') });
+  if (conf.mdslide && Number(conf.mdslide) > SCHEMA_VERSION) issues.push({ path: join(project.path, CONFIG.deck), message: t('issue.newerSchema', { version: conf.mdslide }) });
 
   const layout = typeof conf.layout === 'object' && conf.layout ? conf.layout : { stage: conf.layout };
   return {

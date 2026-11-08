@@ -57,3 +57,12 @@
   --font-display: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
   --bar: 0px;
 }
+
+/* 英文簡報:拉丁字型優先(只作用在 lang="en" 的投影片,中文簡報外觀不變;不載入外部字型) */
+.slide:lang(en) {
+  --font-display: Georgia, "Times New Roman", "Noto Serif TC", serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
+}
+[data-theme="slate"] .slide:lang(en) {
+  --font-display: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}

@@ -6,37 +6,38 @@ import { renderSlide } from '../player/render.js';
 import { hydrate } from '../player/hydrate.js';
 import { applyTheme } from '../player/themes.js';
 import { checkLibrary } from '../core/check.js';
+import { t } from '../core/i18n.js';
 import { openCheckPanel } from './check-view.js';
 
 const coverLimit = limiter(3);
 
 export function renderLibrary(root, { lib, source, sourceKey, onOpen, onRefresh, header }) {
   applyTheme(lib.theme || 'paper');
-  const total = lib.topics.reduce((n, t) => n + t.projects.length, 0);
+  const total = lib.topics.reduce((n, tp) => n + tp.projects.length, 0);
   root.innerHTML = `
     <div class="library">
       ${header}
       <div class="lib-head">
         <div>
-          <div class="eyebrow">${esc(sourceKey === 'repo' ? '內建書庫' : '本機書庫')} · ${lib.topics.length} 個主題 · ${total} 份簡報</div>
+          <div class="eyebrow">${esc(t('lib.eyebrow', { kind: t(sourceKey === 'repo' ? 'lib.repo' : 'lib.local'), topics: lib.topics.length, decks: total }))}</div>
           <h1>${esc(lib.title)}</h1>
           ${lib.description ? `<p class="desc">${esc(lib.description)}</p>` : ''}
         </div>
         <div class="lib-tools">
-          <input type="search" class="search" placeholder="搜尋簡報標題、標籤…">
-          <button class="btn ghost check" title="檢查所有簡報是否符合規則">✓ 檢查</button>
-          ${onRefresh ? '<button class="btn ghost refresh" title="重新讀取資料夾">↻ 重新整理</button>' : ''}
+          <input type="search" class="search" placeholder="${esc(t('lib.search'))}" aria-label="${esc(t('lib.search'))}">
+          <button class="btn ghost check" title="${esc(t('lib.checkTitle'))}">${esc(t('lib.check'))}</button>
+          ${onRefresh ? `<button class="btn ghost refresh" title="${esc(t('lib.refreshTitle'))}">${esc(t('lib.refresh'))}</button>` : ''}
         </div>
       </div>
-      ${lib.topics.length > 1 ? `<nav class="chips"><button class="chip on" data-topic="*">全部</button>${lib.topics.map(t => `<button class="chip" data-topic="${esc(t.id)}" style="--c:${esc(t.color)}">${esc(t.title)}<small>${t.projects.length}</small></button>`).join('')}</nav>` : ''}
-      ${lib.issues.length ? `<details class="lib-issues"><summary>⚠ ${lib.issues.length} 個設定檔問題</summary><ul>${lib.issues.map(i => `<li><code>${esc(i.path)}</code>${esc(i.message)}</li>`).join('')}</ul></details>` : ''}
+      ${lib.topics.length > 1 ? `<nav class="chips"><button class="chip on" data-topic="*">${esc(t('lib.all'))}</button>${lib.topics.map(tp => `<button class="chip" data-topic="${esc(tp.id)}" style="--c:${esc(tp.color)}">${esc(tp.title)}<small>${tp.projects.length}</small></button>`).join('')}</nav>` : ''}
+      ${lib.issues.length ? `<details class="lib-issues"><summary>${esc(t('lib.issues', { n: lib.issues.length }))}</summary><ul>${lib.issues.map(i => `<li><code>${esc(i.path)}</code>${esc(i.message)}</li>`).join('')}</ul></details>` : ''}
       <div class="topics">
-        ${lib.topics.map(t => `
-          <section class="topic" data-topic="${esc(t.id)}" style="--c:${esc(t.color)}">
-            ${lib.kind === 'library' ? `<header><h2><i></i>${esc(t.title)}</h2>${t.description ? `<p>${esc(t.description)}</p>` : ''}</header>` : ''}
+        ${lib.topics.map(tp => `
+          <section class="topic" data-topic="${esc(tp.id)}" style="--c:${esc(tp.color)}">
+            ${lib.kind === 'library' ? `<header><h2><i></i>${esc(tp.title)}</h2>${tp.description ? `<p>${esc(tp.description)}</p>` : ''}</header>` : ''}
             <div class="grid">
-              ${t.projects.map(p => `
-                <a class="deck-card" href="#/${sourceKey}/${encodeURIComponent(t.id)}/${encodeURIComponent(p.id)}" data-topic="${esc(t.id)}" data-project="${esc(p.id)}" data-search="${esc([p.title, p.subtitle, p.author, p.event, ...p.tags, t.title].join(' ').toLowerCase())}">
+              ${tp.projects.map(p => `
+                <a class="deck-card" href="#/${sourceKey}/${encodeURIComponent(tp.id)}/${encodeURIComponent(p.id)}" data-topic="${esc(tp.id)}" data-project="${esc(p.id)}" data-search="${esc([p.title, p.subtitle, p.author, p.event, ...p.tags, tp.title].join(' ').toLowerCase())}">
                   <div class="thumb"><div class="thumb-inner"></div><div class="shine"></div></div>
                   <div class="info">
                     <h3>${esc(p.title)}</h3>
@@ -44,14 +45,14 @@ export function renderLibrary(root, { lib, source, sourceKey, onOpen, onRefresh,
                     <div class="meta"><span>${esc(p.date || '')}</span><span class="count"></span></div>
                     ${p.tags.length ? `<div class="tags">${p.tags.map(x => `<span>#${esc(x)}</span>`).join('')}</div>` : ''}
                   </div>
-                </a>`).join('') || '<p class="empty">這個主題還沒有簡報</p>'}
+                </a>`).join('') || `<p class="empty">${esc(t('lib.empty'))}</p>`}
             </div>
           </section>`).join('')}
       </div>
     </div>`;
 
   const cards = [...root.querySelectorAll('.deck-card')];
-  const find = el => lib.topics.find(t => t.id === el.dataset.topic)?.projects.find(p => p.id === el.dataset.project);
+  const find = el => lib.topics.find(tp => tp.id === el.dataset.topic)?.projects.find(p => p.id === el.dataset.project);
 
   // 預設封面:用設定檔就能畫的標題頁,不必讀任何 MD
   for (const el of cards) {
@@ -67,7 +68,7 @@ export function renderLibrary(root, { lib, source, sourceKey, onOpen, onRefresh,
       io.unobserve(en.target);
       const el = en.target, p = find(el);
       coverLimit(() => loadCover(source, p)).then(info => {
-        el.querySelector('.count').textContent = info.sections ? `${info.sections} 章` : '';
+        el.querySelector('.count').textContent = info.sections ? t('lib.chapters', { n: info.sections }) : '';
         const inner = el.querySelector('.thumb-inner');
         if (info.firstSlide) inner.innerHTML = coverHTML(p, info.firstSlide);
         hydrate(inner, source);

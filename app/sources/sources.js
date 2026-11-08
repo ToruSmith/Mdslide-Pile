@@ -10,6 +10,7 @@
 // 本機來源讀到的清單都會快取:同一個資料夾只列一次,減少隨身碟讀取。
 
 const enc = p => p.split('/').map(encodeURIComponent).join('/');
+import { t } from '../core/i18n.js';
 
 /** 倉庫模式:讀 GitHub Pages 上的 content/,目錄清單來自建置時產生的 catalog.json。 */
 export class HttpSource {
@@ -17,11 +18,11 @@ export class HttpSource {
     this.kind = 'repo';
     this.base = base.replace(/\/?$/, '/');
     this.tree = catalog.tree;
-    this.label = catalog.title || '內建範例';
+    this.label = catalog.title || t('source.repoLabel');
   }
   static async open(base = 'content/', catalogURL = 'catalog.json') {
     const res = await fetch(catalogURL, { cache: 'no-cache' });
-    if (!res.ok) throw new Error('找不到 catalog.json');
+    if (!res.ok) throw new Error(t('source.noCatalog'));
     return new HttpSource(base, await res.json());
   }
   async list(path) {
@@ -87,6 +88,39 @@ export class HandleSource {
   }
   /** 重新整理:清掉快取,下次會重新讀資料夾。 */
   refresh() { this.listCache.clear(); this.dirCache = new Map([['', this.handle]]); }
+
+  /**
+   * 監看簡報資料夾:每隔一段時間比對 .md 與設定檔的修改時間(只讀檔案資訊,不讀內容),
+   * 以及子資料夾的增減;有變化就呼叫 onChange。分頁不在前景時暫停。回傳停止監看的函式。
+   */
+  watch(dirPaths, onChange, interval = 1500) {
+    let last = null, timer = null, stopped = false;
+    const snapshot = async () => {
+      const parts = [];
+      for (const p of dirPaths) {
+        let d;
+        try { d = await this.dir(p); } catch { parts.push(`${p}:gone`); continue; }
+        for await (const [name, h] of d.entries()) {
+          if (h.kind === 'directory') parts.push(`${p}/${name}/`);
+          else if (/\.(md|ya?ml)$/i.test(name)) { const f = await h.getFile(); parts.push(`${p}/${name}:${f.lastModified}:${f.size}`); }
+        }
+      }
+      return parts.sort().join('|');
+    };
+    const tick = async () => {
+      if (stopped) return;
+      if (typeof document === 'undefined' || !document.hidden) {
+        try {
+          const s = await snapshot();
+          if (last !== null && s !== last) await onChange();
+          last = s;
+        } catch { /* 隨身碟拔掉等情況:下次再試 */ }
+      }
+      if (!stopped) timer = setTimeout(tick, interval);
+    };
+    tick();
+    return () => { stopped = true; clearTimeout(timer); };
+  }
 }
 
 /** 本機模式(所有瀏覽器):<input webkitdirectory> 或拖放取得的檔案清單。只讀到檔名,內容等需要時才讀。 */
@@ -108,7 +142,7 @@ export class FileListSource {
         this.dirs.get(dir).set(parts[i], i === parts.length - 1 ? 'file' : 'dir');
       }
     }
-    this.label = root || '本機資料夾';
+    this.label = root || t('source.localLabel');
   }
   static fromInput(fileList) {
     return new FileListSource([...fileList].map(f => ({ file: f, path: f.webkitRelativePath || f.name })));

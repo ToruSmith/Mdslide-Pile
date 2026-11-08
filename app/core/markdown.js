@@ -1,8 +1,14 @@
 // 精簡 Markdown 轉 HTML,零依賴。只處理簡報會用到的語法,所有原始 HTML 一律跳脫(安全)。
 //
 // 區塊:標題、段落、清單(巢狀、有序、核取)、引言、程式碼區塊、表格、分隔線
-// 行內:**粗體** *斜體* ~~刪除~~ ==螢光== `程式碼` [連結](網址) ![圖](路徑)
+// 行內:**粗體** *斜體* ~~刪除~~ ==螢光== `程式碼` [連結](網址) ![圖](路徑) 腳註[^1]
+// 腳註定義:單獨一行 [^1]: 內容,會依引用順序編號,放在內容最後(小字)。
 // 與 GitHub 不同處:段落中的單一換行會保留成換行(簡報通常是逐行排版)。
+
+import { highlight } from './highlight.js';
+
+const FOOTNOTE_DEF = /^\[\^([^\]\s]+)\]:\s*(.*)$/;
+const FOOTNOTE_REF = /\[\^([^\]\s]+)\](?!:)/g;
 
 export function escapeHTML(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -15,8 +21,40 @@ const defaultImage = (src, alt) => `<img data-media="${escapeHTML(src)}" alt="${
  * @param {{ image?: (src: string, alt: string) => string }} [opts]
  */
 export function renderMarkdown(src, opts = {}) {
-  const ctx = { image: opts.image || defaultImage };
-  return renderBlocks(src.replace(/\r\n?/g, '\n').split('\n'), ctx);
+  const { body, defs } = splitFootnotes(src.replace(/\r\n?/g, '\n').split('\n'));
+  const ctx = { image: opts.image || defaultImage, notes: { defs, order: [] } };
+  let html = renderBlocks(body, ctx);
+  if (ctx.notes.order.length) {
+    html += '<div class="footnotes">' + ctx.notes.order.map((id, k) =>
+      `<p class="source"><sup>${k + 1}</sup> ${inline(defs.get(id), { image: ctx.image })}</p>`).join('') + '</div>';
+  }
+  return html;
+}
+
+/** 把腳註定義行([^id]: 內容)抽出來;程式碼區塊裡的不算。 */
+function splitFootnotes(lines) {
+  const defs = new Map(), body = [];
+  let fence = false;
+  for (const l of lines) {
+    if (/^\s*(```|~~~)/.test(l)) fence = !fence;
+    const m = !fence && l.match(FOOTNOTE_DEF);
+    if (m) defs.set(m[1], m[2]); else body.push(l);
+  }
+  return { body, defs };
+}
+
+/** 找出有引用但沒有定義的腳註(給檢查工具用)。 */
+export function undefinedFootnotes(src) {
+  const lines = String(src).replace(/\r\n?/g, '\n').split('\n');
+  const { body, defs } = splitFootnotes(lines);
+  const missing = new Set();
+  let fence = false;
+  for (const l of body) {
+    if (/^\s*(```|~~~)/.test(l)) { fence = !fence; continue; }
+    if (fence) continue;
+    for (const m of l.replace(/`[^`]*`/g, '').matchAll(FOOTNOTE_REF)) if (!defs.has(m[1])) missing.add(m[1]);
+  }
+  return [...missing];
 }
 
 export function renderInline(text, opts = {}) {
@@ -38,7 +76,7 @@ function renderBlocks(lines, ctx) {
       while (i < lines.length && !lines[i].trim().startsWith(fence[1])) body.push(lines[i++]);
       i++;
       const lang = fence[2] ? ` data-lang="${escapeHTML(fence[2])}"` : '';
-      html += `<pre${lang}><code>${escapeHTML(body.join('\n'))}</code></pre>`;
+      html += `<pre${lang}><code>${highlight(body.join('\n'), fence[2])}</code></pre>`; // highlight 會先跳脫 HTML
       continue;
     }
 
@@ -125,21 +163,40 @@ function cells(line) {
   return t.split(/(?<!\\)\|/).map(c => c.trim().replace(/\\\|/g, '|'));
 }
 
-function inline(text, ctx) {
-  const slots = [];
+// 網址可以含一層成對括號,例如 https://en.wikipedia.org/wiki/Foo_(bar)
+const URL_PART = '((?:[^()\\s<>]|\\([^()\\s<>]*\\))+)';
+const IMAGE_RE = new RegExp(`!\\[([^\\]]*)\\]\\(\\s*<?${URL_PART}>?(?:\\s+"[^"]*")?\\s*\\)`, 'g');
+const LINK_RE = new RegExp(`\\[((?:[^\\[\\]]|\\[[^\\]]*\\])+)\\]\\(\\s*<?${URL_PART}>?(?:\\s+"[^"]*")?\\s*\\)`, 'g');
+const BARE_URL_RE = /\bhttps?:\/\/[^\s<>\u0000]+/g;
+const SAFE_HREF = /^(https?:|mailto:|#|\.{0,2}\/)/i;
+
+/** slots 由巢狀呼叫共用,連結文字裡的圖片才不會變成 undefined。 */
+function inline(text, ctx, slots = []) {
   const keep = html => `\u0000${slots.push(html) - 1}\u0000`;
   let s = text;
   s = s.replace(/`([^`]+)`/g, (_, c) => keep(`<code>${escapeHTML(c)}</code>`));
-  s = s.replace(/!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g, (_, alt, src) => keep(ctx.image(src, alt)));
-  s = s.replace(/\[([^\]]+)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g, (_, label, href) => {
-    const safe = /^(https?:|mailto:|#|\.{0,2}\/)/i.test(href) || !/^[a-z]+:/i.test(href);
-    return keep(`<a href="${safe ? escapeHTML(href) : '#'}" target="_blank" rel="noopener">${inline(label, ctx)}</a>`);
+  if (ctx.notes) {
+    s = s.replace(FOOTNOTE_REF, (_, id) => {
+      if (!ctx.notes.defs.has(id)) return keep('<sup class="fn missing">?</sup>');
+      let n = ctx.notes.order.indexOf(id) + 1;
+      if (!n) n = ctx.notes.order.push(id);
+      return keep(`<sup class="fn">${n}</sup>`);
+    });
+  }
+  s = s.replace(IMAGE_RE, (_, alt, src) => keep(ctx.image(src, alt)));
+  s = s.replace(LINK_RE, (_, label, href) => {
+    const safe = SAFE_HREF.test(href) || !/^[a-z][a-z0-9+.-]*:/i.test(href);
+    return keep(`<a href="${safe ? escapeHTML(href) : '#'}" target="_blank" rel="noopener">${inline(label, ctx, slots)}</a>`);
   });
+  s = s.replace(BARE_URL_RE, url => keep(escapeHTML(url))); // 裸網址不做粗體、斜體處理
   s = escapeHTML(s);
+  const W = '\\p{L}\\p{N}_';
   s = s.replace(/\*\*(?=\S)([\s\S]*?\S)\*\*/g, '<strong>$1</strong>')
-       .replace(/__(?=\S)([\s\S]*?\S)__/g, '<strong>$1</strong>')
+       .replace(new RegExp(`(^|[^${W}])__(?=\\S)([\\s\\S]*?\\S)__(?![${W}])`, 'gu'), '$1<strong>$2</strong>')
        .replace(/(^|[^*])\*(?=\S)([^*]*?\S)\*(?!\*)/g, '$1<em>$2</em>')
        .replace(/~~(?=\S)([\s\S]*?\S)~~/g, '<del>$1</del>')
        .replace(/==(?=\S)([\s\S]*?\S)==/g, '<mark>$1</mark>');
-  return s.replace(/\u0000(\d+)\u0000/g, (_, n) => slots[n]);
+  // 還原佔位(可能有多層)
+  for (let i = 0; i < 5 && s.includes('\u0000'); i++) s = s.replace(/\u0000(\d+)\u0000/g, (_, n) => slots[n]);
+  return s;
 }

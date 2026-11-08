@@ -1,0 +1,13 @@
+{
+  "name": "Mdslide Pile",
+  "short_name": "Mdslide",
+  "description": "Folders of Markdown, played as a 3D pile of slides. / 把資料夾變成會動的簡報。",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3eee4",
+  "theme_color": "#f3eee4",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
