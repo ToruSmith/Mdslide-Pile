@@ -85,6 +85,8 @@ export const LOCALE_EN = {
   'loading.library': 'Reading the library…',
   'loading.deck': 'Loading the deck…',
   'err.title': 'Something went wrong',
+  'err.offlineTitle': 'You are offline',
+  'err.offline': 'The built-in examples and repository decks need a connection. Decks in folders on your computer or USB drive work without internet: go back home and choose a folder.',
   'err.noRecord': 'This library is no longer remembered. Please open the folder again.',
   'err.sessionGone': 'The folder you opened is no longer available (after a reload you need to choose it again).',
   'err.cannotRead': 'Cannot read this folder. It may have been moved, or the USB drive is not connected.',

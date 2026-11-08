@@ -2,19 +2,20 @@
 
 需要:pip install playwright && python -m playwright install chromium
 用法:先在倉庫根目錄執行 node scripts/build-catalog.mjs 並啟動靜態伺服器,再執行
-      python tests/smoke/smoke.py http://localhost:8000/
+      python tests/smoke/smoke.py http://localhost:8000/ [chromium|firefox|webkit]
 """
 import sys
 from playwright.sync_api import sync_playwright
 
 BASE = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8000/'
+ENGINE = sys.argv[2] if len(sys.argv) > 2 else 'chromium'
 # 外部網站(YouTube 縮圖等)在 CI 或離線時可能連不上,不算錯誤
 IGNORE = ('ytimg.com', 'youtube', 'bilibili', 'ERR_TUNNEL', 'ERR_NAME_NOT_RESOLVED', 'ERR_INTERNET_DISCONNECTED', 'net::ERR')
 
 def main():
     errors = []
     with sync_playwright() as p:
-        browser = p.chromium.launch()
+        browser = getattr(p, ENGINE).launch()
         ctx = browser.new_context(viewport={'width': 1440, 'height': 900}, accept_downloads=True)
         # 內容安全政策(CSP):任何違規都算錯誤
         ctx.add_init_script("window.__csp=[];document.addEventListener('securitypolicyviolation',e=>window.__csp.push(e.violatedDirective+' '+e.blockedURI))")
@@ -55,9 +56,21 @@ def main():
         assert q.locator('.frame .slide').count() == 1, '匯出的 HTML 無法放大投影片'
         offline.close()
 
+        # 連不上網路時打開內建範例:顯示看得懂的提示,不是「Failed to fetch」
+        net = browser.new_context()
+        r = net.new_page()
+        r.route('**/catalog.json', lambda route: route.abort('internetdisconnected'))
+        r.goto(BASE + '#/repo'); r.wait_for_timeout(1500)
+        box = r.locator('.error-box').inner_text() if r.locator('.error-box').count() else ''
+        assert ('網路' in box or 'offline' in box.lower()) and 'fetch' not in box.lower(), f'離線提示不對:{box!r}'
+        net.close()
+
         # 離線快取:service worker 接手後,斷網重新整理首頁仍可開啟
+        # (Playwright 只有 Chromium 能可靠模擬「有 service worker 時斷網」,其他引擎略過)
         page.goto(BASE); page.evaluate('navigator.serviceWorker.ready'); page.wait_for_timeout(1500)
-        if page.evaluate('!!navigator.serviceWorker.controller'):
+        if ENGINE != 'chromium':
+            pass
+        elif page.evaluate('!!navigator.serviceWorker.controller'):
             ctx.set_offline(True)
             page.reload(); page.wait_for_timeout(1500)
             assert page.locator('.hero').count() == 1, '離線時首頁沒有從快取載入'
@@ -69,6 +82,6 @@ def main():
 
     if errors:
         print('\n'.join(errors)); sys.exit(1)
-    print('smoke OK')
+    print(f'smoke OK ({ENGINE})')
 
 main()

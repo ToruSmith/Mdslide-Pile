@@ -1,8 +1,9 @@
-name: CI
+name: CI 與部署
 
 on:
   pull_request:
   push:
+  workflow_dispatch:
 
 jobs:
   test:
@@ -23,6 +24,11 @@ jobs:
 
   smoke:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    name: smoke (${{ matrix.browser }})
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -34,10 +40,39 @@ jobs:
       - name: 安裝無頭瀏覽器(只在 CI 臨時安裝,不寫進專案)
         run: |
           pip install playwright
-          python -m playwright install --with-deps chromium
+          python -m playwright install --with-deps ${{ matrix.browser }}
       - name: 瀏覽器冒煙測試
         run: |
           node scripts/build-catalog.mjs
           python -m http.server 8000 &
           sleep 2
-          python tests/smoke/smoke.py http://localhost:8000/
+          python tests/smoke/smoke.py http://localhost:8000/ ${{ matrix.browser }}
+
+  # 測試全部通過才部署(只在 main 的推送)
+  deploy:
+    needs: [test, smoke]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: true
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 產生 catalog.json 與 shell-manifest.js
+        run: node scripts/build-catalog.mjs
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deployment
+        uses: actions/deploy-pages@v4

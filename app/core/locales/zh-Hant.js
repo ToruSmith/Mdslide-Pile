@@ -85,6 +85,8 @@ export const LOCALE_ZH_HANT = {
   'loading.library': '讀取書庫目錄…',
   'loading.deck': '讀取簡報…',
   'err.title': '出了點問題',
+  'err.offlineTitle': '目前沒有網路',
+  'err.offline': '內建範例與倉庫裡的簡報需要連線才能讀取。你電腦或隨身碟上的簡報資料夾不需要網路,回首頁選擇資料夾即可。',
   'err.noRecord': '找不到這個書庫的紀錄,請重新開啟資料夾。',
   'err.sessionGone': '這次開啟的資料夾已經失效(重新整理頁面後需要再選一次)。',
   'err.cannotRead': '無法讀取這個資料夾,可能已被移動或隨身碟未插上。',

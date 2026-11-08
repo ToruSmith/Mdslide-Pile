@@ -112,9 +112,14 @@ function loading(msg = t('loading')) {
   app.innerHTML = `<div class="loading"><div class="spinner"><i></i><i></i><i></i></div><p>${esc(msg)}</p></div>`;
 }
 
+// 連不上網路時,各瀏覽器丟出的錯誤:Chrome「Failed to fetch」、Firefox「NetworkError…」、Safari「Load failed」
+const isNetworkError = err => err instanceof TypeError && /fetch|network|load failed/i.test(err.message);
+
 function showError(err) {
   console.error(err);
-  app.innerHTML = `${header()}<div class="error-box"><h2>${t('err.title')}</h2><p>${esc(err instanceof UserError ? err.message : (err.message || String(err)))}</p><a class="btn" href="#/">${t('nav.backHome')}</a></div>`;
+  const offline = isNetworkError(err) || navigator.onLine === false;
+  const msg = err instanceof UserError ? err.message : offline ? t('err.offline') : (err.message || String(err));
+  app.innerHTML = `${header()}<div class="error-box"><h2>${t(offline ? 'err.offlineTitle' : 'err.title')}</h2><p>${esc(msg)}</p><a class="btn" href="#/">${t('nav.backHome')}</a></div>`;
 }
 
 async function home() {
