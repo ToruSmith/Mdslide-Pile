@@ -20,10 +20,13 @@ Mdslide Pile 把「資料夾 + Markdown」播放成 3D 牌堆簡報。網站是�
 ## 架構
 
 ```
-index.html               入口(只載入 CSS 與 app/main.js)
-sw.js                    離線快取(只快取網站本身,不快取簡報內容)
+index.html               入口(只載入 CSS 與 app/main.js;含 CSP)
+sw.js                    離線快取(依 shell-manifest.js 預先快取網站本身,不快取簡報內容)
+offline.html             沒網路也沒快取時的說明頁
+manifest.webmanifest     安裝成 App 用;icon.svg 是圖示
 app/
-  main.js                路由、首頁、資料來源切換
+  main.js                路由、首頁、資料來源切換、介面語言、即時重新載入
+  standalone.js          匯出的單一 HTML 檔的入口(內嵌資料來源)
   core/                  ── 純邏輯,瀏覽器與 Node 共用 ──
     names.js             檔名、排序前綴、略過規則
     yaml.js              精簡 YAML 解析
@@ -32,6 +35,11 @@ app/
     slide.js             一個 MD 檔 → 投影片資料(front matter、拆張、備註、自動版型)
     library.js           書庫掃描三層:scanLibrary / loadCover / loadDeck
     check.js             檢查規則(網站按鈕、check.mjs、單檔版共用)
+    chart.js             圖表表格解析與刻度(負值、缺值、1/2/5 級距)
+    color.js             顏色白名單(safeColor)
+    highlight.js         程式碼上色(只輸出跳脫後的 span)
+    i18n.js              t()、setLang()、簡報語言偵測
+    locales/             zh-Hant.js、en.js(兩份的鍵與 {參數} 必須一致)
   sources/
     sources.js           HttpSource(倉庫)、HandleSource(Chrome/Edge 資料夾)、FileListSource(其他瀏覽器)
     store.js             IndexedDB:記住最近開啟的資料夾
@@ -41,7 +49,8 @@ app/
     render.js            投影片資料 → HTML(所有版型在這裡)
     hydrate.js           媒體佔位 → 真實網址
     layouts.js           3D 排列(純函式)
-    player.js            播放器:動畫、放大、逐步、鍵盤、講者同步、列印
+    player.js            播放器:動畫、放大、逐步、鍵盤、講者同步、列印、重新載入、動畫偏好
+    export.js            匯出單一 HTML(import map + data: 網址,不需打包工具)
     presenter.js         講者視窗
     themes.js            主題名稱登記
   styles/
@@ -49,13 +58,18 @@ app/
     slides.css           投影片內容與各版型樣式(1280×720)
     app.css              介面外框
 scripts/
-  build-catalog.mjs      產生 catalog.json(部署時執行)
+  build-catalog.mjs      產生 catalog.json 與 shell-manifest.js(部署時執行)
+  shell-files.mjs        網站本身的檔案清單與雜湊(給 sw.js)
   check.mjs              檢查資料夾是否符合規則(命令列)
   bundle-check.mjs       產生 dist/mdslide-check.mjs 單檔版
   node-source.mjs        Node 版資料來源
 dist/                    自動產生的單檔檢查工具與雙擊捷徑(不要手動修改)
 content/                 內建書庫;00-官方範例 是驗收基準,不要刪
-tests/                   node:test 單元測試
+docs/                    GUIDE.en.md(英文製作指南)等
+tests/                   node:test 單元測試;smoke/smoke.py 是瀏覽器冒煙測試(Python Playwright)
+  protected.test.mjs     洗牌動畫守門:改到受保護的程式會失敗
+  i18n.test.mjs          locale 鍵一致、沒有寫死的中文、不可用 t 當變數名稱
+  docs-sync.test.mjs     版型、排列、設定欄位與兩份指南同步
 ```
 
 資料流:`source` → `core/library.js` → 簡報資料 → `player/render.js` → HTML → `hydrate.js` 補上媒體。
@@ -93,12 +107,14 @@ python3 -m http.server 8000           # 開 http://localhost:8000
 提交前的檢查:
 
 - [ ] 改過 `app/core/` 就執行 `node scripts/bundle-check.mjs`
-- [ ] 測試全部通過
+- [ ] 測試全部通過(含 `protected.test.mjs` 洗牌動畫守門;洗牌的時間、軌跡與 `STAGES[*].shuffle` 不可更動,只能新增選項)
+- [ ] 新增的介面文字兩份 locale 都有,鍵與參數一致(`i18n.test.mjs`)
+- [ ] 改了播放器或匯出:`python3 tests/smoke/smoke.py http://localhost:8000/` 通過(需要先 `pip install playwright`,不要寫進 package.json)
 - [ ] `check.mjs content` 沒有警告
 - [ ] 用瀏覽器開過官方範例,牌堆、放大、六種排列、三套主題、講者視窗(S)、列印(P)都正常
-- [ ] 規則有變動時,`製作專案指南.md` 已同步
+- [ ] 規則有變動時,`製作專案指南.md` 與 `docs/GUIDE.en.md` 已同步
 - [ ] `CHANGELOG.md` 已記錄
 
 ## 部署
 
-推送到 `main` 後,`.github/workflows/deploy.yml` 會跑測試、產生 `catalog.json`,再部署到 GitHub Pages。`catalog.json` 不進版本控制。
+推送到 `main` 後,`.github/workflows/deploy.yml` 會跑測試、產生 `catalog.json` 與 `shell-manifest.js`,再部署到 GitHub Pages。這兩個檔案不進版本控制。推送與 PR 另外會跑 `.github/workflows/ci.yml`(單元測試、書庫檢查、單檔版同步、冒煙測試)。
