@@ -163,6 +163,14 @@ body.dragging::after { content: attr(data-drop); position: fixed; inset: 16px; z
 .help-card dl { display: grid; grid-template-columns: auto 1fr; gap: 9px 20px; font-size: 14px; }
 .help-card dd { color: var(--muted); }
 .help-card p { margin-top: 18px; font-size: 13px; color: var(--muted); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.motion-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 13px; color: var(--muted); }
+.motion-row span { margin-right: 6px; }
+.motion-row button { border: 1px solid var(--line); background: none; border-radius: 999px; padding: 4px 12px; cursor: pointer; color: var(--muted); font-size: 13px; }
+.motion-row button.on { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+/* 鍵盤操作時的焦點框(滑鼠點擊不會出現) */
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.card:focus-visible { outline-color: var(--c, var(--accent)); }
 .toast { position: absolute; z-index: 45; left: 50%; bottom: 60px; transform: translate(-50%, 20px); background: var(--ink); color: var(--bg); padding: 9px 18px; border-radius: 999px; font-size: 14px; opacity: 0; transition: all .3s; pointer-events: none; }
 .toast.on { opacity: 1; transform: translate(-50%, 0); }
 

@@ -17,6 +17,8 @@ Write slides in Markdown, group them into sections with folders, and play them a
 - **Three themes**: paper, ink (dark) and slate.
 - **Over a dozen layouts**: split, full-bleed, quote, big number, stat cards, timeline, columns, automatic agenda, bar and line charts, and more.
 - **Presenting tools**: step-by-step reveal, presenter view (notes, next slide, timer), black screen, full screen, clicker support, PDF export.
+- **Live reload**: folders opened in Chrome / Edge update on screen as soon as you save a Markdown file (or press `R`).
+- **Motion preference**: reduced transitions when the system asks for reduced motion; switch between "Full" and "Reduced" in the help panel (`?`).
 - **Media**: local images and video; YouTube, Bilibili, Google Drive and Vimeo embeds.
 - **Works offline**: after one visit, the site plays local decks without a network.
 - **English and Traditional Chinese**: switch the interface with the `中 / EN` button; each deck's generated text follows its own `lang`.
@@ -127,7 +129,8 @@ The single-file tool ([`dist/`](dist/)):
 | `Esc` | Zoom out, back to library | `S` | Presenter view |
 | `1`–`9` | Jump to section | `P` | Print / save as PDF |
 | `B` | Black screen | `F` | Full screen |
-| `K` | Play / pause video | `?` | Help |
+| `K` | Play / pause video | `R` | Reload the deck |
+| `?` | Help | | |
 
 ## Browser support
 

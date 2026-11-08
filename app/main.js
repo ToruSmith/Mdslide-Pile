@@ -6,7 +6,7 @@
 //   #/<書庫>/<主題>/<簡報>/<第幾張>
 //   #/presenter                講者視窗
 
-import { scanLibrary, loadDeck } from './core/library.js';
+import { scanLibrary, loadDeck, refreshProject } from './core/library.js';
 import { escapeHTML as esc } from './core/markdown.js';
 import { HttpSource, HandleSource, FileListSource, sourceFromDrop, canPickDirectory } from './sources/sources.js';
 import { listRecent, remember, getRecent, forget, ensurePermission } from './sources/store.js';
@@ -66,6 +66,8 @@ function leavePlayer() {
   state.playerKey = '';
   state.cleanup?.();
   state.cleanup = null;
+  state.stopWatch?.();
+  state.stopWatch = null;
 }
 
 // ---------------- 資料來源 ----------------
@@ -226,12 +228,31 @@ async function openDeck(key, topicId, projectId, start) {
     const base = `#/${key.split('/').map(encodeURIComponent).join('/')}/${encodeURIComponent(topicId)}/${encodeURIComponent(projectId)}`;
     const backToLibrary = lib.kind === 'deck' ? '#/' : `#/${key}`;
     state.playerKey = `${key}/${topicId}/${projectId}`;
+    // 即時重新載入:只有 Chrome / Edge 的資料夾(HandleSource)偵測得到檔案變動
+    let current = project, busy = false;
+    const reload = source.kind === 'handle' ? async () => {
+      if (busy) return null;
+      busy = true;
+      try {
+        source.refresh();
+        state.libs.delete(key); // 回到目錄時重新讀取(標題可能改了)
+        current = await refreshProject(source, current);
+        return await loadDeck(source, current);
+      } finally { busy = false; }
+    } : null;
     state.player = new Player(app, {
-      deck, source, start, theme: deck.theme || lib.theme,
+      deck, source, start, theme: deck.theme || lib.theme, onReload: reload,
       onExit: () => { location.hash = backToLibrary; },
       onIndex: i => history.replaceState(null, '', `${base}/${i + 1}`),
     });
     document.title = `${deck.title} · Mdslide Pile`;
+    if (reload) {
+      const dirs = [...new Set([deck.path, ...deck.sections.map(s => s.path)])];
+      state.stopWatch = source.watch(dirs, async () => {
+        const next = await reload();
+        if (next && state.player) state.player.replaceDeck(next);
+      });
+    }
   } catch (e) { showError(e); }
 }
 

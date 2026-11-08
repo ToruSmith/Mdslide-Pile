@@ -1070,6 +1070,11 @@ function color(value, fallback, path, issues) {
   return c || fallback;
 }
 
+/** 重新讀取一份簡報的 deck.yml(即時重新載入用)。 */
+async function refreshProject(source, project) {
+  return readProject(source, project.path, project.folder, project.topicId, []);
+}
+
 /** 第 2 層:封面。只列出專案資料夾,必要時讀第一張投影片。 */
 async function loadCover(source, project) {
   const entries = await listSafe(source, project.path);

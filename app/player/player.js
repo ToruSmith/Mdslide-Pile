@@ -18,11 +18,25 @@ const KEYS = [
   ['← →', 'key.prevNext'], ['↑ ↓', 'key.section'], ['Enter', 'key.enter'],
   ['Esc', 'key.esc'], ['1–9', 'key.jump'], ['Home End', 'key.homeEnd'],
   ['O', 'key.overview'], ['L', 'key.stage'], ['T', 'key.theme'], ['B', 'key.black'], ['F', 'key.full'],
-  ['S', 'key.presenter'], ['P', 'key.print'], ['K', 'key.video'], ['?', 'key.help'],
+  ['S', 'key.presenter'], ['P', 'key.print'], ['K', 'key.video'], ['R', 'key.reload'], ['?', 'key.help'],
 ];
 
+// 動畫偏好:使用者在說明面板選的「完整 / 簡化」優先;沒選過就看系統的「減少動態」設定。
+const MOTION_KEY = 'mdslide-motion';
+function motionPreference() {
+  try { const v = localStorage.getItem(MOTION_KEY); return v === 'full' || v === 'reduced' ? v : null; } catch { return null; }
+}
+function setMotion(v) { try { localStorage.setItem(MOTION_KEY, v); } catch { /* 隱私模式 */ } }
+function motionReduced() {
+  const pref = motionPreference();
+  if (pref) return pref === 'reduced';
+  return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
 export class Player {
-  constructor(root, { deck, source, start = 0, onExit, onIndex, theme }) {
+  constructor(root, { deck, source, start = 0, onExit, onIndex, theme, onReload }) {
+    this.onReload = onReload;
+    this.reduced = motionReduced();
     this.root = root;
     this.deck = deck;
     this.source = source;
@@ -67,12 +81,21 @@ export class Player {
         <div class="viewer"><div class="frame"></div></div>
         <footer class="pfoot"><div class="progress"></div><div class="hint">${esc(t('player.hint'))}</div></footer>
         <div class="black"></div>
-        <div class="help-panel"><div class="help-card"><h2>${esc(t('help.title'))}</h2><dl>${KEYS.map(([k, v]) => `<dt>${k.split(' ').map(x => `<kbd>${x}</kbd>`).join('')}</dt><dd>${esc(t(v))}</dd>`).join('')}</dl><p>${esc(t('help.foot'))}</p></div></div>
+        <div class="help-panel"><div class="help-card"><h2>${esc(t('help.title'))}</h2><dl>${KEYS.map(([k, v]) => `<dt>${k.split(' ').map(x => `<kbd>${x}</kbd>`).join('')}</dt><dd>${esc(t(v))}</dd>`).join('')}</dl><p>${esc(t('help.foot'))}</p><div class="motion-row"><span>${esc(t('help.motion'))}</span><button data-motion="full">${esc(t('help.motionFull'))}</button><button data-motion="reduced">${esc(t('help.motionReduced'))}</button></div></div></div>
+        <div class="sr-only" aria-live="polite"></div>
         <div class="issues"></div>
       </div>`;
     const $ = s => this.root.querySelector(s);
-    this.el = { player: $('.player'), world: $('.world'), stage: $('.stage'), viewer: $('.viewer'), frame: $('.frame'), tabs: $('.tabs'), secName: $('.sec-name'), progress: $('.progress'), select: $('.stage-select'), black: $('.black'), help: $('.help-panel'), issues: $('.issues') };
+    this.el = { player: $('.player'), world: $('.world'), stage: $('.stage'), viewer: $('.viewer'), frame: $('.frame'), tabs: $('.tabs'), secName: $('.sec-name'), progress: $('.progress'), select: $('.stage-select'), black: $('.black'), help: $('.help-panel'), issues: $('.issues'), live: $('.sr-only') };
 
+    this.buildCards();
+    this.buildNav();
+  }
+
+  /** 建立所有卡片(重新載入時也會呼叫)。 */
+  buildCards() {
+    const d = this.deck;
+    this.cards?.forEach(c => c.remove());
     this.cards = this.slides.map((s, gi) => {
       const card = document.createElement('div');
       card.className = 'card';
@@ -81,7 +104,14 @@ export class Player {
       this.el.world.appendChild(card);
       return card;
     });
+  }
 
+  /** 章節標籤、進度條、提醒(重新載入時也會呼叫)。 */
+  buildNav() {
+    const d = this.deck;
+    this.el.tabs.innerHTML = '';
+    this.el.progress.innerHTML = '';
+    this.el.tabs.style.display = '';
     this.sections.forEach((sec, si) => {
       const b = document.createElement('button');
       b.textContent = sec.folder ? pad(this.sections.filter(s => s.folder).indexOf(sec) + 1) : '●';
@@ -98,6 +128,7 @@ export class Player {
     });
     if (this.sections.length < 2) this.el.tabs.style.display = 'none';
 
+    this.el.issues.innerHTML = '';
     if (d.issues?.length) {
       this.el.issues.innerHTML = `<details><summary>${esc(t('player.issues', { n: d.issues.length }))}</summary><ul>${d.issues.map(i => `<li><code>${esc(i.path)}</code>${esc(i.message)}</li>`).join('')}</ul></details>`;
     }
@@ -126,7 +157,12 @@ export class Player {
     this.el.select.addEventListener('change', () => { this.setStage(this.el.select.value); this.el.select.blur(); });
     this.el.frame.addEventListener('click', e => { e.stopPropagation(); if (!e.target.closest('video, audio, iframe, a')) this.next(); });
     this.el.viewer.addEventListener('click', () => this.closeViewer());
-    this.el.help.addEventListener('click', () => this.toggleHelp(false));
+    this.el.help.addEventListener('click', e => {
+      const m = e.target.closest('[data-motion]')?.dataset.motion;
+      if (m) { setMotion(m); this.reduced = motionReduced(); this.updateMotionButtons(); return; }
+      if (!e.target.closest('.help-card')) this.toggleHelp(false);
+    });
+    this.updateMotionButtons();
     this.el.black.addEventListener('click', () => this.el.black.classList.remove('on'));
   }
 
@@ -150,7 +186,7 @@ export class Player {
 
   layout(kind = 'focus') {
     const { poses, world } = this.computeLayout();
-    this.el.world.style.transition = kind === 'resize' ? 'none' : `transform ${kind === 'focus' ? 0.6 : 1.1}s ${EASE}`;
+    this.el.world.style.transition = kind === 'resize' ? 'none' : `transform ${this.reduced ? 0.35 : kind === 'focus' ? 0.6 : 1.1}s ${EASE}`;
     this.el.world.style.transform = worldTransform(world);
     let leave = 0, enter = 0;
     poses.forEach((to, gi) => {
@@ -163,6 +199,12 @@ export class Player {
       let frames, delay = 0, dur = 450;
       const crossing = kind === 'shuffle' && from && (from.d === 0) !== (to.d === 0);
       if (kind === 'resize') frames = null;
+      else if (this.reduced && kind !== 'focus' && from) {
+        // 簡化動畫(系統設定減少動態,或使用者選「簡化」):原地淡出、在新位置淡入,沒有隨機飛行
+        frames = [{ transform: fromT, opacity: fromO }, { transform: fromT, opacity: 0, offset: 0.4 },
+          { transform: `${poseTransform(to)} translateY(12px)`, opacity: 0, offset: 0.6 }, { transform: poseTransform(to), opacity: to.o }];
+        dur = 420;
+      }
       else if (crossing) {
         const leaving = from.d === 0;
         const mid = { x: (from.x + to.x) / 2 + (Math.random() - 0.5) * 260, y: (from.y + to.y) / 2 + (leaving ? -300 : 260),
@@ -183,7 +225,14 @@ export class Player {
       if (frames) el.animate(frames, { duration: dur, delay, easing: EASE, fill: 'backwards' });
       el._pose = to;
       el.classList.toggle('focus', gi === this.focus && !this.viewing);
+      // 目前的卡片可用鍵盤聚焦,Enter 由全域按鍵處理放大
+      if (gi === this.focus) { el.setAttribute('role', 'button'); el.tabIndex = 0; el.setAttribute('aria-label', t('player.slideLabel', { n: gi + 1, title: this.slides[gi].title || '' })); }
+      else { el.removeAttribute('role'); el.removeAttribute('tabindex'); el.removeAttribute('aria-label'); }
     });
+    if (this.announced !== this.focus) {
+      this.announced = this.focus;
+      this.el.live.textContent = t('player.slideLabel', { n: this.focus + 1, title: this.slides[this.focus]?.title || '' });
+    }
     this.updateChrome();
     this.hydrateNearby();
     this.syncThumbVideo();
@@ -331,6 +380,7 @@ export class Player {
       case 's': case 'S': this.openPresenter(); break;
       case 'p': case 'P': this.print(); break;
       case 'k': case 'K': this.el.frame.querySelectorAll('video, audio').forEach(v => (v.paused ? v.play() : v.pause())); break;
+      case 'r': case 'R': this.reload(); break;
       case '?': case '/': this.toggleHelp(); break;
       default:
         if (/^[1-9]$/.test(k)) { const numbered = this.sections.map((s, i) => [s, i]).filter(([s]) => s.folder); const hit = numbered[+k - 1]; if (hit) this.setSection(hit[1]); break; }
@@ -344,6 +394,45 @@ export class Player {
     openCheckPanel(this.el.player, async () => {
       const r = await checkDeck(this.source, d);
       return { kind: 'deck', title: d.title, topics: [{ title: '', decks: [r] }], problems: r.problems };
+    });
+  }
+
+  async reload() {
+    if (!this.onReload) return this.toast(t('player.reloadUnsupported'));
+    const deck = await this.onReload();
+    if (deck) { this.replaceDeck(deck); this.toast(t('player.reloaded')); }
+  }
+
+  /** 換上新讀到的簡報:保留目前張數與是否放大,不重播開場動畫。 */
+  replaceDeck(deck) {
+    const wasViewing = this.viewing;
+    const sameShape = deck.sections.length === this.sections.length && deck.sections.every((s, i) => s.slides.length === this.sections[i].slides.length);
+    this.deck = deck;
+    this.slides = flatten(deck);
+    this.sections = deck.sections;
+    this.focus = Math.min(this.focus, this.slides.length - 1);
+    this.cur = this.slides[this.focus]?.sec ?? 0;
+    this.hydrated.clear();
+    if (sameShape) {
+      // 結構沒變:只換卡片內容
+      this.cards.forEach((c, gi) => { c.innerHTML = renderSlide(this.slides[gi], { deck, mode: 'thumb', globalIndex: gi, total: this.slides.length }); });
+    } else {
+      // 章節或張數變了:重建卡片,新卡片從目前的位置開始移動
+      const old = this.cards.map(c => c._pose);
+      this.buildCards();
+      this.cards.forEach((c, gi) => { c._pose = old[Math.min(gi, old.length - 1)]; c.style.transform = poseTransform(c._pose); });
+    }
+    this.buildNav();
+    this.layout('focus');
+    if (wasViewing) { this.hideCard(this.cards[this.focus]); this.fillFrame(); }
+  }
+
+  updateMotionButtons() {
+    const pref = motionPreference();
+    this.el.help.querySelectorAll('[data-motion]').forEach(b => {
+      const on = b.dataset.motion === (pref || (this.reduced ? 'reduced' : 'full'));
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', String(on));
     });
   }
 

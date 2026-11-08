@@ -374,6 +374,7 @@ Follow the steps in section 7 of the guide to create the folder and files, then 
 ## 8. FAQ
 
 - **Wrong order on screen?** Check the number prefixes. They sort numerically (`2-` before `10-`), but two digits (`02-`) also keep file explorers in the same order.
+- **How do I see my edits?** Folders opened in Chrome / Edge update automatically (within about 1.5 seconds), or press `R`. In other browsers, choose the folder again.
 - **A slide is missing?** Does its file name start with `_`? Does its front matter say `hidden: true`?
 - **"Media not found"?** Paths are relative to the deck folder, for example `media/a.jpg`, and letter case must match.
 - **A config file has no effect?** Indent with spaces and put a space after each colon; "✓ Check" on the website shows the line with the problem.
