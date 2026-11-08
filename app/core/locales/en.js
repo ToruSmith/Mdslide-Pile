@@ -267,4 +267,7 @@ export const LOCALE_EN = {
   'key.read': 'Reading view (with notes)',
   'pv.inkNone': 'Off',
   'pv.inkHint': 'Draw on the slide above; it appears on the audience screen',
+  'update.ready': 'A new version of the site is ready.',
+  'update.reload': 'Reload',
+  'update.later': 'Later',
 };

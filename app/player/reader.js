@@ -93,10 +93,9 @@ export function openReader(player, start, { onClose, onIndex, onPrint }) {
       if (k === 'ArrowUp' || k === 'ArrowLeft' || k === 'PageUp') { goto(Math.max(0, cur - 1)); return true; }
       if (k === 'Home') { goto(0); return true; }
       if (k === 'End') { goto(items.length - 1); return true; }
-      if (k === ' ') return false; // 空白鍵:瀏覽器原本的往下捲
       if (k === 'm' || k === 'M') { close(); return true; }
       if (k === 'p' || k === 'P') { onPrint?.(); return true; }
-      return true; // 閱讀時其他播放快捷鍵不作用
+      return false; // 其他按鍵交給播放器決定
     },
   };
 }

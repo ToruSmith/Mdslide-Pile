@@ -60,6 +60,8 @@ def main():
         page.keyboard.press('m'); page.wait_for_timeout(1000)
         assert page.locator('.reader .ritem').count() == page.locator('.card').count(), '閱讀模式的張數不對'
         assert '/read' in page.url, '閱讀模式的網址沒有 /read'
+        page.keyboard.press('Enter'); page.wait_for_timeout(1200)
+        assert page.locator('.reader').count() == 0 and page.evaluate("document.querySelector('.player').classList.contains('viewing')"), '閱讀模式按 Enter 沒有放大投影片'
         page.keyboard.press('Escape'); page.wait_for_timeout(900)
         page.keyboard.press('v'); page.wait_for_timeout(1300)
         assert page.evaluate("document.querySelector('.player').dataset.stage") == 'side', 'V 沒有切到對照模式'

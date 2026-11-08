@@ -283,6 +283,9 @@ const LOCALE_ZH_HANT = {
   'key.read': '閱讀模式(附備註)',
   'pv.inkNone': '不畫',
   'pv.inkHint': '在上面的投影片畫,觀眾畫面同步出現',
+  'update.ready': '網站已更新到新版。',
+  'update.reload': '重新整理',
+  'update.later': '稍後',
 };
 
 // ───────── app/core/locales/en.js ─────────
@@ -555,6 +558,9 @@ const LOCALE_EN = {
   'key.read': 'Reading view (with notes)',
   'pv.inkNone': 'Off',
   'pv.inkHint': 'Draw on the slide above; it appears on the audience screen',
+  'update.ready': 'A new version of the site is ready.',
+  'update.reload': 'Reload',
+  'update.later': 'Later',
 };
 
 // ───────── app/core/i18n.js ─────────

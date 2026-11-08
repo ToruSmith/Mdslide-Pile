@@ -435,10 +435,11 @@ export class Player {
     const k = e.key;
     if (this.ink.enabled && (e.metaKey || e.ctrlKey) && (k === 'z' || k === 'Z')) { e.preventDefault(); this.ink.undo(); return; }
     if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (this.reader) { if (this.reader.key(k)) e.preventDefault(); return; }
-    if (this.closeLight) { e.preventDefault(); this.closeLight(); return; }
     if (this.el.black.classList.contains('on')) { e.preventDefault(); this.el.black.classList.remove('on'); return; }
     if (this.el.help.classList.contains('on') && k !== '?') { this.toggleHelp(false); if (k === 'Escape') return; }
+    if (this.reader && this.readerKey(k)) { e.preventDefault(); return; }
+    if (this.reader) return;
+    if (this.closeLight) { e.preventDefault(); this.closeLight(); return; }
     const handled = this.command(k);
     if (handled) e.preventDefault();
   }
@@ -660,6 +661,18 @@ export class Player {
   }
 
   closeReading() { this.reader?.close(); }
+
+  /** 閱讀模式的按鍵:捲動類交給閱讀模式;黑屏、全螢幕、主題、講者視窗等照常;
+   *  放大、畫筆、換排列、跳章節則先回到投影片再執行。回傳 true 表示已處理。 */
+  readerKey(k) {
+    if (this.reader.key(k)) return true;
+    if (['b', 'B', '.', 'f', 'F', 't', 'T', 's', 'S', 'k', 'K', '?'].includes(k)) return this.command(k);
+    if (['Enter', 'd', 'D', 'v', 'V', 'o', 'O', 'l', 'L'].includes(k) || /^[1-9]$/.test(k)) {
+      this.reader.close();
+      return this.command(k);
+    }
+    return false;
+  }
 
   showInViewer(dir) {
     this.hideCard(this.cards[this.focus]);

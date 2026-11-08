@@ -365,3 +365,11 @@ body.dragging::after { content: attr(data-drop); position: fixed; inset: 16px; z
 
 /* 很窄的手機:主題用不太到,讓位給閱讀與畫筆 */
 @media (max-width: 480px) { .ptools .pbtn[data-act="theme"] { display: none; } }
+
+/* 網站有新版時的提示 */
+.update-bar { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 100; display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 18px;
+  background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 999px; box-shadow: 0 16px 50px rgb(var(--shadow) / .25); font-size: 14px; animation: fade-in .3s; }
+.update-bar .btn { padding: 6px 14px; font-size: 13px; }
+
+/* 閱讀模式時,說明面板要蓋在閱讀頁上面 */
+.player.reading .help-panel { z-index: 47; }

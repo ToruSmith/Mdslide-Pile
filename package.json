@@ -7,5 +7,5 @@
     "check": "node scripts/check.mjs",
     "bundle": "node scripts/bundle-check.mjs"
   },
-  "version": "1.6.0"
+  "version": "1.6.1"
 }

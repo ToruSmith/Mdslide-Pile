@@ -17,7 +17,7 @@ import { startPresenter } from './player/presenter.js';
 import { applyTheme } from './player/themes.js';
 import { t, setLang, getLang, normalizeLang } from './core/i18n.js';
 
-export const VERSION = '1.6.0';
+export const VERSION = '1.6.1';
 const REPO_URL = 'https://github.com/ToruSmith/Mdslide-Pile';
 
 const app = document.getElementById('app');
@@ -297,5 +297,21 @@ route();
 
 // 離線也能用:把網站本身快取起來(你的簡報檔案不會被快取)
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  // updateViaCache: 'none':檢查新版時不要用瀏覽器快取(GitHub Pages 會快取 10 分鐘)
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => reg.update()).catch(() => {});
+  // 新版接手後,目前這一頁還是舊程式:提示重新整理(不自動重新整理,以免打斷正在播放的簡報)
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || document.querySelector('.update-bar')) return;
+    const bar = document.createElement('div');
+    bar.className = 'update-bar';
+    bar.setAttribute('role', 'status');
+    bar.innerHTML = `<span>${esc(t('update.ready'))}</span><button class="btn primary" data-u="reload">${esc(t('update.reload'))}</button><button class="btn ghost" data-u="later">${esc(t('update.later'))}</button>`;
+    bar.addEventListener('click', e => {
+      const u = e.target.closest('[data-u]')?.dataset.u;
+      if (u === 'reload') location.reload();
+      if (u === 'later') bar.remove();
+    });
+    document.body.append(bar);
+  });
 }
