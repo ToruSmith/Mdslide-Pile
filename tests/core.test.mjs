@@ -54,7 +54,7 @@ test('markdown: 區塊與行內語法,並跳脫 HTML', () => {
   assert.match(h, /<td style="text-align:right">2<\/td>/);
   assert.match(h, /&lt;script&gt;/);
   assert.match(h, /第一行<br>第二行 <mark>亮<\/mark>/);
-  assert.match(h, /<pre data-lang="js"><code>const a = 1 &lt; 2<\/code><\/pre>/);
+  assert.match(h, /<pre data-lang="js"><code><span class="tk-k">const<\/span> a = <span class="tk-n">1<\/span> &lt; <span class="tk-n">2<\/span><\/code><\/pre>/);
 });
 
 test('slide: front matter、--- 拆張、備註、媒體、自動版型', () => {
@@ -250,4 +250,29 @@ test('顏色注入:設定檔裡的顏色不合法會回報並改用預設', asyn
   const deck = await loadDeck(src, lib.topics[0].projects[0]);
   assert.match(deck.sections[0].color, /^#[0-9a-f]{6}$/i);
   assert.equal(deck.issues.length, 1);
+});
+
+import { highlight } from '../app/core/highlight.js';
+import { undefinedFootnotes } from '../app/core/markdown.js';
+
+test('腳註:依引用順序編號,定義放在最後,未定義顯示 ?', () => {
+  const h = renderMarkdown('第二[^b] 第一[^a] 再一次[^b] 不存在[^x]\n\n[^a]: 甲來源\n[^b]: 乙來源');
+  assert.match(h, /第二<sup class="fn">1<\/sup> 第一<sup class="fn">2<\/sup> 再一次<sup class="fn">1<\/sup> 不存在<sup class="fn missing">\?<\/sup>/);
+  assert.match(h, /<div class="footnotes"><p class="source"><sup>1<\/sup> 乙來源<\/p><p class="source"><sup>2<\/sup> 甲來源<\/p><\/div>$/);
+  assert.deepEqual(undefinedFootnotes('a[^1] b[^2] `c[^3]`\n[^1]: x'), ['2']);
+  assert.deepEqual(undefinedFootnotes('```\n[^z]\n```'), []);
+});
+
+test('程式碼上色:關鍵字、字串、註解、數字;HTML 一律跳脫', () => {
+  const h = highlight('const s = "<script>"; // 註解\nreturn 42', 'js');
+  assert.match(h, /<span class="tk-k">const<\/span>/);
+  assert.match(h, /<span class="tk-s">&quot;&lt;script&gt;&quot;<\/span>/);
+  assert.match(h, /<span class="tk-c">\/\/ 註解<\/span>/);
+  assert.match(h, /<span class="tk-n">42<\/span>/);
+  assert.ok(!h.includes('<script'));
+  for (const [lang, code, kw] of [['python', 'def f(): # x', 'def'], ['sql', 'SELECT * FROM t', 'SELECT'], ['bash', 'echo "hi"', 'echo'], ['json', '{"a": true}', 'true'], ['ts', 'interface A {}', 'interface']]) {
+    assert.match(highlight(code, lang), new RegExp(`<span class="tk-k">${kw}</span>`), lang);
+  }
+  assert.equal(highlight('<b>', 'unknown'), '&lt;b&gt;');
+  assert.match(renderMarkdown('```py\nx = 1 # <b>\n```'), /<pre data-lang="py"><code>x = <span class="tk-n">1<\/span> <span class="tk-c"># &lt;b&gt;<\/span><\/code><\/pre>/);
 });

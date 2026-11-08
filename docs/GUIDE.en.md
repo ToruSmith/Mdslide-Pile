@@ -221,6 +221,20 @@ An image on **a line of its own** is the slide's main media:
 - Prefer online video; compress local video to 1080p and under 100 MB per file.
 - An image inside a paragraph (not on its own line) is shown inline.
 
+### Footnotes
+
+Write `[^1]` next to the text, and put `[^1]: text` on a line of its own anywhere in the file. Numbers follow the order of first reference, and the definitions appear in small text at the end of the slide content. The checker warns about markers without a definition.
+
+```markdown
+Revenue grew 35%[^1]
+
+[^1]: Q3 2026 earnings report
+```
+
+### Code highlighting
+
+Tag a code block with its language to highlight it: `js`, `ts`, `python`, `json`, `bash` or `sql` (other languages are shown as plain text).
+
 ### Sources, data dates and footers
 
 When you quote numbers, follow these three rules and the slide formats them as professional footers:

@@ -44,6 +44,15 @@
 .md img { max-width: 100%; max-height: 420px; border-radius: 10px; vertical-align: middle; }
 .md p.source { font-size: 19px; line-height: 1.5; color: var(--slide-muted); margin: 14px 0 0; letter-spacing: .02em; }
 .md p.source + p.source { margin-top: 4px; }
+.md sup.fn { font-size: .6em; color: var(--c); font-weight: 700; margin-left: 2px; }
+.md sup.fn.missing { color: var(--slide-muted); }
+.md .footnotes { margin-top: 18px; }
+.md .footnotes sup { margin-right: 6px; color: var(--c); font-weight: 700; }
+/* 程式碼上色:三套主題都以文字色混色,深色主題自動變亮 */
+.md pre .tk-k { color: var(--c); font-weight: 600; }
+.md pre .tk-s { color: color-mix(in srgb, #3f8f8f 70%, var(--slide-ink)); }
+.md pre .tk-n { color: color-mix(in srgb, #b0566e 75%, var(--slide-ink)); }
+.md pre .tk-c { color: var(--slide-muted); font-style: italic; }
 .md hr { border: 0; border-top: 2px solid var(--line); margin: 28px 0; }
 
 .foot { position: absolute; left: 112px; right: 88px; bottom: 34px; display: flex; justify-content: space-between; gap: 24px; font-size: 18px; color: var(--slide-muted); letter-spacing: .04em; z-index: 2; }

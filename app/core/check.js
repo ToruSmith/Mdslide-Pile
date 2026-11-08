@@ -5,6 +5,7 @@
 import { scanLibrary, loadDeck } from './library.js';
 import { resolveMediaPath } from './media.js';
 import { parseChartTable } from './chart.js';
+import { undefinedFootnotes } from './markdown.js';
 import { t } from './i18n.js';
 
 export const MAX_SLIDES = 45;
@@ -33,6 +34,7 @@ export async function checkDeck(source, project) {
       if (!tbl) problems.push({ path: sl.file, message: t('check.noTable') });
       else for (const b of tbl.bad) problems.push({ path: sl.file, message: t('check.badCell', b) });
     }
+    for (const id of undefinedFootnotes(sl.body)) problems.push({ path: sl.file, message: t('check.missingFootnote', { id }) });
     for (const m of sl.media) {
       if (m.remote) continue;
       const path = resolveMediaPath(m.src, { projectPath: project.path, filePath: sl.file });
