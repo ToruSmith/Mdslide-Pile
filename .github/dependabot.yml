@@ -1,0 +1,9 @@
+# 只自動更新 GitHub Actions 的版本(這個專案沒有 npm 套件)
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: ci

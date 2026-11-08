@@ -73,6 +73,7 @@ tests/                   node:test 單元測試;smoke/smoke.py 是瀏覽器冒�
   protected.test.mjs     洗牌動畫守門:改到受保護的程式會失敗
   i18n.test.mjs          locale 鍵一致、沒有寫死的中文、不可用 t 當變數名稱
   docs-sync.test.mjs     版型、排列、設定欄位與兩份指南同步
+  visual/compare.py      畫面比對:PR 時與目標分支逐張比對官方範例(提醒用)
 ```
 
 資料流:`source` → `core/library.js` → 簡報資料 → `player/render.js` → HTML → `hydrate.js` 補上媒體。
@@ -121,7 +122,7 @@ python3 -m http.server 8000           # 開 http://localhost:8000
 
 ## 部署
 
-推送到 `main` 後,`.github/workflows/deploy.yml` 會跑測試、產生 `catalog.json` 與 `shell-manifest.js`,再部署到 GitHub Pages。這兩個檔案不進版本控制。推送與 PR 另外會跑 `.github/workflows/ci.yml`(單元測試、書庫檢查、單檔版同步、冒煙測試)。
+推送到 `main` 後會產生 `catalog.json` 與 `shell-manifest.js` 並部署到 GitHub Pages(這兩個檔案不進版本控制)。部署和測試在同一個 `.github/workflows/ci.yml`:單元測試、書庫檢查、單檔版同步、三種瀏覽器引擎的冒煙測試都通過,才會部署。PR 另外會跑畫面比對,有變化的投影片列在 Actions 摘要並附上差異圖(只是提醒,不會擋 PR)。`.github/dependabot.yml` 每月提醒更新 Actions 版本。
 
 ## 發布新版
 
