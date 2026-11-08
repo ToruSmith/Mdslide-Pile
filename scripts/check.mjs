@@ -5,12 +5,17 @@
 //
 //   node scripts/check.mjs <資料夾>           例:node scripts/check.mjs content
 //   node scripts/check.mjs <資料夾> --slides  連每張投影片的版型與標題都列出來
+//   node scripts/check.mjs <資料夾> --lang en  英文輸出(預設依作業系統語言)
 
-import { nodeSource } from './node-source.mjs';
+import { nodeSource, detectNodeLang } from './node-source.mjs';
 import { checkLibrary, formatReport } from '../app/core/check.js';
+import { t, setLang } from '../app/core/i18n.js';
 
-const dir = process.argv.slice(2).find(a => !a.startsWith('--'));
-if (!dir) { console.log('用法:node scripts/check.mjs <資料夾> [--slides]'); process.exit(1); }
+setLang(detectNodeLang());
+
+const args = process.argv.slice(2);
+const dir = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--lang');
+if (!dir) { console.log(t('check.usage')); process.exit(1); }
 
 const report = await checkLibrary(nodeSource(dir));
 console.log(formatReport(report, { verbose: process.argv.includes('--slides') }));

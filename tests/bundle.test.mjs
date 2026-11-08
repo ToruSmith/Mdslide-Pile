@@ -12,6 +12,6 @@ test('dist/mdslide-check.mjs 與原始碼同步(不同步請執行 node scripts/
 });
 
 test('單檔版可以獨立檢查內建書庫', () => {
-  const out = execFileSync(process.execPath, [dist.pathname, new URL('../content', import.meta.url).pathname], { encoding: 'utf8' });
+  const out = execFileSync(process.execPath, [dist.pathname, new URL('../content', import.meta.url).pathname, '--lang', 'zh-Hant'], { encoding: 'utf8' });
   assert.match(out, /✓ 沒有發現問題/);
 });

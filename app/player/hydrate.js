@@ -3,6 +3,7 @@
 
 import { isURL } from '../core/names.js';
 import { escapeHTML } from '../core/markdown.js';
+import { t } from '../core/i18n.js';
 
 export async function hydrate(root, source, { full = false } = {}) {
   const jobs = [];
@@ -46,7 +47,8 @@ function missing(el, path) {
   const fig = el.closest('figure');
   const box = document.createElement('div');
   box.className = 'missing';
-  box.innerHTML = `找不到素材<br><small>${escapeHTML(path)}</small>`;
+  const lang = el.closest('[lang]')?.getAttribute('lang'); // 依簡報語言,不是介面語言
+  box.innerHTML = `${escapeHTML(t('slide.missingMedia', null, lang))}<br><small>${escapeHTML(path)}</small>`;
   if (fig) { el.remove(); fig.append(box); } else el.replaceWith(box);
 }
 

@@ -4,11 +4,15 @@
 //   node scripts/build-catalog.mjs
 
 import { writeFile } from 'node:fs/promises';
-import { nodeSource, walkTree } from './node-source.mjs';
+import { nodeSource, walkTree, detectNodeLang } from './node-source.mjs';
+import { t, setLang } from '../app/core/i18n.js';
+
+setLang(detectNodeLang());
 import { scanLibrary, loadDeck } from '../app/core/library.js';
 
-const root = process.argv[2] || 'content';
-const out = process.argv[3] || 'catalog.json';
+const args = process.argv.slice(2).filter((a, i, all) => !a.startsWith('--') && all[i - 1] !== '--lang');
+const root = args[0] || 'content';
+const out = args[1] || 'catalog.json';
 
 const source = nodeSource(root);
 const tree = await walkTree(source);
@@ -17,7 +21,7 @@ const lib = await scanLibrary(source);
 // 順便檢查每份簡報,有問題就印出來(不中斷部署)
 const issues = [...lib.issues];
 let decks = 0, slides = 0;
-for (const t of lib.topics) for (const p of t.projects) {
+for (const tp of lib.topics) for (const p of tp.projects) {
   const d = await loadDeck(source, p);
   decks++;
   slides += d.sections.reduce((n, s) => n + s.slides.length, 0);
@@ -25,5 +29,5 @@ for (const t of lib.topics) for (const p of t.projects) {
 }
 
 await writeFile(out, JSON.stringify({ version: 1, title: lib.title, generated: new Date().toISOString(), tree }) + '\n');
-console.log(`catalog.json:${lib.topics.length} 個主題、${decks} 份簡報、${slides} 張投影片`);
+console.log(t('catalog.done', { topics: lib.topics.length, decks, slides }));
 for (const i of issues) console.warn(`  ⚠ ${i.path}:${i.message}`);

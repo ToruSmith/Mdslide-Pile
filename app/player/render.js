@@ -6,6 +6,9 @@ import { resolveMediaPath, classifyMedia } from '../core/media.js';
 import { PALETTE } from '../core/library.js';
 import { parseChartTable, niceScale } from '../core/chart.js';
 import { safeColor } from '../core/color.js';
+import { t } from '../core/i18n.js';
+
+const NOW_MARK = /\s*\((now|現在|目前)\)\s*$/; // i18n-ok:語法關鍵字
 
 const pad = n => String(n).padStart(2, '0');
 
@@ -19,6 +22,8 @@ export function renderSlide(slide, ctx) {
   const pathCtx = { projectPath: deck.path, filePath: slide.file };
   const image = (src, alt) => `<img data-media="${esc(resolveMediaPath(src, pathCtx))}" alt="${esc(alt)}">`;
   const md = s => renderMarkdown(s, { image });
+  const lang = deck.lang || 'zh-Hant';
+  const tl = key => t(key, null, lang); // 自動文字跟著簡報語言
   const layout = slide.layout;
   const meta = slide.meta || {};
   const c = safeColor(meta.color) || safeColor(section.color) || safeColor(deck.accent) || PALETTE[0];
@@ -27,15 +32,15 @@ export function renderSlide(slide, ctx) {
   switch (layout) {
     case 'title': inner = titleSlide(deck, ctx, image); break;
     case 'section': inner = sectionSlide(slide, section, deck); break;
-    case 'end': inner = /^#\s/m.test(slide.body) ? `<div class="md">${md(slide.body)}</div>` : `<h1>${esc(slide.title || '謝謝')}</h1>${slide.body ? `<div class="md">${md(slide.body)}</div>` : ''}`; break;
+    case 'end': inner = /^#\s/m.test(slide.body) ? `<div class="md">${md(slide.body)}</div>` : `<h1>${esc(slide.title || tl('slide.thanks'))}</h1>${slide.body ? `<div class="md">${md(slide.body)}</div>` : ''}`; break;
     case 'split': case 'split-left':
-      inner = `<div class="md">${md(slide.body)}</div>${mediaFigure(slide.media[0], ctx, pathCtx, meta)}`; break;
+      inner = `<div class="md">${md(slide.body)}</div>${mediaFigure(slide.media[0], ctx, pathCtx, meta, true, tl)}`; break;
     case 'full':
-      inner = mediaFigure(slide.media[0], ctx, pathCtx, meta, !slide.body.trim()) + (slide.body.trim() ? `<div class="overlay"><div class="md">${md(slide.body)}</div></div>` : ''); break;
+      inner = mediaFigure(slide.media[0], ctx, pathCtx, meta, !slide.body.trim(), tl) + (slide.body.trim() ? `<div class="overlay"><div class="md">${md(slide.body)}</div></div>` : ''); break;
     case 'stats': inner = statsSlide(slide.body, md); break;
     case 'timeline': inner = timelineSlide(slide.body, md, meta); break;
     case 'columns': inner = columnsSlide(slide.body, md); break;
-    case 'agenda': inner = agendaSlide(slide, deck, md); break;
+    case 'agenda': inner = agendaSlide(slide, deck, md, tl); break;
     case 'chart': inner = chartSlide(slide.body, md, meta, c, slide.title); break;
     default: inner = `<div class="md">${md(slide.body)}</div>`;
   }
@@ -44,9 +49,9 @@ export function renderSlide(slide, ctx) {
   const sec = section.title || '';
   const foot = showFoot ? `<div class="foot"><span>${esc(sec || deck.title)}</span><span class="page">${ctx.globalIndex + 1} / ${ctx.total}</span></div>` : '';
   const bg = meta.background ? ` data-bg="${esc(resolveMediaPath(String(meta.background), pathCtx))}"` : '';
-  inner = inner.replace(/<p>((?:資料來源|來源|資料截至|註|備考|Source|Note)\s*[:：]?)/g, '<p class="source">$1');
+  inner = inner.replace(/<p>((?:資料來源|來源|資料截至|註|備考|Source|Sources|Data as of|Note)\s*[:：]?)/g, '<p class="source">$1'); // i18n-ok:語法關鍵字
   const extra = (layout === 'title' && deck.coverImage ? ' has-image' : '') + (meta.class ? ' ' + esc(meta.class) : '');
-  return `<div class="slide l-${layout}${extra}" style="--c:${esc(c)}"${bg}>${inner}${foot}</div>`;
+  return `<div class="slide l-${layout}${extra}" lang="${esc(lang)}" style="--c:${esc(c)}"${bg}>${inner}${foot}</div>`;
 }
 
 function titleSlide(deck, ctx, image) {
@@ -64,8 +69,8 @@ function sectionSlide(slide, section, deck) {
   return `<div class="num">${pad(k || n + 1)}</div><h1>${esc(section.title)}</h1>${section.subtitle ? `<div class="sub">${esc(section.subtitle)}</div>` : ''}`;
 }
 
-function mediaFigure(m, ctx, pathCtx, meta, showCaption = true) {
-  if (!m) return '<figure class="media"><div class="missing">沒有媒體</div></figure>';
+function mediaFigure(m, ctx, pathCtx, meta, showCaption = true, tl = key => t(key)) {
+  if (!m) return `<figure class="media"><div class="missing">${esc(tl('slide.noMedia'))}</div></figure>`;
   const fit = meta.fit === 'contain' ? ' contain' : '';
   const cap = showCaption && m.caption ? `<figcaption>${esc(m.caption)}</figcaption>` : '';
   if (m.kind === 'embed') {
@@ -84,7 +89,7 @@ function statsSlide(body, md) {
   const n = Math.min(Math.max(items.length, 1), 4);
   const colW = (1056 - 32 * (n - 1)) / n;
   const base = [0, 120, 104, 88, 72][n];
-  const parsed = items.map(t => { const m = t.match(/^\*\*(.+?)\*\*\s*(.*)$/); return { value: m ? m[1] : t, label: m ? m[2] : '' }; });
+  const parsed = items.map(item => { const m = item.match(/^\*\*(.+?)\*\*\s*(.*)$/); return { value: m ? m[1] : item, label: m ? m[2] : '' }; });
   // 依最長的數值決定字級(所有卡片同一大小),避免「−5,510 點」這類較長的數值換行或超出
   const units = v => [...v].reduce((u, ch) => u + (/[\u2e80-\u9fff\uff00-\uffef]/.test(ch) ? 1 : ch === ' ' ? 0.3 : 0.6), 0);
   const size = Math.floor(Math.min(base, ...parsed.map(p => (colW * 0.96) / Math.max(units(p.value), 1))));
@@ -95,12 +100,12 @@ function statsSlide(body, md) {
 /** 清單項目「**時間** 事件」;子項目變成小字說明;項目結尾加 (now) 會被標成目前位置。 */
 function timelineSlide(body, md, meta) {
   const { head, items, children, rest } = splitList(body);
-  const nodes = items.map((t, k) => {
-    const now = /\s*\((now|現在|目前)\)\s*$/.test(t);
-    t = t.replace(/\s*\((now|現在|目前)\)\s*$/, '');
-    const m = t.match(/^\*\*(.+?)\*\*\s*(.*)$/);
+  const nodes = items.map((item, k) => {
+    const now = NOW_MARK.test(item);
+    item = item.replace(NOW_MARK, '');
+    const m = item.match(/^\*\*(.+?)\*\*\s*(.*)$/);
     const small = children[k]?.length ? `<small>${children[k].map(renderInline).join('<br>')}</small>` : '';
-    return `<div class="tl-item${now ? ' now' : ''}"><b>${renderInline(m ? m[1] : '')}</b><span>${renderInline(m ? m[2] : t)}${small}</span></div>`;
+    return `<div class="tl-item${now ? ' now' : ''}"><b>${renderInline(m ? m[1] : '')}</b><span>${renderInline(m ? m[2] : item)}${small}</span></div>`;
   });
   return `<div class="md">${md(head)}</div><div class="tl" style="--n:${Math.max(nodes.length, 1)}">${nodes.join('')}</div>${rest.trim() ? `<div class="after md">${md(rest)}</div>` : ''}`;
 }
@@ -114,24 +119,24 @@ function columnsSlide(body, md) {
   return `<div class="md">${md(head)}</div><div class="cols" style="--n:${parts.length}">${parts.map(p => `<div class="col md">${md(p.trim())}</div>`).join('')}</div>`;
 }
 
-function agendaSlide(slide, deck, md) {
+function agendaSlide(slide, deck, md, tl) {
   const secs = deck.sections.filter(s => s.folder);
-  const head = slide.body.trim() ? md(slide.body) : '<h1>大綱</h1>';
+  const head = slide.body.trim() ? md(slide.body) : `<h1>${esc(tl('slide.agenda'))}</h1>`;
   const items = secs.map((s, k) => `<div class="ag" style="--sc:${esc(safeColor(s.color) || PALETTE[0])}"><b>${pad(k + 1)}</b><span>${esc(s.title)}${s.subtitle ? `<small>${esc(s.subtitle)}</small>` : ''}</span></div>`);
   return `<div class="md">${head}</div><div class="agenda" style="--cols:${secs.length > 3 ? 2 : 1}">${items.join('')}</div>`;
 }
 
 /** 表格 → 圖表(chart: bar | hbar | line)。第一欄是標籤,其餘欄是數列;支援負值與缺值。 */
 function chartSlide(body, md, meta, color, title) {
-  const t = parseChartTable(body);
-  if (!t) return `<div class="md">${md(body)}</div>`;
+  const tbl = parseChartTable(body);
+  if (!tbl) return `<div class="md">${md(body)}</div>`;
   const colors = [color, ...PALETTE.filter(p => p.toLowerCase() !== String(color).toLowerCase())];
   const type = String(meta.chart || 'bar');
   const unit = meta.unit ? String(meta.unit) : '';
   const draw = type === 'line' ? lineChart : type === 'hbar' ? hbarChart : barChart;
-  const svg = draw(t.labels, t.series, colors, unit, title);
-  const legend = t.series.length > 1 ? `<div class="legend">${t.series.map((s, k) => `<span><i style="background:${colors[k % colors.length]}"></i>${esc(s.name)}</span>`).join('')}</div>` : '';
-  return `<div class="md">${md(t.before)}</div>${svg}${legend}${t.after.trim() ? `<div class="caption md">${md(t.after)}</div>` : ''}`;
+  const svg = draw(tbl.labels, tbl.series, colors, unit, title);
+  const legend = tbl.series.length > 1 ? `<div class="legend">${tbl.series.map((s, k) => `<span><i style="background:${colors[k % colors.length]}"></i>${esc(s.name)}</span>`).join('')}</div>` : '';
+  return `<div class="md">${md(tbl.before)}</div>${svg}${legend}${tbl.after.trim() ? `<div class="caption md">${md(tbl.after)}</div>` : ''}`;
 }
 
 const W = 1056, H = 440;

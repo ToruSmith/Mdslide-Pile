@@ -5,18 +5,20 @@ import { escapeHTML as esc, renderMarkdown } from '../core/markdown.js';
 import { renderSlide } from './render.js';
 import { hydrate, playMedia, stopMedia } from './hydrate.js';
 import { STAGES, STAGE_ORDER, CW, poseTransform, worldTransform } from './layouts.js';
-import { THEMES, THEME_NAMES, applyTheme, currentTheme } from './themes.js';
+import { THEMES, themeName, applyTheme, currentTheme } from './themes.js';
+import { t } from '../core/i18n.js';
 import { checkDeck } from '../core/check.js';
 import { openCheckPanel } from '../ui/check-view.js';
 
 const EASE = 'cubic-bezier(.65, 0, .35, 1)';
 const pad = n => String(n).padStart(2, '0');
 
+// 快捷鍵說明(文字在 locales 的 key.*)
 const KEYS = [
-  ['← →', '上一張 / 下一張(翻頁筆也可以)'], ['↑ ↓', '上一章 / 下一章(牌堆會洗牌)'], ['Enter', '放大 / 縮回'],
-  ['Esc', '縮回、離開總覽、回目錄'], ['1–9', '跳到第幾章'], ['Home End', '第一張 / 最後一張'],
-  ['O', '總覽'], ['L', '切換排列'], ['T', '切換主題'], ['B', '黑屏'], ['F', '全螢幕'],
-  ['S', '開啟講者視窗'], ['P', '列印 / 存成 PDF'], ['K', '影片播放 / 暫停'], ['?', '這個說明'],
+  ['← →', 'key.prevNext'], ['↑ ↓', 'key.section'], ['Enter', 'key.enter'],
+  ['Esc', 'key.esc'], ['1–9', 'key.jump'], ['Home End', 'key.homeEnd'],
+  ['O', 'key.overview'], ['L', 'key.stage'], ['T', 'key.theme'], ['B', 'key.black'], ['F', 'key.full'],
+  ['S', 'key.presenter'], ['P', 'key.print'], ['K', 'key.video'], ['?', 'key.help'],
 ];
 
 export class Player {
@@ -50,22 +52,22 @@ export class Player {
     this.root.innerHTML = `
       <div class="player">
         <header class="pbar">
-          <button class="pbtn back" data-act="exit" title="回到目錄(Esc)">‹ 目錄</button>
+          <button class="pbtn back" data-act="exit" title="${esc(t('player.backTitle'))}">${esc(t('player.back'))}</button>
           <div class="ptitle"><div class="deck-name">${esc(d.title)}</div><div class="sec-name"></div></div>
           <nav class="tabs"></nav>
           <div class="ptools">
-            <select class="stage-select" title="排列方式(L)">${Object.entries(STAGES).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join('')}</select>
-            <button class="pbtn" data-act="theme" title="切換主題(T)">主題</button>
-            <button class="pbtn" data-act="check" title="檢查這份簡報">檢查</button>
-            <button class="pbtn" data-act="present" title="放大播放(Enter)">▶</button>
-            <button class="pbtn" data-act="help" title="快捷鍵(?)">?</button>
+            <select class="stage-select" title="${esc(t('player.stageTitle'))}" aria-label="${esc(t('player.stageTitle'))}">${Object.keys(STAGES).map(k => `<option value="${k}">${esc(t('stage.' + k))}</option>`).join('')}</select>
+            <button class="pbtn" data-act="theme" title="${esc(t('player.themeTitle'))}">${esc(t('player.theme'))}</button>
+            <button class="pbtn" data-act="check" title="${esc(t('player.checkTitle'))}">${esc(t('player.check'))}</button>
+            <button class="pbtn" data-act="present" title="${esc(t('player.presentTitle'))}" aria-label="${esc(t('player.presentTitle'))}">▶</button>
+            <button class="pbtn" data-act="help" title="${esc(t('player.helpTitle'))}" aria-label="${esc(t('player.helpTitle'))}">?</button>
           </div>
         </header>
         <div class="stage"><div class="world"></div></div>
         <div class="viewer"><div class="frame"></div></div>
-        <footer class="pfoot"><div class="progress"></div><div class="hint">← → 翻頁 · ↑ ↓ 換章 · Enter 放大 · L 排列 · ? 說明</div></footer>
+        <footer class="pfoot"><div class="progress"></div><div class="hint">${esc(t('player.hint'))}</div></footer>
         <div class="black"></div>
-        <div class="help-panel"><div class="help-card"><h2>快捷鍵</h2><dl>${KEYS.map(([k, v]) => `<dt>${k.split(' ').map(x => `<kbd>${x}</kbd>`).join('')}</dt><dd>${v}</dd>`).join('')}</dl><p>點卡片選取,再點一次放大。滑鼠滾輪也可以翻頁。</p></div></div>
+        <div class="help-panel"><div class="help-card"><h2>${esc(t('help.title'))}</h2><dl>${KEYS.map(([k, v]) => `<dt>${k.split(' ').map(x => `<kbd>${x}</kbd>`).join('')}</dt><dd>${esc(t(v))}</dd>`).join('')}</dl><p>${esc(t('help.foot'))}</p></div></div>
         <div class="issues"></div>
       </div>`;
     const $ = s => this.root.querySelector(s);
@@ -97,7 +99,7 @@ export class Player {
     if (this.sections.length < 2) this.el.tabs.style.display = 'none';
 
     if (d.issues?.length) {
-      this.el.issues.innerHTML = `<details><summary>⚠ ${d.issues.length} 個提醒</summary><ul>${d.issues.map(i => `<li><code>${esc(i.path)}</code>${esc(i.message)}</li>`).join('')}</ul></details>`;
+      this.el.issues.innerHTML = `<details><summary>${esc(t('player.issues', { n: d.issues.length }))}</summary><ul>${d.issues.map(i => `<li><code>${esc(i.path)}</code>${esc(i.message)}</li>`).join('')}</ul></details>`;
     }
   }
 
@@ -274,7 +276,7 @@ export class Player {
   cycleTheme() {
     const i = THEMES.indexOf(currentTheme());
     applyTheme(THEMES[(i + 1) % THEMES.length]);
-    this.toast(`主題:${THEME_NAMES[currentTheme()]}`);
+    this.toast(t('toast.theme', { name: themeName(currentTheme()) }));
   }
 
   onCardClick(gi) {
@@ -331,7 +333,7 @@ export class Player {
       case 'k': case 'K': this.el.frame.querySelectorAll('video, audio').forEach(v => (v.paused ? v.play() : v.pause())); break;
       case '?': case '/': this.toggleHelp(); break;
       default:
-        if (/^[1-9]$/.test(k)) { const numbered = this.sections.map((s, i) => [s, i]).filter(([s]) => s.folder); const t = numbered[+k - 1]; if (t) this.setSection(t[1]); break; }
+        if (/^[1-9]$/.test(k)) { const numbered = this.sections.map((s, i) => [s, i]).filter(([s]) => s.folder); const hit = numbered[+k - 1]; if (hit) this.setSection(hit[1]); break; }
         return false;
     }
     return true;
@@ -348,12 +350,12 @@ export class Player {
   toggleHelp(force) { this.el.help.classList.toggle('on', force); }
 
   toast(msg) {
-    let t = this.root.querySelector('.toast');
-    if (!t) { t = document.createElement('div'); t.className = 'toast'; this.el.player.appendChild(t); }
-    t.textContent = msg;
-    t.classList.add('on');
+    let el = this.root.querySelector('.toast');
+    if (!el) { el = document.createElement('div'); el.className = 'toast'; this.el.player.appendChild(el); }
+    el.textContent = msg;
+    el.classList.add('on');
     clearTimeout(this.toastTimer);
-    this.toastTimer = setTimeout(() => t.classList.remove('on'), 1600);
+    this.toastTimer = setTimeout(() => el.classList.remove('on'), 1600);
   }
 
   // ---------------- 放大檢視 ----------------
@@ -422,9 +424,9 @@ export class Player {
 
   // ---------------- 講者視窗 ----------------
   openPresenter() {
-    if (!this.channel) return this.toast('這個瀏覽器不支援講者視窗');
+    if (!this.channel) return this.toast(t('toast.noPresenter'));
     const w = window.open(`${location.pathname}#/presenter`, 'mdslide-presenter', 'width=1200,height=760');
-    if (!w) this.toast('瀏覽器擋住了彈出視窗,請允許後再按 S');
+    if (!w) this.toast(t('toast.popupBlocked'));
     this.startedAt = Date.now();
   }
 
@@ -452,7 +454,7 @@ export class Player {
 
   // ---------------- 列印 / PDF ----------------
   async print() {
-    this.toast('準備列印中…');
+    this.toast(t('toast.printing'));
     const box = document.createElement('div');
     box.id = 'print-root';
     box.innerHTML = this.slides.map((_, gi) => `<div class="print-page">${this.renderFull(gi)}</div>`).join('');

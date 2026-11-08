@@ -1,6 +1,7 @@
 // 「檢查」面板:顯示 app/core/check.js 的結果。目錄頁與播放器共用。
 
 import { escapeHTML as esc } from '../core/markdown.js';
+import { t } from '../core/i18n.js';
 
 /**
  * @param {HTMLElement} host 面板要放在哪個元素裡
@@ -10,9 +11,9 @@ export function openCheckPanel(host, run) {
   host.querySelector('.check-panel')?.remove();
   const panel = document.createElement('div');
   panel.className = 'check-panel';
-  panel.innerHTML = `<div class="check-card" role="dialog" aria-label="檢查結果">
-    <header><h2>檢查</h2><button class="check-close" title="關閉(Esc)">×</button></header>
-    <div class="check-body"><div class="check-progress"><i></i></div><p class="check-status">讀取中…</p></div>
+  panel.innerHTML = `<div class="check-card" role="dialog" aria-modal="true" aria-label="${esc(t('checkp.aria'))}">
+    <header><h2>${esc(t('checkp.title'))}</h2><button class="check-close" title="${esc(t('checkp.close'))}" aria-label="${esc(t('checkp.close'))}">×</button></header>
+    <div class="check-body"><div class="check-progress"><i></i></div><p class="check-status">${esc(t('loading'))}</p></div>
   </div>`;
   host.appendChild(panel);
   requestAnimationFrame(() => panel.classList.add('on'));
@@ -27,34 +28,34 @@ export function openCheckPanel(host, run) {
     const bar = body.querySelector('.check-progress i');
     if (bar) bar.style.transform = `scaleX(${total ? done / total : 0})`;
     const st = body.querySelector('.check-status');
-    if (st) st.textContent = title ? `檢查中(${done + 1}/${total}):${title}` : '整理結果…';
+    if (st) st.textContent = title ? t('checkp.progress', { i: done + 1, n: total, title }) : t('checkp.finishing');
   }).then(report => { body.innerHTML = renderReport(report); }, err => {
-    body.innerHTML = `<p class="check-bad">檢查失敗:${esc(err.message || String(err))}</p>`;
+    body.innerHTML = `<p class="check-bad">${esc(t('checkp.failed', { error: err.message || String(err) }))}</p>`;
   });
   return close;
 }
 
 function renderReport(r) {
-  const decks = r.topics.flatMap(t => t.decks);
+  const decks = r.topics.flatMap(tp => tp.decks);
   const slides = decks.reduce((n, d) => n + d.total, 0);
   const ok = !r.problems.length;
   const summary = `<div class="check-summary ${ok ? 'good' : 'bad'}">
-    <b>${ok ? '✓ 沒有發現問題' : `⚠ ${r.problems.length} 個問題`}</b>
-    <span>${decks.length} 份簡報 · ${slides} 張投影片</span></div>`;
-  const problems = ok ? '' : `<h3>問題</h3><ul class="check-problems">${r.problems.map(p => `<li><code>${esc(p.path)}</code>${esc(p.message)}</li>`).join('')}</ul>`;
-  const rows = r.topics.map(t => `
-    ${r.kind === 'library' ? `<h3>${esc(t.title)}</h3>` : ''}
-    ${t.decks.length ? t.decks.map(d => `
+    <b>${esc(ok ? t('check.report.ok') : t('checkp.problems', { n: r.problems.length }))}</b>
+    <span>${esc(t('checkp.summary', { decks: decks.length, slides }))}</span></div>`;
+  const problems = ok ? '' : `<h3>${esc(t('checkp.problemsHeading'))}</h3><ul class="check-problems">${r.problems.map(p => `<li><code>${esc(p.path)}</code>${esc(p.message)}</li>`).join('')}</ul>`;
+  const rows = r.topics.map(tp => `
+    ${r.kind === 'library' ? `<h3>${esc(tp.title)}</h3>` : ''}
+    ${tp.decks.length ? tp.decks.map(d => `
       <details class="check-deck">
         <summary>
           <span class="t">${d.problems.length ? '⚠ ' : ''}${esc(d.title)}</span>
-          <span class="n">${d.sections.length} 章</span>
-          <span class="n">${d.total} 張</span>
-          <span class="n">${d.layouts.length} 種版型</span>
-          <span class="n ${d.noted < d.total ? 'warn' : ''}">備註 ${d.noted}/${d.total}</span>
+          <span class="n">${esc(t('checkp.sections', { n: d.sections.length }))}</span>
+          <span class="n">${esc(t('checkp.slides', { n: d.total }))}</span>
+          <span class="n">${esc(t('checkp.layouts', { n: d.layouts.length }))}</span>
+          <span class="n ${d.noted < d.total ? 'warn' : ''}">${esc(t('checkp.notes', { a: d.noted, b: d.total }))}</span>
         </summary>
-        <ol>${d.slides.map(s => `<li><em>${esc(s.layout)}</em>${esc(s.title || '(無標題)')}${s.notes ? ' <small>📝</small>' : ''}${s.auto ? ' <small>自動</small>' : ''}</li>`).join('')}</ol>
-      </details>`).join('') : '<p class="check-empty">還沒有簡報</p>'}`).join('');
-  return `${summary}${problems}<h3 class="check-h">簡報</h3>${rows}
-    <p class="check-foot">規則:製作專案指南.md · 版型建議至少 4 種、每張都有講者備註。修改檔案後再按一次「檢查」即可。</p>`;
+        <ol>${d.slides.map(s => `<li><em>${esc(s.layout)}</em>${esc(s.title || t('check.report.untitled'))}${s.notes ? ' <small>📝</small>' : ''}${s.auto ? ` <small>${esc(t('checkp.auto'))}</small>` : ''}</li>`).join('')}</ol>
+      </details>`).join('') : `<p class="check-empty">${esc(t('checkp.noDecks'))}</p>`}`).join('');
+  return `${summary}${problems}<h3 class="check-h">${esc(t('checkp.decksHeading'))}</h3>${rows}
+    <p class="check-foot">${esc(t('checkp.foot'))}</p>`;
 }

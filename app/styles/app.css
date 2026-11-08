@@ -22,6 +22,9 @@ kbd { font: inherit; font-size: 12px; border: 1px solid var(--line); border-bott
 .logo i:nth-child(3) { background: var(--accent); }
 .topbar nav { display: flex; gap: 6px; }
 .topbar nav a { text-decoration: none; font-size: 14px; color: var(--muted); padding: 7px 12px; border-radius: 8px; }
+.lang-toggle { border: 1px solid var(--line); background: none; border-radius: 8px; padding: 6px 10px; margin-left: 6px; cursor: pointer; font-size: 13px; color: var(--muted); }
+.lang-toggle b { font-weight: 400; }
+.lang-toggle b.on { font-weight: 700; color: var(--ink); }
 .topbar nav a:hover, .topbar nav a.on { color: var(--ink); background: color-mix(in srgb, var(--line) 45%, transparent); }
 
 /* ---------- 首頁 ---------- */
@@ -110,7 +113,7 @@ kbd { font: inherit; font-size: 12px; border: 1px solid var(--line); border-bott
 .error-box { max-width: 560px; margin: 12vh auto; padding: 40px; text-align: center; background: var(--surface); border-radius: 16px; border: 1px solid var(--line); }
 .error-box h2 { font-family: var(--font-display); margin-bottom: 14px; }
 .error-box p { color: var(--muted); line-height: 1.8; margin-bottom: 24px; }
-body.dragging::after { content: "放開來開啟這個資料夾"; position: fixed; inset: 16px; z-index: 100; display: grid; place-items: center; font-size: 22px; color: var(--ink);
+body.dragging::after { content: attr(data-drop); position: fixed; inset: 16px; z-index: 100; display: grid; place-items: center; font-size: 22px; color: var(--ink);
   border: 3px dashed var(--accent); border-radius: 20px; background: color-mix(in srgb, var(--bg) 85%, transparent); pointer-events: none; }
 
 /* ---------- 播放器 ---------- */

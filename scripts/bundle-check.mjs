@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 // 入口:從這兩個檔案開始,依 import 自動找出所有需要的模組並排好順序(不用手動維護清單)
-const ENTRIES = ['app/core/check.js', 'scripts/node-source.mjs'];
+const ENTRIES = ['app/core/check.js', 'app/core/i18n.js', 'scripts/node-source.mjs'];
 
 async function collect() {
   const order = [], seen = new Set();
@@ -48,6 +48,7 @@ export async function bundle() {
 //   node mdslide-check.mjs                 檢查這個檔案所在的資料夾(放在書庫根目錄時 = 整個書庫)
 //   node mdslide-check.mjs <資料夾>         檢查指定的書庫、主題或單一簡報
 //   node mdslide-check.mjs <資料夾> --slides 連每張投影片都列出來
+//   node mdslide-check.mjs <資料夾> --lang en  英文輸出(預設依作業系統語言)
 // Windows 也可以直接雙擊「檢查書庫.cmd」,Mac 雙擊「檢查書庫.command」。
 
 ${[...nodeImports].sort().join('\n')}
@@ -55,7 +56,9 @@ import { fileURLToPath as __toPath } from 'node:url';
 
 ${parts.join('\n')}
 // ───────── 命令列 ─────────
-const __dir = process.argv.slice(2).find(a => !a.startsWith('--')) || __toPath(new URL('.', import.meta.url));
+setLang(detectNodeLang());
+const __args = process.argv.slice(2);
+const __dir = __args.find((a, i) => !a.startsWith('--') && __args[i - 1] !== '--lang') || __toPath(new URL('.', import.meta.url));
 const __report = await checkLibrary(nodeSource(__dir));
 console.log(formatReport(__report, { verbose: process.argv.includes('--slides') }));
 if (__report.problems.length) process.exitCode = 1;

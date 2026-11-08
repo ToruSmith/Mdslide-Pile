@@ -1,0 +1,380 @@
+# Deck-Making Guide
+
+This document explains how to turn a folder into a Mdslide Pile deck. **People and AI follow the same rules**: there is only one rulebook.
+
+> 中文版:[製作專案指南.md](../製作專案指南.md)
+
+> For AI: read this whole document before you start. When you are done, run `node scripts/check.mjs <folder>`; the job is finished only when it reports no problems. The last section is your workflow and acceptance checklist.
+
+---
+
+## 1. The one-minute version
+
+```
+my-library/                         ← library (on a hard drive or a USB drive)
+├─ _site.yml                        ← library settings (optional)
+├─ 01-teaching/                     ← topic
+│  ├─ _topic.yml                    ← topic settings (optional)
+│  └─ 2026-11-book-club/            ← project = one deck
+│     ├─ deck.yml                   ← deck settings (recommended)
+│     ├─ 01-problem/                ← section
+│     │  ├─ 01-today.md             ← slide
+│     │  └─ 02-data.md
+│     ├─ 02-method/
+│     └─ media/                     ← images and videos
+└─ 02-work/
+```
+
+- **Folders are the structure**: library → topic → deck → section → slide.
+- **One `.md` file is one slide** (you can also put several slides in one file, separated by `---`).
+- **Every config file is optional**; folder names alone are enough to play.
+
+You can open a whole library, one topic, or a single deck folder; the tool detects which level it is.
+
+---
+
+## 2. Folder and naming rules
+
+| Rule | Meaning | Example |
+|---|---|---|
+| A number prefix sets the order | The prefix is hidden on screen | `01-problem` shows as "problem" |
+| A date prefix | Treated as a date, not an order; decks without prefixes are sorted newest first | `2026-11-book-club` |
+| Starts with `_` or `.` | Skipped, never played; good for drafts | `_draft.md`, `_old/` |
+| Reserved folders | Hold media only, never become sections | `media/` `assets/` `images/` `img/` `video/` `videos/` |
+| Documentation files | Never become slides | `README.md`, `AGENTS.md` |
+
+**Naming tips** (topic and deck names matter, because you may later move or delete a whole folder):
+
+- Topics: `01-teaching`, `02-work`; short nouns.
+- Decks: `2026-11-book-club-notes`; a leading date makes them easy to sort and recognize.
+- Sections: `01-problem`, `02-method`; two digits leave room to insert (`015-extra` also works).
+- Slides: `01-today.md`; the file name is only for you, the screen shows the heading inside.
+- Avoid `/ \ : * ? " < > |` in names.
+
+**How the opened level is detected** (checked in this order):
+
+1. Has `deck.yml` → single deck
+2. Has `_topic.yml` → topic
+3. Has `_site.yml` → library
+4. Contains `.md` files directly → single deck
+5. A subfolder has `deck.yml` → topic; a subfolder has `_topic.yml` → library
+6. A subfolder contains `.md` files directly → single deck (the subfolders are sections)
+7. Anything else → library
+
+> For decks inside a topic, **always add a `deck.yml`** (a single line `title: My title` is enough); detection is then unambiguous.
+
+---
+
+## 3. Config files
+
+Config files are YAML. Only the common syntax is supported: `key: value`, nesting by indentation, `- list items`, `[a, b]`, `|` multi-line text and `#` comments. **Indent with spaces, never tabs.**
+
+### deck.yml (one deck)
+
+```yaml
+mdslide: 1                     # rule version, currently 1
+title: A moving deck made with Markdown
+subtitle: Book club, 2026
+kicker: Book club · Session 12  # small text at the top of the title slide
+author: Toru
+event: Taipei Book Club
+date: 2026-11-20
+theme: paper                   # paper / ink (dark) / slate
+lang: en                       # language of generated text (Thank you, Agenda…): zh-Hant / en; detected from the title when omitted
+accent: "#b4654a"              # accent color when a section has none
+cover_image: media/cover.jpg   # image on the right of the title slide (optional)
+tags: [book-club, notes]
+layout:
+  stage: pile                  # opening stage: pile / coverflow / carousel / helix / sphere / overview
+cover: true                    # false = no automatic title slide
+section_covers: true           # false = no automatic section covers
+end: Thank you                 # adds an automatic closing slide (optional)
+end_notes: Q&A                 # speaker notes for the closing slide
+cover_notes: |                 # speaker notes for the title slide
+  Pause for three seconds first.
+sections:                      # only overrides section properties; order always follows folder prefixes
+  - folder: 01-problem
+    title: "Problem: notes keep piling up"
+    subtitle: Why we write so much and use so little
+    color: "#c0674a"
+    notes: About 5 minutes      # speaker notes for the automatic section cover
+  - folder: 99-appendix
+    hidden: true               # keep the files but do not play them
+```
+
+Every field is optional. Defaults: the title comes from the folder name, section colors are assigned automatically, the theme is `paper` and the stage is `pile`.
+
+Colors accept `#rgb`, `#rrggbb`, `#rrggbbaa`, numeric `rgb()` / `hsl()` and plain color names (`teal`). Anything else is reported and replaced by the default color.
+
+### _topic.yml (one topic)
+
+```yaml
+name: Teaching
+description: Book clubs and internal talks
+color: "#4f73a6"
+order: [2026-12-year-end, 2026-11-book-club]   # optional; defaults to prefix or date
+```
+
+### _site.yml (the whole library)
+
+```yaml
+title: Toru's slide shelf
+description: One sentence about it
+theme: paper
+topics: [02-work, 01-teaching]                 # optional
+```
+
+---
+
+## 4. Writing slides
+
+### Basics
+
+It is ordinary Markdown:
+
+```markdown
+# The heading is the conclusion
+
+- First point; **bold** is highlighted in the section color
+- Second point; ==highlight== works too
+  - Sub-items are smaller and grey
+- [x] Checkbox
+- [ ] Not done
+
+A normal paragraph. Single line breaks inside a paragraph are kept.
+```
+
+Supported: headings, lists (ordered, unordered, nested, checkboxes), quotes, tables, code blocks, bold, italic, strikethrough, `==highlight==`, `inline code`, links and images. **Raw HTML is never rendered** (it is shown as text, for safety).
+
+### Several slides in one file
+
+Separate them with `---` **on a line of its own** (not inside code blocks):
+
+```markdown
+# First slide
+---
+# Second slide
+```
+
+### Speaker notes
+
+Write `Note:` on a line of its own; everything after it is visible only in the presenter view:
+
+```markdown
+# Slide content
+
+Note:
+Mention last week's example here.
+```
+
+### Per-slide settings
+
+Front matter at the **top of the file** applies to the whole file:
+
+```markdown
+---
+layout: split-left
+step: true
+---
+```
+
+Or put settings at the **start of each slide**; they apply to that slide only (handy when a file holds several slides):
+
+```markdown
+<!-- layout: quote -->
+<!-- color: #4f73a6 -->
+```
+
+| Setting | Meaning |
+|---|---|
+| `layout` | Layout, see the next section; default `auto` |
+| `step: true` | Step-by-step reveal: list items, stat cards, timeline items, columns and agenda items appear one at a time |
+| `color` | Accent color for this slide |
+| `background` | Background image (a light overlay keeps text readable) |
+| `fit: contain` | Show media whole, without cropping |
+| `footer: false` | Hide the footer |
+| `hidden: true` | Do not play this slide |
+| `title` | Title for the presenter view and overview (defaults to the first heading) |
+| `chart` / `unit` | Chart type and unit (for the chart layout) |
+
+### Images and video
+
+An image on **a line of its own** is the slide's main media:
+
+```markdown
+![Caption](media/photo.jpg)
+![Video caption](media/demo.mp4)
+![Caption](https://www.youtube.com/watch?v=VIDEO_ID)
+![Caption](media/photo.jpg "Text in quotes becomes the caption")
+```
+
+- **Paths**: `media/a.jpg` is relative to the **deck folder** (recommended; works from any section); `./a.jpg` is relative to the Markdown file.
+- **Local formats**: images jpg, png, gif, webp, svg, avif; video mp4, webm, mov.
+- **Online video**: YouTube, Bilibili, Google Drive (shared as "anyone with the link") and Vimeo. Paste the normal share URL. Needs a network connection.
+- Prefer online video; compress local video to 1080p and under 100 MB per file.
+- An image inside a paragraph (not on its own line) is shown inline.
+
+### Sources, data dates and footers
+
+When you quote numbers, follow these three rules and the slide formats them as professional footers:
+
+1. **Put the source next to the number.** A paragraph starting with `Source:`, `Sources:`, `Data as of` (or the Chinese `資料來源:`, `來源:`, `資料截至`, `註:`) becomes small footer text.
+2. **Date your data in time-sensitive decks.** Put "Data as of Nov 6, 2026 close" in the `kicker` of `deck.yml`; it appears on the title slide.
+3. **End with a "Sources" slide.** List every source as a link so the audience can photograph and check them.
+
+```markdown
+## NT$994.3 billion
+
+Foreign investors sold a record NT$994.3 billion of Taiwan shares in October.
+
+Source: Economic Daily News, Nov 6, 2026
+```
+
+Values derived from other numbers (for example the difference of two closing prices) must say "derived" in the footer.
+
+---
+
+## 5. Layouts
+
+When `layout` is omitted it is `auto`:
+
+- One media item and no text → `full`
+- Text plus media → `split`
+- Only a quote → `quote`
+- The first line is a short `## number` and there are at most 3 lines → `number`
+- Anything else → `text`
+
+| Layout | Use | How to write it |
+|---|---|---|
+| `text` | Normal content | Heading plus list or paragraphs |
+| `center` | Centered emphasis | Same as text, centered both ways |
+| `split` | Text left, media right | Text plus a media line |
+| `split-left` | Media left, text right | Same as split |
+| `full` | Full-bleed image or video | Media only; any text is overlaid at the bottom |
+| `quote` | Quotation | `> quote`, then `— source` on the next line |
+| `number` | Big number | `## 68%`, then an explanation |
+| `stats` | Stat cards (2–4) | List items written as `- **68%** label`; long values shrink automatically, keep them under 8 characters |
+| `timeline` | Timeline or steps | `- **2024** event`; sub-items become small text; end an item with `(now)` to mark the current point |
+| `columns` | Side-by-side comparison | Separate columns with `+++` on its own line; a first part with only a heading becomes the slide title |
+| `agenda` | Automatic agenda | Lists every section; nothing to write |
+| `chart` | Chart | Write a table: first column labels, other columns values; `chart: bar / hbar / line`, `unit: pts`. Values may use thousands separators, minus signs (− or -), % and units; write missing values as `—`, `N/A` or leave them blank |
+| `end` | Closing slide | `# Thank you` plus contact details |
+| `title`, `section` | Automatic title slide and section covers | Usually not written by hand |
+
+Examples:
+
+```markdown
+<!-- layout: stats -->
+# This year's results
+- **3×** user growth
+- **12 min** average preparation time
+- **98%** satisfaction
+Source: 2026 internal survey
+```
+
+```markdown
+---
+layout: chart
+chart: bar
+unit: k
+---
+# Quarterly revenue
+| Quarter | 2025 | 2026 |
+|---|---|---|
+| Q1 | 120 | 150 |
+| Q2 | 135 | 180 |
+```
+
+See `content/00-官方範例/04-Feature-Tour/` (English) and `content/00-官方範例/01-功能總覽/` (Chinese) for every layout.
+
+---
+
+## 6. Principles of a good deck
+
+These are not syntax rules; they are what makes a deck look professional:
+
+1. **One idea per slide.** Write the conclusion as the heading ("Growth came from new customers"), not just the topic ("Revenue analysis").
+2. **At most 5 bullets, each at most a line and a half.** Split the slide if it does not fit.
+3. **Slide count follows talk length** (including the automatic title slide and section covers):
+
+   | Length | Slides | Sections |
+   |---|---|---|
+   | 5 minutes | 6–8 | 1–2 |
+   | 10 minutes | 10–13 | 2–3 |
+   | 15 minutes | 14–18 | 3 |
+   | 25–30 minutes | 20–30 | 3–5 |
+
+   The checker warns above 45 slides.
+4. **Numbers need sources.** Never invent data; label illustrative numbers clearly as illustrative.
+5. **3–7 slides per section.** Sections are signposts for the audience; start with an `agenda`.
+6. **Avoid wall-to-wall text.** Every 3–4 slides, add a `number`, `quote`, `full` or chart slide to vary the rhythm.
+7. **Put details in the notes.** Slides are for the audience, notes are for you.
+8. **End with an action.** Put "Next steps" or "Conclusion" before the last slide, not just "Thank you".
+9. **Add a disclaimer on sensitive topics.** For investment, medical or legal decks, state on the conclusion slide that it is not investment (medical, legal) advice.
+
+---
+
+## 7. Workflow for AI
+
+### Confirm first
+
+- Topic, audience, length, and which topic folder the deck goes in.
+- Available material (images, data, video URLs). **Do not invent numbers** when there is no data.
+
+### When you receive data or sources
+
+1. **Build a number table first** (in your working notes, not in the deck): every number maps to one source and one date.
+2. Numbers may come only from material the user gave you or from source pages you actually opened; search-result snippets do not count.
+3. When sources disagree, prefer the more primary one (official announcement > major media > blogs) and explain in the notes.
+4. Mark derived numbers as "derived"; when comparisons use different dates, state the date ("as of Nov 4").
+
+### Steps
+
+1. Choose the deck folder name: `YYYY-MM-short-name`, inside the right topic.
+2. Write `deck.yml` first: `mdslide: 1`, `title`, `subtitle`, `date`, `theme`, `lang`, `kicker` (with the data date for current events), `cover_notes`, and `sections` with title, color and `notes` for each section.
+3. Plan sections and slides per section using the table in section 6.
+4. One file per slide: `01-xxx.md`; add front matter only when needed.
+5. Use at least 4 different layouts; put an `agenda` in the first section.
+6. Write `Note:` speaker notes for every slide (what to say, where to pause, what to ask); cite quoted numbers in the notes.
+7. Media always uses `media/` paths or online URLs; never reference files that do not exist.
+8. Run the check (all three give the same result; pick one):
+
+```bash
+node scripts/check.mjs <deck-or-library-folder> --slides --lang en   # inside the repository
+node mdslide-check.mjs <deck-or-library-folder> --slides --lang en   # the single-file tool in a library
+```
+
+If no command line is available, ask the user to open the folder on the website, press "✓ Check" and paste the result back.
+
+### Acceptance checklist
+
+- [ ] The check reports "✓ No problems found"
+- [ ] Every slide heading is a conclusion
+- [ ] No list longer than 5 items, no invented numbers
+- [ ] Every section has a title and color; section and slide counts fit the talk length
+- [ ] Every slide has speaker notes (the checker shows note coverage)
+- [ ] Every slide with numbers has a "Source:" footer, and the deck ends with a sources slide
+- [ ] Time-sensitive decks date their data in `kicker`; sensitive topics have a disclaimer
+- [ ] Media paths are correct and online videos are publicly viewable
+
+### Ready-to-use prompt
+
+```text
+Please read docs/GUIDE.en.md in full first.
+Make a deck in the "<topic folder>" folder:
+- Topic: <topic>
+- Audience: <audience>
+- Length: <minutes> minutes
+- Material: <data, images, video URLs, or "none">
+Follow the steps in section 7 of the guide to create the folder and files, then run check.mjs and report the result.
+```
+
+---
+
+## 8. FAQ
+
+- **Wrong order on screen?** Check the number prefixes. They sort numerically (`2-` before `10-`), but two digits (`02-`) also keep file explorers in the same order.
+- **A slide is missing?** Does its file name start with `_`? Does its front matter say `hidden: true`?
+- **"Media not found"?** Paths are relative to the deck folder, for example `media/a.jpg`, and letter case must match.
+- **A config file has no effect?** Indent with spaces and put a space after each colon; "✓ Check" on the website shows the line with the problem.
+- **USB drive on another computer?** Open the website in Chrome or Edge and choose the folder again.

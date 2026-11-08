@@ -10,6 +10,7 @@
 // 本機來源讀到的清單都會快取:同一個資料夾只列一次,減少隨身碟讀取。
 
 const enc = p => p.split('/').map(encodeURIComponent).join('/');
+import { t } from '../core/i18n.js';
 
 /** 倉庫模式:讀 GitHub Pages 上的 content/,目錄清單來自建置時產生的 catalog.json。 */
 export class HttpSource {
@@ -17,11 +18,11 @@ export class HttpSource {
     this.kind = 'repo';
     this.base = base.replace(/\/?$/, '/');
     this.tree = catalog.tree;
-    this.label = catalog.title || '內建範例';
+    this.label = catalog.title || t('source.repoLabel');
   }
   static async open(base = 'content/', catalogURL = 'catalog.json') {
     const res = await fetch(catalogURL, { cache: 'no-cache' });
-    if (!res.ok) throw new Error('找不到 catalog.json');
+    if (!res.ok) throw new Error(t('source.noCatalog'));
     return new HttpSource(base, await res.json());
   }
   async list(path) {
@@ -108,7 +109,7 @@ export class FileListSource {
         this.dirs.get(dir).set(parts[i], i === parts.length - 1 ? 'file' : 'dir');
       }
     }
-    this.label = root || '本機資料夾';
+    this.label = root || t('source.localLabel');
   }
   static fromInput(fileList) {
     return new FileListSource([...fileList].map(f => ({ file: f, path: f.webkitRelativePath || f.name })));

@@ -4,9 +4,11 @@
  * 把表格裡的一格轉成數字。支援千分位、全形負號(−)、%、單位後綴(點、億、張…)與常見貨幣前綴。
  * 無法解析(空白、N/A、—、文字)時回傳 null。
  */
+const MISSING = /^(n\/?a|na|null|none|—|–|-|－|無|缺)$/i; // i18n-ok:缺值的寫法
+
 export function parseNumber(cell) {
   let s = String(cell ?? '').trim();
-  if (!s || /^(n\/?a|na|null|none|—|–|-|－|無|缺)$/i.test(s)) return null;
+  if (!s || MISSING.test(s)) return null;
   s = s.replace(/^(NT\$|US\$|HK\$|NTD|USD|\$|¥|€|£)\s*/i, '');
   const m = s.match(/^([+\-−–－]?)\s*(\d[\d,]*(?:\.\d+)?|\.\d+)\s*([^\d].*)?$/);
   if (!m) return null;
@@ -33,7 +35,7 @@ export function parseChartTable(body) {
     name,
     values: rows.map((r, ri) => {
       const v = parseNumber(r[k + 1]);
-      if (v == null && String(r[k + 1] ?? '').trim() && !/^(n\/?a|na|—|–|-|－|無|缺)$/i.test(String(r[k + 1]).trim())) bad.push({ row: ri + 1, col: k + 2, text: String(r[k + 1]) });
+      if (v == null && String(r[k + 1] ?? '').trim() && !MISSING.test(String(r[k + 1]).trim())) bad.push({ row: ri + 1, col: k + 2, text: String(r[k + 1]) });
       return v;
     }),
   }));

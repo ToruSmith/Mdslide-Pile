@@ -3,18 +3,21 @@
 
 import { escapeHTML as esc } from '../core/markdown.js';
 import { applyTheme } from './themes.js';
+import { t, setLang, getLang } from '../core/i18n.js';
 
 export function startPresenter(root) {
-  document.title = '講者視窗 · Mdslide Pile';
+  try { setLang(localStorage.getItem('mdslide-lang') || (navigator.language?.toLowerCase().startsWith('zh') ? 'zh-Hant' : 'en')); } catch { /* 隱私模式 */ }
+  document.documentElement.lang = getLang();
+  document.title = t('pv.docTitle');
   root.innerHTML = `
     <div class="presenter">
-      <section class="pv-main"><div class="pv-label">目前</div><div class="pv-box cur"><div class="pv-frame"></div></div></section>
+      <section class="pv-main"><div class="pv-label">${t('pv.current')}</div><div class="pv-box cur"><div class="pv-frame"></div></div></section>
       <aside class="pv-side">
-        <div class="pv-clock"><div><small>經過</small><b class="elapsed">00:00</b></div><div><small>現在</small><b class="now">--:--</b></div><button class="reset">重設</button></div>
-        <div class="pv-label">下一張</div><div class="pv-box next"><div class="pv-frame"></div></div>
+        <div class="pv-clock"><div><small>${t('pv.elapsed')}</small><b class="elapsed">00:00</b></div><div><small>${t('pv.now')}</small><b class="now">--:--</b></div><button class="reset">${t('pv.reset')}</button></div>
+        <div class="pv-label">${t('pv.next')}</div><div class="pv-box next"><div class="pv-frame"></div></div>
         <div class="pv-meta"></div>
-        <div class="pv-label">備註</div><div class="pv-notes"><p class="empty">等待主視窗…(在主視窗按 S 開啟)</p></div>
-        <div class="pv-keys">← → 翻頁 · ↑ ↓ 換章 · Enter 放大 · B 黑屏 · 這個視窗的按鍵會同步到主視窗</div>
+        <div class="pv-label">${t('pv.notes')}</div><div class="pv-notes"><p class="empty">${t('pv.waiting')}</p></div>
+        <div class="pv-keys">${t('pv.keys')}</div>
       </aside>
     </div>`;
   const $ = s => root.querySelector(s);
@@ -23,7 +26,7 @@ export function startPresenter(root) {
 
   const place = (box, html, media) => {
     const frame = box.querySelector('.pv-frame');
-    frame.innerHTML = html || '<div class="pv-end">(最後一張)</div>';
+    frame.innerHTML = html || `<div class="pv-end">${t('pv.last')}</div>`;
     frame.querySelectorAll('[data-media]').forEach(el => { const u = media[el.dataset.media]; if (u) el.src = u; });
     frame.querySelectorAll('img[data-thumb]').forEach(el => { el.onerror = () => el.remove(); el.src = el.dataset.thumb; });
     frame.querySelectorAll('.slide[data-bg]').forEach(el => { const u = media[el.dataset.bg]; if (u) el.style.backgroundImage = `url("${u}")`; });
@@ -41,8 +44,8 @@ export function startPresenter(root) {
     startedAt = m.startedAt || startedAt;
     place($('.pv-box.cur'), m.cur, m.media);
     place($('.pv-box.next'), m.next, m.media);
-    $('.pv-meta').innerHTML = `<b>${m.n}</b> / ${m.total} · ${esc(m.section || m.title)}${m.steps ? ` · 逐步 ${m.step}/${m.steps}` : ''}${m.viewing ? '' : ' · <em>主畫面未放大</em>'}`;
-    $('.pv-notes').innerHTML = m.notes || '<p class="empty">這張沒有備註</p>';
+    $('.pv-meta').innerHTML = `<b>${m.n}</b> / ${m.total} · ${esc(m.section || m.title)}${m.steps ? esc(t('pv.steps', { a: m.step, b: m.steps })) : ''}${m.viewing ? '' : t('pv.notViewing')}`;
+    $('.pv-notes').innerHTML = m.notes || `<p class="empty">${t('pv.noNotes')}</p>`;
   };
   ch.postMessage({ type: 'hello' });
 
@@ -56,7 +59,7 @@ export function startPresenter(root) {
   const tick = () => {
     const s = Math.floor((Date.now() - startedAt) / 1000);
     $('.elapsed').textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
-    $('.now').textContent = new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false });
+    $('.now').textContent = new Date().toLocaleTimeString(getLang() === 'en' ? 'en-GB' : 'zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false });
   };
   tick();
   setInterval(tick, 1000);

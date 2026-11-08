@@ -101,12 +101,13 @@ function overview({ slides, sections, focus, vw, vh }) {
 }
 
 export const STAGES = {
-  pile: { name: '牌堆', fn: pile, shuffle: true },
-  coverflow: { name: '封面流', fn: coverflow },
-  carousel: { name: '圓柱', fn: carousel },
-  helix: { name: '螺旋', fn: helix },
-  sphere: { name: '球體', fn: sphere },
-  overview: { name: '總覽', fn: overview },
+  // 顯示名稱在 locales 的 stage.<名稱>
+  pile: { fn: pile, shuffle: true },
+  coverflow: { fn: coverflow },
+  carousel: { fn: carousel },
+  helix: { fn: helix },
+  sphere: { fn: sphere },
+  overview: { fn: overview },
 };
 export const STAGE_ORDER = ['pile', 'coverflow', 'carousel', 'helix', 'sphere'];
 

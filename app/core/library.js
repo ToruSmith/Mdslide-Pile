@@ -15,6 +15,7 @@ import { parseYaml, YamlError } from './yaml.js';
 import { join, isHidden, isMarkdown, RESERVED_DIRS, splitOrder, byOrder } from './names.js';
 import { parseSlideFile } from './slide.js';
 import { safeColor } from './color.js';
+import { t, detectDeckLang } from './i18n.js';
 
 export const SCHEMA_VERSION = 1;
 export const PALETTE = ['#c0674a', '#5f8a64', '#4f73a6', '#b08a3a', '#8a5fa6', '#3f8f8f', '#b0566e', '#6b7a8f'];
@@ -78,7 +79,7 @@ export async function scanLibrary(source) {
   const issues = [];
   const kind = await detectRootKind(source);
   const rootEntries = await source.list('');
-  const label = source.label || '書庫';
+  const label = source.label || t('lib.defaultLabel');
 
   if (kind === 'deck') {
     const project = await readProject(source, '', label, '_', issues);
@@ -157,6 +158,7 @@ async function readProject(source, path, folder, topicId, issues) {
     theme: str(conf.theme),
     accent: color(conf.accent, null, join(path, CONFIG.deck), issues) || safeColor(Array.isArray(conf.sections) && conf.sections[0]?.color) || '',
     coverImage: str(conf.cover_image || conf.coverImage),
+    lang: detectDeckLang(conf.lang, conf.title, conf.subtitle, conf.kicker, folder, ...(Array.isArray(conf.sections) ? conf.sections.map(s => s && (s.title || s.folder)) : [])),
     config: conf,
   };
 }
@@ -167,7 +169,7 @@ const str = v => (v == null ? '' : String(v));
 function color(value, fallback, path, issues) {
   if (value == null || value === '') return fallback;
   const c = safeColor(value);
-  if (!c) issues.push({ path, message: `顏色「${value}」格式不正確,已改用預設顏色` });
+  if (!c) issues.push({ path, message: t('issue.color', { value }) });
   return c || fallback;
 }
 
@@ -215,11 +217,11 @@ export async function loadDeck(source, project) {
   for (const s of sections) {
     const c = confSections.find(x => x.folder === s.folder || x.folder === splitOrder(s.folder).label) || {};
     if (c.hidden) continue;
-    const texts = await Promise.all(s.files.map(f => limit(() => source.readText(f)).then(t => [f, t], () => [f, null])));
+    const texts = await Promise.all(s.files.map(f => limit(() => source.readText(f)).then(text => [f, text], () => [f, null])));
     const slides = [];
-    for (const [f, t] of texts) {
-      if (t == null) { issues.push({ path: f, message: '讀取失敗' }); continue; }
-      const r = parseSlideFile(t, { path: f });
+    for (const [f, text] of texts) {
+      if (text == null) { issues.push({ path: f, message: t('issue.readFailed') }); continue; }
+      const r = parseSlideFile(text, { path: f });
       issues.push(...r.issues);
       slides.push(...r.slides.filter(sl => !sl.meta.hidden));
     }
@@ -244,8 +246,8 @@ export async function loadDeck(source, project) {
     if (last) last.slides.push({ file: project.path, index: -1, meta: {}, layout: 'end', body: '', notes: str(conf.end_notes), media: [], title: String(conf.end), auto: true });
   }
 
-  if (!built.some(s => s.slides.some(sl => !sl.auto))) issues.push({ path: project.path, message: '這個資料夾裡沒有找到任何投影片(.md 檔)' });
-  if (conf.mdslide && Number(conf.mdslide) > SCHEMA_VERSION) issues.push({ path: join(project.path, CONFIG.deck), message: `此簡報需要較新版本的工具(mdslide: ${conf.mdslide})` });
+  if (!built.some(s => s.slides.some(sl => !sl.auto))) issues.push({ path: project.path, message: t('issue.noSlides') });
+  if (conf.mdslide && Number(conf.mdslide) > SCHEMA_VERSION) issues.push({ path: join(project.path, CONFIG.deck), message: t('issue.newerSchema', { version: conf.mdslide }) });
 
   const layout = typeof conf.layout === 'object' && conf.layout ? conf.layout : { stage: conf.layout };
   return {

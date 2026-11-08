@@ -12,9 +12,10 @@ Mdslide Pile 把「資料夾 + Markdown」播放成 3D 牌堆簡報。網站是�
 1. **零依賴、零建置。** 網站是原生 ES 模組,直接由靜態伺服器提供。不要加 npm 套件、打包工具或框架。需要的功能自己寫精簡版(例如 `app/core/yaml.js`、`app/core/markdown.js`)。
 2. **解析器只有一份。** `app/core/` 同時給瀏覽器與 Node 腳本使用,裡面不能用到 DOM 或 Node 專屬 API。
 3. **按需讀取。** 本機資料可能在隨身碟上。讀取分三層(目錄 → 封面 → 整份簡報),媒體只在快要看到時才載入。新增功能時不要在目錄層讀 MD 檔;`tests/core.test.mjs` 有測試在把關。
-4. **規則文件與程式同步。** 改了規則(版型、設定欄位、命名規則),必須同時更新 `製作專案指南.md`、範例內容與測試。
+4. **規則文件與程式同步。** 改了規則(版型、設定欄位、命名規則),必須同時更新 `製作專案指南.md`、`docs/GUIDE.en.md`、範例內容與測試。
 5. **使用者內容不執行。** Markdown 裡的 HTML 一律跳脫;外部連結只允許 http(s)、mailto 與相對路徑。
-6. **向後相容。** `deck.yml` 的 `mdslide: 1` 是規則版本;破壞性變更才升版,並保留舊版的讀法。
+6. **介面文字一律走 i18n。** 新增任何使用者看得到的文字,必須同時加進 `app/core/locales/zh-Hant.js` 與 `en.js`,程式裡用 `t('鍵')` 取用;不要把 `t` 拿來當變數名稱。`tests/i18n.test.mjs` 會擋下寫死的中文與缺漏的鍵。
+7. **向後相容。** `deck.yml` 的 `mdslide: 1` 是規則版本;破壞性變更才升版,並保留舊版的讀法。
 
 ## 架構
 
@@ -70,7 +71,7 @@ tests/                   node:test 單元測試
 4. `製作專案指南.md` 第 5 節的表格與範例。
 5. 在 `content/00-官方範例/01-功能總覽/03-功能展示/` 加一張示範。
 
-**新增主題**:`app/styles/themes.css` 複製一段 `[data-theme]`,再到 `app/player/themes.js` 的 `THEMES` 與 `THEME_NAMES` 登記,並更新指南。
+**新增主題**:`app/styles/themes.css` 複製一段 `[data-theme]`,再到 `app/player/themes.js` 的 `THEMES` 登記、在兩份 locale 加上 `theme.<名稱>`,並更新兩份指南。
 
 **新增 3D 排列**:在 `app/player/layouts.js` 寫一個純函式並加進 `STAGES`(要在牌堆輪替中出現就加進 `STAGE_ORDER`),並更新指南的 `layout.stage` 說明。
 

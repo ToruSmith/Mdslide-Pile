@@ -1,4 +1,5 @@
 mdslide: 1
+lang: zh-Hant                 # 自動產生的文字(謝謝、大綱…)用中文
 title: Mdslide Pile
 subtitle: 把資料夾變成會動的簡報
 kicker: 官方範例 · 功能總覽

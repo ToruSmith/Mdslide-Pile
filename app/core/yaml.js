@@ -10,9 +10,11 @@
 // 不支援:錨點、標籤、多文件、行內物件 {}。
 // 解析失敗時丟出 YamlError(含行號),呼叫端負責轉成使用者看得懂的提示。
 
+import { t } from './i18n.js';
+
 export class YamlError extends Error {
   constructor(message, line) {
-    super(line ? `第 ${line} 行:${message}` : message);
+    super(line ? t('yaml.line', { line, message }) : message);
     this.line = line;
   }
 }
@@ -22,7 +24,7 @@ export function parseYaml(text) {
   text.replace(/\r\n?/g, '\n').split('\n').forEach((raw, i) => {
     const stripped = stripComment(raw);
     if (!stripped.trim()) { lines.push({ blank: true, raw, no: i + 1 }); return; }
-    if (/^\t/.test(raw)) throw new YamlError('請用空白縮排,不要用 Tab', i + 1);
+    if (/^\t/.test(raw)) throw new YamlError(t('yaml.tab'), i + 1);
     lines.push({ indent: stripped.match(/^ */)[0].length, text: stripped.trim(), raw, no: i + 1 });
   });
   const state = { lines, i: 0 };
@@ -30,7 +32,7 @@ export function parseYaml(text) {
   if (state.i >= lines.length) return {};
   const value = parseBlock(state, lines[state.i].indent);
   skipBlank(state);
-  if (state.i < lines.length) throw new YamlError('縮排不一致', lines[state.i].no);
+  if (state.i < lines.length) throw new YamlError(t('yaml.inconsistent'), lines[state.i].no);
   return value;
 }
 
@@ -59,10 +61,10 @@ function parseMap(s, indent) {
     skipBlank(s);
     const ln = s.lines[s.i];
     if (!ln || ln.indent < indent) break;
-    if (ln.indent > indent) throw new YamlError('縮排過多', ln.no);
-    if (ln.text.startsWith('- ')) throw new YamlError('這裡應該是「名稱: 值」,不是清單', ln.no);
+    if (ln.indent > indent) throw new YamlError(t('yaml.tooDeep'), ln.no);
+    if (ln.text.startsWith('- ')) throw new YamlError(t('yaml.notList'), ln.no);
     const m = ln.text.match(/^("[^"]*"|'[^']*'|[^:]+?)\s*:(?:\s+(.*))?$/);
-    if (!m) throw new YamlError(`看不懂「${ln.text}」,格式應為「名稱: 值」`, ln.no);
+    if (!m) throw new YamlError(t('yaml.unknown', { text: ln.text }), ln.no);
     const key = unquote(m[1]);
     const rest = m[2] ?? '';
     s.i++;
@@ -77,7 +79,7 @@ function parseList(s, indent) {
     skipBlank(s);
     const ln = s.lines[s.i];
     if (!ln || ln.indent < indent) break;
-    if (ln.indent > indent) throw new YamlError('縮排過多', ln.no);
+    if (ln.indent > indent) throw new YamlError(t('yaml.tooDeep'), ln.no);
     if (!(ln.text.startsWith('- ') || ln.text === '-')) break;
     const rest = ln.text === '-' ? '' : ln.text.slice(2).trim();
     if (!rest) { s.i++; skipBlank(s); arr.push(s.lines[s.i] && s.lines[s.i].indent > indent ? parseBlock(s, s.lines[s.i].indent) : null); continue; }
@@ -120,27 +122,27 @@ function blockScalar(s, indent, fold) {
   return fold ? out.join('\n').replace(/([^\n])\n(?!\n)/g, '$1 ') : out.join('\n');
 }
 
-function unquote(t) {
-  t = t.trim();
-  if (t.length >= 2 && t[0] === '"' && t.at(-1) === '"') return t.slice(1, -1).replace(/\\n/g, '\n').replace(/\\"/g, '"');
-  if (t.length >= 2 && t[0] === "'" && t.at(-1) === "'") return t.slice(1, -1).replace(/''/g, "'");
-  return t;
+function unquote(v) {
+  v = v.trim();
+  if (v.length >= 2 && v[0] === '"' && v.at(-1) === '"') return v.slice(1, -1).replace(/\\n/g, '\n').replace(/\\"/g, '"');
+  if (v.length >= 2 && v[0] === "'" && v.at(-1) === "'") return v.slice(1, -1).replace(/''/g, "'");
+  return v;
 }
 
-function scalar(t, no) {
-  t = t.trim();
-  if (t.startsWith('[')) {
-    if (!t.endsWith(']')) throw new YamlError('行內陣列缺少 ]', no);
-    const inner = t.slice(1, -1).trim();
+function scalar(v, no) {
+  v = v.trim();
+  if (v.startsWith('[')) {
+    if (!v.endsWith(']')) throw new YamlError(t('yaml.array'), no);
+    const inner = v.slice(1, -1).trim();
     if (!inner) return [];
     return splitTopLevel(inner).map(x => scalar(x, no));
   }
-  if (/^["']/.test(t)) return unquote(t);
-  if (/^(true|yes|on)$/i.test(t)) return true;
-  if (/^(false|no|off)$/i.test(t)) return false;
-  if (/^(null|~)$/i.test(t)) return null;
-  if (/^-?\d+(\.\d+)?$/.test(t)) return Number(t);
-  return t;
+  if (/^["']/.test(v)) return unquote(v);
+  if (/^(true|yes|on)$/i.test(v)) return true;
+  if (/^(false|no|off)$/i.test(v)) return false;
+  if (/^(null|~)$/i.test(v)) return null;
+  if (/^-?\d+(\.\d+)?$/.test(v)) return Number(v);
+  return v;
 }
 
 function splitTopLevel(s) {

@@ -6,11 +6,467 @@
 //   node mdslide-check.mjs                 檢查這個檔案所在的資料夾(放在書庫根目錄時 = 整個書庫)
 //   node mdslide-check.mjs <資料夾>         檢查指定的書庫、主題或單一簡報
 //   node mdslide-check.mjs <資料夾> --slides 連每張投影片都列出來
+//   node mdslide-check.mjs <資料夾> --lang en  英文輸出(預設依作業系統語言)
 // Windows 也可以直接雙擊「檢查書庫.cmd」,Mac 雙擊「檢查書庫.command」。
 
 import * as fsp from 'node:fs/promises';
 import * as nodePath from 'node:path';
 import { fileURLToPath as __toPath } from 'node:url';
+
+// ───────── app/core/locales/zh-Hant.js ─────────
+// 繁體中文字串表。新增任何使用者看得到的文字時,必須同時加進 en.js(tests/i18n.test.mjs 會檢查)。
+// {name} 是參數佔位,兩份語言的佔位必須一致。
+
+const LOCALE_ZH_HANT = {
+  // ---------- 設定檔(YAML)----------
+  'yaml.line': '第 {line} 行:{message}',
+  'yaml.tab': '請用空白縮排,不要用 Tab',
+  'yaml.inconsistent': '縮排不一致',
+  'yaml.tooDeep': '縮排過多',
+  'yaml.notList': '這裡應該是「名稱: 值」,不是清單',
+  'yaml.unknown': '看不懂「{text}」,格式應為「名稱: 值」',
+  'yaml.array': '行內陣列缺少 ]',
+
+  // ---------- 解析時的提醒 ----------
+  'lib.defaultLabel': '書庫',
+  'issue.color': '顏色「{value}」格式不正確,已改用預設顏色',
+  'issue.slideColor': '顏色「{value}」格式不正確,已改用章節顏色',
+  'issue.readFailed': '讀取失敗',
+  'issue.noSlides': '這個資料夾裡沒有找到任何投影片(.md 檔)',
+  'issue.newerSchema': '此簡報需要較新版本的工具(mdslide: {version})',
+  'issue.frontMatter': '開頭設定(front matter){detail}',
+  'issue.frontMatterParse': '無法解析',
+  'issue.layout': '未知的版型「{layout}」,改用自動判斷。可用:{list}',
+  'issue.brandFont': 'brand 字型「{value}」含有不允許的字元,已忽略',
+
+  // ---------- 檢查 ----------
+  'check.noTable': 'chart 版型找不到表格',
+  'check.badCell': '圖表第 {row} 列第 {col} 欄「{text}」不是數字,會顯示為空白',
+  'check.missingMedia': '找不到素材 {src}(實際路徑 {path})',
+  'check.missingBg': '找不到背景圖 {src}',
+  'check.missingCover': '找不到 cover_image {src}',
+  'check.missingLogo': '找不到 brand.logo {src}',
+  'check.missingFootnote': '腳註 [^{id}] 沒有定義',
+  'check.deckFolder': '(簡報資料夾)',
+  'check.tooMany': '共 {n} 張,25–30 分鐘的報告建議 20–30 張',
+  'check.opening': '(開場)',
+  'check.unreadable': '無法讀取:{error}',
+  'check.kind.library': '書庫',
+  'check.kind.topic': '主題',
+  'check.kind.deck': '單一簡報',
+  'check.report.title': '📚 {title}(偵測為:{kind})',
+  'check.report.topic': '▸ 主題:{title}',
+  'check.report.empty': '  (還沒有簡報)',
+  'check.report.deck': '  ▪ {title}{date}— {sections} 章、{total} 張、{layouts} 種版型、備註 {noted}/{total}{noConfig}',
+  'check.report.date': '({date})',
+  'check.report.noConfig': '、沒有 deck.yml',
+  'check.report.section': '      {title}:{count} 張',
+  'check.report.untitled': '(無標題)',
+  'check.report.auto': '  (自動)',
+  'check.report.problems': '⚠ {n} 個問題:',
+  'check.report.ok': '✓ 沒有發現問題',
+  'check.usage': '用法:node scripts/check.mjs <資料夾> [--slides] [--lang en|zh-Hant]',
+  'catalog.done': 'catalog.json:{topics} 個主題、{decks} 份簡報、{slides} 張投影片',
+
+  // ---------- 資料來源 ----------
+  'source.repoLabel': '內建範例',
+  'source.localLabel': '本機資料夾',
+  'source.noCatalog': '找不到 catalog.json',
+
+  // ---------- 投影片自動文字(依簡報語言)----------
+  'slide.thanks': '謝謝',
+  'slide.agenda': '大綱',
+  'slide.noMedia': '沒有媒體',
+  'slide.missingMedia': '找不到素材',
+
+  // ---------- 主題與排列 ----------
+  'theme.paper': '紙張',
+  'theme.ink': '深色',
+  'theme.slate': '石板',
+  'stage.pile': '牌堆',
+  'stage.coverflow': '封面流',
+  'stage.carousel': '圓柱',
+  'stage.helix': '螺旋',
+  'stage.sphere': '球體',
+  'stage.overview': '總覽',
+
+  // ---------- 首頁與導覽 ----------
+  'doc.title': 'Mdslide Pile · 把資料夾變成會動的簡報',
+  'nav.repo': '內建範例',
+  'nav.home': '我的書庫',
+  'nav.backHome': '回首頁',
+  'lang.label': '語言 / Language',
+  'lang.zhShort': '中',
+  'loading': '讀取中…',
+  'loading.library': '讀取書庫目錄…',
+  'loading.deck': '讀取簡報…',
+  'err.title': '出了點問題',
+  'err.noRecord': '找不到這個書庫的紀錄,請重新開啟資料夾。',
+  'err.sessionGone': '這次開啟的資料夾已經失效(重新整理頁面後需要再選一次)。',
+  'err.cannotRead': '無法讀取這個資料夾,可能已被移動或隨身碟未插上。',
+  'err.noDeck': '找不到這份簡報,可能已經改名或移除。',
+  'err.emptyDeck': '這份簡報裡沒有投影片。',
+  'err.dropFolder': '請拖入「資料夾」,不是單一檔案。',
+  'drop.hint': '放開來開啟這個資料夾',
+  'home.eyebrow': '把資料夾變成會動的簡報',
+  'home.title': '網站是遊戲機,<br>你的資料夾是遊戲片。',
+  'home.lead': '簡報檔案留在你的電腦或隨身碟裡,這裡只負責播放。不用安裝、不用上傳。',
+  'home.open': '開啟本機資料夾',
+  'home.repo': '看內建範例',
+  'home.tipPicker': '也可以直接把資料夾拖進這個視窗。Chrome / Edge 會記住你開過的書庫。',
+  'home.tipNoPicker': '也可以直接把資料夾拖進這個視窗。這個瀏覽器無法記住資料夾,重新整理後需要再選一次;用 Chrome 或 Edge 體驗最好。',
+  'home.recent': '最近開啟的書庫',
+  'home.forget': '從清單移除(不會刪除檔案)',
+  'home.step1.title': '準備資料夾',
+  'home.step1.text': '一個資料夾一份簡報,子資料夾是章節,每個 .md 檔是一張投影片。',
+  'home.step2.title': '開啟',
+  'home.step2.text': '開啟整個書庫、一個主題,或單一簡報資料夾都可以,會自動判斷。',
+  'home.step3.title': '上台',
+  'home.step3.text': 'Enter 放大、方向鍵翻頁、S 開講者視窗、P 存成 PDF。',
+  'home.rules': '規則說明:',
+  'home.guideName': '製作專案指南.md',
+  'home.guidePath': '製作專案指南.md',
+  'perm.title': '重新連線「{name}」',
+  'perm.text': '為了保護你的檔案,瀏覽器每次重新開啟都需要再確認一次讀取權限。<br>如果是隨身碟,請先確認已經插上。',
+  'perm.grant': '允許讀取',
+
+  // ---------- 目錄頁 ----------
+  'lib.repo': '內建書庫',
+  'lib.local': '本機書庫',
+  'lib.eyebrow': '{kind} · {topics} 個主題 · {decks} 份簡報',
+  'lib.search': '搜尋簡報標題、標籤…',
+  'lib.check': '✓ 檢查',
+  'lib.checkTitle': '檢查所有簡報是否符合規則',
+  'lib.refresh': '↻ 重新整理',
+  'lib.refreshTitle': '重新讀取資料夾',
+  'lib.all': '全部',
+  'lib.issues': '⚠ {n} 個設定檔問題',
+  'lib.empty': '這個主題還沒有簡報',
+  'lib.chapters': '{n} 章',
+
+  // ---------- 檢查面板 ----------
+  'checkp.aria': '檢查結果',
+  'checkp.title': '檢查',
+  'checkp.close': '關閉(Esc)',
+  'checkp.progress': '檢查中({i}/{n}):{title}',
+  'checkp.finishing': '整理結果…',
+  'checkp.failed': '檢查失敗:{error}',
+  'checkp.problems': '⚠ {n} 個問題',
+  'checkp.summary': '{decks} 份簡報 · {slides} 張投影片',
+  'checkp.problemsHeading': '問題',
+  'checkp.decksHeading': '簡報',
+  'checkp.sections': '{n} 章',
+  'checkp.slides': '{n} 張',
+  'checkp.layouts': '{n} 種版型',
+  'checkp.notes': '備註 {a}/{b}',
+  'checkp.auto': '自動',
+  'checkp.noDecks': '還沒有簡報',
+  'checkp.foot': '規則:製作專案指南.md · 版型建議至少 4 種、每張都有講者備註。修改檔案後再按一次「檢查」即可。',
+
+  // ---------- 播放器 ----------
+  'player.back': '‹ 目錄',
+  'player.backTitle': '回到目錄(Esc)',
+  'player.stageTitle': '排列方式(L)',
+  'player.theme': '主題',
+  'player.themeTitle': '切換主題(T)',
+  'player.check': '檢查',
+  'player.checkTitle': '檢查這份簡報',
+  'player.presentTitle': '放大播放(Enter)',
+  'player.helpTitle': '快捷鍵(?)',
+  'player.hint': '← → 翻頁 · ↑ ↓ 換章 · Enter 放大 · L 排列 · ? 說明',
+  'player.issues': '⚠ {n} 個提醒',
+  'player.slideLabel': '第 {n} 張:{title}',
+  'player.reloaded': '已重新載入',
+  'player.reloadUnsupported': '這個資料來源無法重新載入,請重新開啟資料夾',
+  'help.title': '快捷鍵',
+  'help.foot': '點卡片選取,再點一次放大。滑鼠滾輪也可以翻頁。',
+  'help.motion': '動畫',
+  'help.motionFull': '完整',
+  'help.motionReduced': '簡化',
+  'key.prevNext': '上一張 / 下一張(翻頁筆也可以)',
+  'key.section': '上一章 / 下一章(牌堆會洗牌)',
+  'key.enter': '放大 / 縮回',
+  'key.esc': '縮回、離開總覽、回目錄',
+  'key.jump': '跳到第幾章',
+  'key.homeEnd': '第一張 / 最後一張',
+  'key.overview': '總覽',
+  'key.stage': '切換排列',
+  'key.theme': '切換主題',
+  'key.black': '黑屏',
+  'key.full': '全螢幕',
+  'key.presenter': '開啟講者視窗',
+  'key.print': '列印 / 存成 PDF',
+  'key.video': '影片播放 / 暫停',
+  'key.reload': '重新載入簡報',
+  'key.help': '這個說明',
+  'toast.theme': '主題:{name}',
+  'toast.noPresenter': '這個瀏覽器不支援講者視窗',
+  'toast.popupBlocked': '瀏覽器擋住了彈出視窗,請允許後再按 S',
+  'toast.printing': '準備列印中…',
+
+  // ---------- 講者視窗 ----------
+  'pv.docTitle': '講者視窗 · Mdslide Pile',
+  'pv.current': '目前',
+  'pv.elapsed': '經過',
+  'pv.now': '現在',
+  'pv.reset': '重設',
+  'pv.next': '下一張',
+  'pv.notes': '備註',
+  'pv.waiting': '等待主視窗…(在主視窗按 S 開啟)',
+  'pv.keys': '← → 翻頁 · ↑ ↓ 換章 · Enter 放大 · B 黑屏 · 這個視窗的按鍵會同步到主視窗',
+  'pv.last': '(最後一張)',
+  'pv.steps': ' · 逐步 {a}/{b}',
+  'pv.notViewing': ' · <em>主畫面未放大</em>',
+  'pv.noNotes': '這張沒有備註',
+};
+
+// ───────── app/core/locales/en.js ─────────
+// English strings. Every key here must also exist in zh-Hant.js (tests/i18n.test.mjs checks this).
+// {name} is a placeholder; both languages must use the same placeholders.
+
+const LOCALE_EN = {
+  // ---------- Config files (YAML) ----------
+  'yaml.line': 'Line {line}: {message}',
+  'yaml.tab': 'Indent with spaces, not tabs',
+  'yaml.inconsistent': 'Inconsistent indentation',
+  'yaml.tooDeep': 'Too much indentation',
+  'yaml.notList': 'Expected "key: value" here, not a list item',
+  'yaml.unknown': 'Cannot read "{text}"; expected "key: value"',
+  'yaml.array': 'Inline list is missing ]',
+
+  // ---------- Parse warnings ----------
+  'lib.defaultLabel': 'Library',
+  'issue.color': 'Invalid color "{value}"; using the default color',
+  'issue.slideColor': 'Invalid color "{value}"; using the section color',
+  'issue.readFailed': 'Could not read file',
+  'issue.noSlides': 'No slides (.md files) found in this folder',
+  'issue.newerSchema': 'This deck needs a newer version of the tool (mdslide: {version})',
+  'issue.frontMatter': 'Front matter: {detail}',
+  'issue.frontMatterParse': 'could not be parsed',
+  'issue.layout': 'Unknown layout "{layout}"; using auto. Available: {list}',
+  'issue.brandFont': 'brand font "{value}" contains characters that are not allowed; ignored',
+
+  // ---------- Check ----------
+  'check.noTable': 'chart layout has no table',
+  'check.badCell': 'Chart row {row}, column {col}: "{text}" is not a number and will be shown as blank',
+  'check.missingMedia': 'Missing media {src} (resolved path {path})',
+  'check.missingBg': 'Missing background image {src}',
+  'check.missingCover': 'Missing cover_image {src}',
+  'check.missingLogo': 'Missing brand.logo {src}',
+  'check.missingFootnote': 'Footnote [^{id}] is not defined',
+  'check.deckFolder': '(deck folder)',
+  'check.tooMany': '{n} slides; a 25–30 minute talk usually needs 20–30',
+  'check.opening': '(opening)',
+  'check.unreadable': 'Could not read: {error}',
+  'check.kind.library': 'library',
+  'check.kind.topic': 'topic',
+  'check.kind.deck': 'single deck',
+  'check.report.title': '📚 {title} (detected as: {kind})',
+  'check.report.topic': '▸ Topic: {title}',
+  'check.report.empty': '  (no decks yet)',
+  'check.report.deck': '  ▪ {title}{date} — {sections} sections, {total} slides, {layouts} layouts, notes {noted}/{total}{noConfig}',
+  'check.report.date': ' ({date})',
+  'check.report.noConfig': ', no deck.yml',
+  'check.report.section': '      {title}: {count} slides',
+  'check.report.untitled': '(untitled)',
+  'check.report.auto': '  (auto)',
+  'check.report.problems': '⚠ {n} problems:',
+  'check.report.ok': '✓ No problems found',
+  'check.usage': 'Usage: node scripts/check.mjs <folder> [--slides] [--lang en|zh-Hant]',
+  'catalog.done': 'catalog.json: {topics} topics, {decks} decks, {slides} slides',
+
+  // ---------- Sources ----------
+  'source.repoLabel': 'Built-in examples',
+  'source.localLabel': 'Local folder',
+  'source.noCatalog': 'catalog.json not found',
+
+  // ---------- Auto slide text (follows the deck language) ----------
+  'slide.thanks': 'Thank you',
+  'slide.agenda': 'Agenda',
+  'slide.noMedia': 'No media',
+  'slide.missingMedia': 'Media not found',
+
+  // ---------- Themes and stages ----------
+  'theme.paper': 'Paper',
+  'theme.ink': 'Ink',
+  'theme.slate': 'Slate',
+  'stage.pile': 'Pile',
+  'stage.coverflow': 'Cover flow',
+  'stage.carousel': 'Carousel',
+  'stage.helix': 'Helix',
+  'stage.sphere': 'Sphere',
+  'stage.overview': 'Overview',
+
+  // ---------- Home and navigation ----------
+  'doc.title': 'Mdslide Pile · Turn folders into moving slides',
+  'nav.repo': 'Examples',
+  'nav.home': 'My library',
+  'nav.backHome': 'Back to home',
+  'lang.label': '語言 / Language',
+  'lang.zhShort': '中',
+  'loading': 'Loading…',
+  'loading.library': 'Reading the library…',
+  'loading.deck': 'Loading the deck…',
+  'err.title': 'Something went wrong',
+  'err.noRecord': 'This library is no longer remembered. Please open the folder again.',
+  'err.sessionGone': 'The folder you opened is no longer available (after a reload you need to choose it again).',
+  'err.cannotRead': 'Cannot read this folder. It may have been moved, or the USB drive is not connected.',
+  'err.noDeck': 'Deck not found. It may have been renamed or removed.',
+  'err.emptyDeck': 'This deck has no slides.',
+  'err.dropFolder': 'Please drop a folder, not a single file.',
+  'drop.hint': 'Drop to open this folder',
+  'home.eyebrow': 'Turn folders into moving slides',
+  'home.title': 'The website is the console,<br>your folder is the game.',
+  'home.lead': 'Your slides stay on your computer or USB drive; this site only plays them. Nothing to install, nothing to upload.',
+  'home.open': 'Open a local folder',
+  'home.repo': 'See the examples',
+  'home.tipPicker': 'You can also drag a folder into this window. Chrome / Edge remember the libraries you open.',
+  'home.tipNoPicker': 'You can also drag a folder into this window. This browser cannot remember folders, so you need to choose again after a reload; Chrome or Edge work best.',
+  'home.recent': 'Recent libraries',
+  'home.forget': 'Remove from list (files are not deleted)',
+  'home.step1.title': 'Prepare a folder',
+  'home.step1.text': 'One folder per deck, subfolders are sections, and each .md file is a slide.',
+  'home.step2.title': 'Open it',
+  'home.step2.text': 'Open a whole library, a topic, or a single deck folder; the level is detected automatically.',
+  'home.step3.title': 'Present',
+  'home.step3.text': 'Enter to zoom, arrow keys to advance, S for presenter view, P to save as PDF.',
+  'home.rules': 'Rules: ',
+  'home.guideName': 'GUIDE.en.md',
+  'home.guidePath': 'docs/GUIDE.en.md',
+  'perm.title': 'Reconnect "{name}"',
+  'perm.text': 'To protect your files, the browser asks for read permission again each time.<br>If it is on a USB drive, make sure it is connected.',
+  'perm.grant': 'Allow access',
+
+  // ---------- Library page ----------
+  'lib.repo': 'Built-in library',
+  'lib.local': 'Local library',
+  'lib.eyebrow': '{kind} · {topics} topics · {decks} decks',
+  'lib.search': 'Search titles and tags…',
+  'lib.check': '✓ Check',
+  'lib.checkTitle': 'Check every deck against the rules',
+  'lib.refresh': '↻ Refresh',
+  'lib.refreshTitle': 'Read the folder again',
+  'lib.all': 'All',
+  'lib.issues': '⚠ {n} config problems',
+  'lib.empty': 'No decks in this topic yet',
+  'lib.chapters': '{n} sections',
+
+  // ---------- Check panel ----------
+  'checkp.aria': 'Check results',
+  'checkp.title': 'Check',
+  'checkp.close': 'Close (Esc)',
+  'checkp.progress': 'Checking ({i}/{n}): {title}',
+  'checkp.finishing': 'Summarizing…',
+  'checkp.failed': 'Check failed: {error}',
+  'checkp.problems': '⚠ {n} problems',
+  'checkp.summary': '{decks} decks · {slides} slides',
+  'checkp.problemsHeading': 'Problems',
+  'checkp.decksHeading': 'Decks',
+  'checkp.sections': '{n} sections',
+  'checkp.slides': '{n} slides',
+  'checkp.layouts': '{n} layouts',
+  'checkp.notes': 'Notes {a}/{b}',
+  'checkp.auto': 'auto',
+  'checkp.noDecks': 'No decks yet',
+  'checkp.foot': 'Rules: GUIDE.en.md · Use at least 4 layouts and write speaker notes for every slide. Edit your files, then press "Check" again.',
+
+  // ---------- Player ----------
+  'player.back': '‹ Library',
+  'player.backTitle': 'Back to the library (Esc)',
+  'player.stageTitle': 'Stage (L)',
+  'player.theme': 'Theme',
+  'player.themeTitle': 'Switch theme (T)',
+  'player.check': 'Check',
+  'player.checkTitle': 'Check this deck',
+  'player.presentTitle': 'Present (Enter)',
+  'player.helpTitle': 'Shortcuts (?)',
+  'player.hint': '← → slides · ↑ ↓ sections · Enter zoom · L stage · ? help',
+  'player.issues': '⚠ {n} warnings',
+  'player.slideLabel': 'Slide {n}: {title}',
+  'player.reloaded': 'Reloaded',
+  'player.reloadUnsupported': 'This source cannot be reloaded; please open the folder again',
+  'help.title': 'Shortcuts',
+  'help.foot': 'Click a card to select it, click again to zoom. The mouse wheel also turns slides.',
+  'help.motion': 'Animation',
+  'help.motionFull': 'Full',
+  'help.motionReduced': 'Reduced',
+  'key.prevNext': 'Previous / next slide (clickers work too)',
+  'key.section': 'Previous / next section (the pile shuffles)',
+  'key.enter': 'Zoom in / out',
+  'key.esc': 'Zoom out, leave overview, back to library',
+  'key.jump': 'Jump to section',
+  'key.homeEnd': 'First / last slide',
+  'key.overview': 'Overview',
+  'key.stage': 'Switch stage',
+  'key.theme': 'Switch theme',
+  'key.black': 'Black screen',
+  'key.full': 'Full screen',
+  'key.presenter': 'Open presenter view',
+  'key.print': 'Print / save as PDF',
+  'key.video': 'Play / pause video',
+  'key.reload': 'Reload the deck',
+  'key.help': 'This help',
+  'toast.theme': 'Theme: {name}',
+  'toast.noPresenter': 'This browser does not support the presenter view',
+  'toast.popupBlocked': 'The browser blocked the pop-up; allow it and press S again',
+  'toast.printing': 'Preparing to print…',
+
+  // ---------- Presenter view ----------
+  'pv.docTitle': 'Presenter view · Mdslide Pile',
+  'pv.current': 'Current',
+  'pv.elapsed': 'Elapsed',
+  'pv.now': 'Now',
+  'pv.reset': 'Reset',
+  'pv.next': 'Next',
+  'pv.notes': 'Notes',
+  'pv.waiting': 'Waiting for the main window… (press S there)',
+  'pv.keys': '← → slides · ↑ ↓ sections · Enter zoom · B black · keys here are sent to the main window',
+  'pv.last': '(last slide)',
+  'pv.steps': ' · step {a}/{b}',
+  'pv.notViewing': ' · <em>main screen not zoomed</em>',
+  'pv.noNotes': 'No notes for this slide',
+};
+
+// ───────── app/core/i18n.js ─────────
+// 介面語言(瀏覽器與 Node 共用)。字串表在 locales/,新增文字時兩份都要加。
+//
+// 兩種語言分開決定:
+//   介面語言:使用者選擇 → 瀏覽器語言(zh 開頭 = 繁中,其他 = 英文)→ 繁中
+//   簡報語言:deck.yml 的 lang → 標題等文字含中日韓字元 = 繁中,否則英文
+// 簡報語言只影響「自動產生的投影片文字」(謝謝、大綱…)與英文字型,不受介面語言影響。
+
+
+
+const LANGS = ['zh-Hant', 'en'];
+const TABLES = { 'zh-Hant': LOCALE_ZH_HANT, en: LOCALE_EN };
+let current = 'zh-Hant';
+
+/** 把各種寫法(zh-TW、zh_hant、en-US…)整理成支援的語言代碼;不支援時回傳 null。 */
+function normalizeLang(value) {
+  if (!value) return null;
+  const v = String(value).toLowerCase();
+  if (v.startsWith('zh')) return 'zh-Hant';
+  if (v.startsWith('en')) return 'en';
+  return null;
+}
+
+function setLang(lang) { current = normalizeLang(lang) || 'zh-Hant'; return current; }
+function getLang() { return current; }
+
+/** 取字串。lang 省略時用目前介面語言;找不到時退回繁中,再退回鍵名本身。 */
+function t(key, params, lang) {
+  const table = TABLES[normalizeLang(lang) || current];
+  let s = table[key] ?? TABLES['zh-Hant'][key] ?? key;
+  if (params) s = s.replace(/\{(\w+)\}/g, (m, k) => (k in params ? String(params[k]) : m));
+  return s;
+}
+
+const CJK = /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff\uac00-\ud7af]/;
+
+/** 簡報語言:明確設定優先;否則看標題、副標、資料夾與章節名稱是否含中日韓字元。 */
+function detectDeckLang(explicit, ...texts) {
+  return normalizeLang(explicit) || (texts.some(s => CJK.test(String(s ?? ''))) ? 'zh-Hant' : 'en');
+}
 
 // ───────── app/core/yaml.js ─────────
 // 精簡 YAML 解析器:只支援設定檔需要的子集,零依賴。
@@ -25,9 +481,10 @@ import { fileURLToPath as __toPath } from 'node:url';
 // 不支援:錨點、標籤、多文件、行內物件 {}。
 // 解析失敗時丟出 YamlError(含行號),呼叫端負責轉成使用者看得懂的提示。
 
+
 class YamlError extends Error {
   constructor(message, line) {
-    super(line ? `第 ${line} 行:${message}` : message);
+    super(line ? t('yaml.line', { line, message }) : message);
     this.line = line;
   }
 }
@@ -37,7 +494,7 @@ function parseYaml(text) {
   text.replace(/\r\n?/g, '\n').split('\n').forEach((raw, i) => {
     const stripped = stripComment(raw);
     if (!stripped.trim()) { lines.push({ blank: true, raw, no: i + 1 }); return; }
-    if (/^\t/.test(raw)) throw new YamlError('請用空白縮排,不要用 Tab', i + 1);
+    if (/^\t/.test(raw)) throw new YamlError(t('yaml.tab'), i + 1);
     lines.push({ indent: stripped.match(/^ */)[0].length, text: stripped.trim(), raw, no: i + 1 });
   });
   const state = { lines, i: 0 };
@@ -45,7 +502,7 @@ function parseYaml(text) {
   if (state.i >= lines.length) return {};
   const value = parseBlock(state, lines[state.i].indent);
   skipBlank(state);
-  if (state.i < lines.length) throw new YamlError('縮排不一致', lines[state.i].no);
+  if (state.i < lines.length) throw new YamlError(t('yaml.inconsistent'), lines[state.i].no);
   return value;
 }
 
@@ -74,10 +531,10 @@ function parseMap(s, indent) {
     skipBlank(s);
     const ln = s.lines[s.i];
     if (!ln || ln.indent < indent) break;
-    if (ln.indent > indent) throw new YamlError('縮排過多', ln.no);
-    if (ln.text.startsWith('- ')) throw new YamlError('這裡應該是「名稱: 值」,不是清單', ln.no);
+    if (ln.indent > indent) throw new YamlError(t('yaml.tooDeep'), ln.no);
+    if (ln.text.startsWith('- ')) throw new YamlError(t('yaml.notList'), ln.no);
     const m = ln.text.match(/^("[^"]*"|'[^']*'|[^:]+?)\s*:(?:\s+(.*))?$/);
-    if (!m) throw new YamlError(`看不懂「${ln.text}」,格式應為「名稱: 值」`, ln.no);
+    if (!m) throw new YamlError(t('yaml.unknown', { text: ln.text }), ln.no);
     const key = unquote(m[1]);
     const rest = m[2] ?? '';
     s.i++;
@@ -92,7 +549,7 @@ function parseList(s, indent) {
     skipBlank(s);
     const ln = s.lines[s.i];
     if (!ln || ln.indent < indent) break;
-    if (ln.indent > indent) throw new YamlError('縮排過多', ln.no);
+    if (ln.indent > indent) throw new YamlError(t('yaml.tooDeep'), ln.no);
     if (!(ln.text.startsWith('- ') || ln.text === '-')) break;
     const rest = ln.text === '-' ? '' : ln.text.slice(2).trim();
     if (!rest) { s.i++; skipBlank(s); arr.push(s.lines[s.i] && s.lines[s.i].indent > indent ? parseBlock(s, s.lines[s.i].indent) : null); continue; }
@@ -135,27 +592,27 @@ function blockScalar(s, indent, fold) {
   return fold ? out.join('\n').replace(/([^\n])\n(?!\n)/g, '$1 ') : out.join('\n');
 }
 
-function unquote(t) {
-  t = t.trim();
-  if (t.length >= 2 && t[0] === '"' && t.at(-1) === '"') return t.slice(1, -1).replace(/\\n/g, '\n').replace(/\\"/g, '"');
-  if (t.length >= 2 && t[0] === "'" && t.at(-1) === "'") return t.slice(1, -1).replace(/''/g, "'");
-  return t;
+function unquote(v) {
+  v = v.trim();
+  if (v.length >= 2 && v[0] === '"' && v.at(-1) === '"') return v.slice(1, -1).replace(/\\n/g, '\n').replace(/\\"/g, '"');
+  if (v.length >= 2 && v[0] === "'" && v.at(-1) === "'") return v.slice(1, -1).replace(/''/g, "'");
+  return v;
 }
 
-function scalar(t, no) {
-  t = t.trim();
-  if (t.startsWith('[')) {
-    if (!t.endsWith(']')) throw new YamlError('行內陣列缺少 ]', no);
-    const inner = t.slice(1, -1).trim();
+function scalar(v, no) {
+  v = v.trim();
+  if (v.startsWith('[')) {
+    if (!v.endsWith(']')) throw new YamlError(t('yaml.array'), no);
+    const inner = v.slice(1, -1).trim();
     if (!inner) return [];
     return splitTopLevel(inner).map(x => scalar(x, no));
   }
-  if (/^["']/.test(t)) return unquote(t);
-  if (/^(true|yes|on)$/i.test(t)) return true;
-  if (/^(false|no|off)$/i.test(t)) return false;
-  if (/^(null|~)$/i.test(t)) return null;
-  if (/^-?\d+(\.\d+)?$/.test(t)) return Number(t);
-  return t;
+  if (/^["']/.test(v)) return unquote(v);
+  if (/^(true|yes|on)$/i.test(v)) return true;
+  if (/^(false|no|off)$/i.test(v)) return false;
+  if (/^(null|~)$/i.test(v)) return null;
+  if (/^-?\d+(\.\d+)?$/.test(v)) return Number(v);
+  return v;
 }
 
 function splitTopLevel(s) {
@@ -321,11 +778,12 @@ function safeColor(value) {
 
 
 
+
 /** 所有支援的版型。新增版型時,記得同步更新 製作專案指南.md 與 app/player/render.js。 */
 const LAYOUTS = ['auto', 'text', 'center', 'split', 'split-left', 'full', 'quote', 'number', 'stats', 'timeline', 'columns', 'agenda', 'chart', 'title', 'section', 'end'];
 
 const MEDIA_LINE = /^\s*!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"([^"]*)")?\s*\)\s*$/;
-const NOTE_LINE = /^\s*(?:note|notes|備註|講者備註)\s*[:：]\s*(.*)$/i;
+const NOTE_LINE = /^\s*(?:note|notes|備註|講者備註)\s*[:：]\s*(.*)$/i; // i18n-ok:語法關鍵字,不是介面文字
 const META_LINE = /^\s*<!--\s*([\w-]+)\s*:\s*(.*?)\s*-->\s*$/;
 
 /**
@@ -342,7 +800,7 @@ function parseSlideFile(text, { path }) {
   const fm = src.match(/^---\n([\s\S]*?)\n---[ \t]*(\n|$)/);
   if (fm) {
     try { fileMeta = parseYaml(fm[1]) || {}; }
-    catch (e) { issues.push({ path, message: `開頭設定(front matter)${e instanceof YamlError ? e.message : '無法解析'}` }); }
+    catch (e) { issues.push({ path, message: t('issue.frontMatter', { detail: e instanceof YamlError ? e.message : t('issue.frontMatterParse') }) }); }
     src = src.slice(fm[0].length);
   }
 
@@ -402,13 +860,13 @@ function parseSegment(seg, { path, index, fileMeta, issues }) {
   const body = bodyLines.join('\n').replace(/^\n+|\n+$/g, '');
 
   if (meta.color != null && !safeColor(meta.color)) {
-    issues.push({ path, message: `顏色「${meta.color}」格式不正確,已改用章節顏色` });
+    issues.push({ path, message: t('issue.slideColor', { value: meta.color }) });
     delete meta.color;
   }
 
   let layout = String(meta.layout || 'auto').toLowerCase();
   if (!LAYOUTS.includes(layout)) {
-    issues.push({ path, message: `未知的版型「${layout}」,改用自動判斷。可用:${LAYOUTS.join(', ')}` });
+    issues.push({ path, message: t('issue.layout', { layout, list: LAYOUTS.join(', ') }) });
     layout = 'auto';
   }
   if (layout === 'auto') layout = autoLayout(body, media);
@@ -450,6 +908,7 @@ function coerce(v) {
 //   list(path)     → Promise<{ name, kind: 'file'|'dir' }[]>   path '' 代表根目錄
 //   readText(path) → Promise<string>
 //   mediaURL(path) → Promise<string>
+
 
 
 
@@ -517,7 +976,7 @@ async function scanLibrary(source) {
   const issues = [];
   const kind = await detectRootKind(source);
   const rootEntries = await source.list('');
-  const label = source.label || '書庫';
+  const label = source.label || t('lib.defaultLabel');
 
   if (kind === 'deck') {
     const project = await readProject(source, '', label, '_', issues);
@@ -596,6 +1055,7 @@ async function readProject(source, path, folder, topicId, issues) {
     theme: str(conf.theme),
     accent: color(conf.accent, null, join(path, CONFIG.deck), issues) || safeColor(Array.isArray(conf.sections) && conf.sections[0]?.color) || '',
     coverImage: str(conf.cover_image || conf.coverImage),
+    lang: detectDeckLang(conf.lang, conf.title, conf.subtitle, conf.kicker, folder, ...(Array.isArray(conf.sections) ? conf.sections.map(s => s && (s.title || s.folder)) : [])),
     config: conf,
   };
 }
@@ -606,7 +1066,7 @@ const str = v => (v == null ? '' : String(v));
 function color(value, fallback, path, issues) {
   if (value == null || value === '') return fallback;
   const c = safeColor(value);
-  if (!c) issues.push({ path, message: `顏色「${value}」格式不正確,已改用預設顏色` });
+  if (!c) issues.push({ path, message: t('issue.color', { value }) });
   return c || fallback;
 }
 
@@ -654,11 +1114,11 @@ async function loadDeck(source, project) {
   for (const s of sections) {
     const c = confSections.find(x => x.folder === s.folder || x.folder === splitOrder(s.folder).label) || {};
     if (c.hidden) continue;
-    const texts = await Promise.all(s.files.map(f => limit(() => source.readText(f)).then(t => [f, t], () => [f, null])));
+    const texts = await Promise.all(s.files.map(f => limit(() => source.readText(f)).then(text => [f, text], () => [f, null])));
     const slides = [];
-    for (const [f, t] of texts) {
-      if (t == null) { issues.push({ path: f, message: '讀取失敗' }); continue; }
-      const r = parseSlideFile(t, { path: f });
+    for (const [f, text] of texts) {
+      if (text == null) { issues.push({ path: f, message: t('issue.readFailed') }); continue; }
+      const r = parseSlideFile(text, { path: f });
       issues.push(...r.issues);
       slides.push(...r.slides.filter(sl => !sl.meta.hidden));
     }
@@ -683,8 +1143,8 @@ async function loadDeck(source, project) {
     if (last) last.slides.push({ file: project.path, index: -1, meta: {}, layout: 'end', body: '', notes: str(conf.end_notes), media: [], title: String(conf.end), auto: true });
   }
 
-  if (!built.some(s => s.slides.some(sl => !sl.auto))) issues.push({ path: project.path, message: '這個資料夾裡沒有找到任何投影片(.md 檔)' });
-  if (conf.mdslide && Number(conf.mdslide) > SCHEMA_VERSION) issues.push({ path: join(project.path, CONFIG.deck), message: `此簡報需要較新版本的工具(mdslide: ${conf.mdslide})` });
+  if (!built.some(s => s.slides.some(sl => !sl.auto))) issues.push({ path: project.path, message: t('issue.noSlides') });
+  if (conf.mdslide && Number(conf.mdslide) > SCHEMA_VERSION) issues.push({ path: join(project.path, CONFIG.deck), message: t('issue.newerSchema', { version: conf.mdslide }) });
 
   const layout = typeof conf.layout === 'object' && conf.layout ? conf.layout : { stage: conf.layout };
   return {
@@ -710,9 +1170,11 @@ function flatten(deck) {
  * 把表格裡的一格轉成數字。支援千分位、全形負號(−)、%、單位後綴(點、億、張…)與常見貨幣前綴。
  * 無法解析(空白、N/A、—、文字)時回傳 null。
  */
+const MISSING = /^(n\/?a|na|null|none|—|–|-|－|無|缺)$/i; // i18n-ok:缺值的寫法
+
 function parseNumber(cell) {
   let s = String(cell ?? '').trim();
-  if (!s || /^(n\/?a|na|null|none|—|–|-|－|無|缺)$/i.test(s)) return null;
+  if (!s || MISSING.test(s)) return null;
   s = s.replace(/^(NT\$|US\$|HK\$|NTD|USD|\$|¥|€|£)\s*/i, '');
   const m = s.match(/^([+\-−–－]?)\s*(\d[\d,]*(?:\.\d+)?|\.\d+)\s*([^\d].*)?$/);
   if (!m) return null;
@@ -739,7 +1201,7 @@ function parseChartTable(body) {
     name,
     values: rows.map((r, ri) => {
       const v = parseNumber(r[k + 1]);
-      if (v == null && String(r[k + 1] ?? '').trim() && !/^(n\/?a|na|—|–|-|－|無|缺)$/i.test(String(r[k + 1]).trim())) bad.push({ row: ri + 1, col: k + 2, text: String(r[k + 1]) });
+      if (v == null && String(r[k + 1] ?? '').trim() && !MISSING.test(String(r[k + 1]).trim())) bad.push({ row: ri + 1, col: k + 2, text: String(r[k + 1]) });
       return v;
     }),
   }));
@@ -775,6 +1237,7 @@ function niceScale(min, max) {
 
 
 
+
 const MAX_SLIDES = 45;
 
 /** 檔案是否存在:列出上一層資料夾來確認(本機來源會快取清單,不會重複讀)。 */
@@ -797,25 +1260,25 @@ async function checkDeck(source, project) {
 
   for (const sl of all) {
     if (sl.layout === 'chart') {
-      const t = parseChartTable(sl.body);
-      if (!t) problems.push({ path: sl.file, message: 'chart 版型找不到表格' });
-      else for (const b of t.bad) problems.push({ path: sl.file, message: `圖表第 ${b.row} 列第 ${b.col} 欄「${b.text}」不是數字,會顯示為空白` });
+      const tbl = parseChartTable(sl.body);
+      if (!tbl) problems.push({ path: sl.file, message: t('check.noTable') });
+      else for (const b of tbl.bad) problems.push({ path: sl.file, message: t('check.badCell', b) });
     }
     for (const m of sl.media) {
       if (m.remote) continue;
       const path = resolveMediaPath(m.src, { projectPath: project.path, filePath: sl.file });
-      if (!(await exists(source, path))) problems.push({ path: sl.file, message: `找不到素材 ${m.src}(實際路徑 ${path || '(簡報資料夾)'})` });
+      if (!(await exists(source, path))) problems.push({ path: sl.file, message: t('check.missingMedia', { src: m.src, path: path || t('check.deckFolder') }) });
     }
     const bg = sl.meta?.background;
     if (bg && !/^(https?:|data:)/.test(String(bg))) {
       const path = resolveMediaPath(String(bg), { projectPath: project.path, filePath: sl.file });
-      if (!(await exists(source, path))) problems.push({ path: sl.file, message: `找不到背景圖 ${bg}` });
+      if (!(await exists(source, path))) problems.push({ path: sl.file, message: t('check.missingBg', { src: bg }) });
     }
   }
   if (project.coverImage && !(await exists(source, resolveMediaPath(project.coverImage, { projectPath: project.path, filePath: project.path + '/deck.yml' })))) {
-    problems.push({ path: project.path || '(簡報資料夾)', message: `找不到 cover_image ${project.coverImage}` });
+    problems.push({ path: project.path || t('check.deckFolder'), message: t('check.missingCover', { src: project.coverImage }) });
   }
-  if (all.length > MAX_SLIDES) problems.push({ path: project.path || '(簡報資料夾)', message: `共 ${all.length} 張,25–30 分鐘的報告建議 20–30 張` });
+  if (all.length > MAX_SLIDES) problems.push({ path: project.path || t('check.deckFolder'), message: t('check.tooMany', { n: all.length }) });
 
   return {
     title: deck.title,
@@ -824,7 +1287,7 @@ async function checkDeck(source, project) {
     total: all.length,
     noted: all.filter(s => s.notes).length,
     layouts: [...new Set(all.map(s => s.layout))],
-    sections: deck.sections.map(s => ({ title: s.title || '(開場)', count: s.slides.length })),
+    sections: deck.sections.map(s => ({ title: s.title || t('check.opening'), count: s.slides.length })),
     slides: all.map(s => ({ layout: s.layout, title: s.title, notes: !!s.notes, auto: !!s.auto })),
     problems,
   };
@@ -836,48 +1299,47 @@ async function checkDeck(source, project) {
  */
 async function checkLibrary(source, onProgress) {
   const lib = await scanLibrary(source);
-  const total = lib.topics.reduce((n, t) => n + t.projects.length, 0);
+  const total = lib.topics.reduce((n, tp) => n + tp.projects.length, 0);
   let done = 0;
   const topics = [];
-  for (const t of lib.topics) {
+  for (const tp of lib.topics) {
     const decks = [];
-    for (const p of t.projects) {
+    for (const p of tp.projects) {
       onProgress?.(done, total, p.title);
       try { decks.push({ id: p.id, ...(await checkDeck(source, p)) }); }
-      catch (e) { decks.push({ id: p.id, title: p.title, total: 0, noted: 0, layouts: [], sections: [], slides: [], problems: [{ path: p.path, message: `無法讀取:${e.message || e}` }] }); }
+      catch (e) { decks.push({ id: p.id, title: p.title, total: 0, noted: 0, layouts: [], sections: [], slides: [], problems: [{ path: p.path, message: t('check.unreadable', { error: e.message || e }) }] }); }
       done++;
     }
-    topics.push({ id: t.id, title: t.title, decks });
+    topics.push({ id: tp.id, title: tp.title, decks });
   }
   onProgress?.(done, total, '');
-  const problems = [...lib.issues, ...topics.flatMap(t => t.decks.flatMap(d => d.problems))];
+  const problems = [...lib.issues, ...topics.flatMap(tp => tp.decks.flatMap(d => d.problems))];
   return { kind: lib.kind, title: lib.title, topics, problems };
 }
 
-const KIND = { library: '書庫', topic: '主題', deck: '單一簡報' };
 
 /** 把檢查結果排成純文字報告(給命令列用)。 */
 function formatReport(report, { verbose = false } = {}) {
-  const out = [`📚 ${report.title}(偵測為:${KIND[report.kind] || report.kind})`];
-  for (const t of report.topics) {
-    if (report.kind === 'library') out.push('', `▸ 主題:${t.title}`);
-    if (!t.decks.length) out.push('  (還沒有簡報)');
-    for (const d of t.decks) {
-      out.push(`  ▪ ${d.title}${d.date ? `(${d.date})` : ''}— ${d.sections.length} 章、${d.total} 張、${d.layouts.length} 種版型、備註 ${d.noted}/${d.total}${d.hasConfig === false ? '、沒有 deck.yml' : ''}`);
+  const out = [t('check.report.title', { title: report.title, kind: t('check.kind.' + report.kind) })];
+  for (const tp of report.topics) {
+    if (report.kind === 'library') out.push('', t('check.report.topic', { title: tp.title }));
+    if (!tp.decks.length) out.push(t('check.report.empty'));
+    for (const d of tp.decks) {
+      out.push(t('check.report.deck', { title: d.title, date: d.date ? t('check.report.date', { date: d.date }) : '', sections: d.sections.length, total: d.total, layouts: d.layouts.length, noted: d.noted, noConfig: d.hasConfig === false ? t('check.report.noConfig') : '' }));
       if (!verbose) continue;
       let k = 0;
       for (const s of d.sections) {
-        out.push(`      ${s.title}:${s.count} 張`);
-        for (const sl of d.slides.slice(k, k + s.count)) out.push(`        - [${sl.layout}] ${sl.title || '(無標題)'}${sl.notes ? '  📝' : ''}${sl.auto ? '  (自動)' : ''}`);
+        out.push(t('check.report.section', s));
+        for (const sl of d.slides.slice(k, k + s.count)) out.push(`        - [${sl.layout}] ${sl.title || t('check.report.untitled')}${sl.notes ? '  📝' : ''}${sl.auto ? t('check.report.auto') : ''}`);
         k += s.count;
       }
     }
   }
   if (report.problems.length) {
-    out.push('', `⚠ ${report.problems.length} 個問題:`);
+    out.push('', t('check.report.problems', { n: report.problems.length }));
     for (const i of report.problems) out.push(`  - ${i.path}:${i.message}`);
   } else {
-    out.push('', '✓ 沒有發現問題');
+    out.push('', t('check.report.ok'));
   }
   return out.join('\n');
 }
@@ -904,6 +1366,22 @@ function nodeSource(root) {
   };
 }
 
+/**
+ * 命令列的輸出語言:--lang 參數 → 環境變數(LC_ALL、LC_MESSAGES、LANG)→ 作業系統語系 → 繁中。
+ * Windows 通常沒有 LANG,所以會用作業系統語系(繁中 Windows 會得到 zh-TW)。
+ */
+function detectNodeLang(argv = process.argv) {
+  const i = argv.indexOf('--lang');
+  if (i >= 0 && argv[i + 1]) return argv[i + 1];
+  const eq = argv.find(a => a.startsWith('--lang='));
+  if (eq) return eq.slice(7);
+  for (const k of ['LC_ALL', 'LC_MESSAGES', 'LANG']) {
+    const v = process.env[k];
+    if (v && !/^(C|POSIX)(\.|$)/i.test(v)) return v;
+  }
+  try { return Intl.DateTimeFormat().resolvedOptions().locale; } catch { return 'zh-Hant'; }
+}
+
 /** 走訪整棵樹,回傳 { 路徑: 清單 }(給 catalog.json 用)。 */
 async function walkTree(source, path = '', tree = {}) {
   const entries = await source.list(path);
@@ -913,7 +1391,9 @@ async function walkTree(source, path = '', tree = {}) {
 }
 
 // ───────── 命令列 ─────────
-const __dir = process.argv.slice(2).find(a => !a.startsWith('--')) || __toPath(new URL('.', import.meta.url));
+setLang(detectNodeLang());
+const __args = process.argv.slice(2);
+const __dir = __args.find((a, i) => !a.startsWith('--') && __args[i - 1] !== '--lang') || __toPath(new URL('.', import.meta.url));
 const __report = await checkLibrary(nodeSource(__dir));
 console.log(formatReport(__report, { verbose: process.argv.includes('--slides') }));
 if (__report.problems.length) process.exitCode = 1;
