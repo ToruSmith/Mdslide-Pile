@@ -154,7 +154,7 @@ async function readProject(source, path, folder, topicId, issues) {
     event: str(conf.event),
     tags: Array.isArray(conf.tags) ? conf.tags.map(String) : [],
     theme: str(conf.theme),
-    accent: str(conf.accent),
+    accent: str(conf.accent || (Array.isArray(conf.sections) && conf.sections[0]?.color) || ''),
     coverImage: str(conf.cover_image || conf.coverImage),
     config: conf,
   };
@@ -231,7 +231,7 @@ export async function loadDeck(source, project) {
   }
   if (conf.end) {
     const last = built.at(-1);
-    if (last) last.slides.push({ file: project.path, index: -1, meta: {}, layout: 'end', body: '', notes: '', media: [], title: String(conf.end), auto: true });
+    if (last) last.slides.push({ file: project.path, index: -1, meta: {}, layout: 'end', body: '', notes: str(conf.end_notes), media: [], title: String(conf.end), auto: true });
   }
 
   if (!built.some(s => s.slides.some(sl => !sl.auto))) issues.push({ path: project.path, message: '這個資料夾裡沒有找到任何投影片(.md 檔)' });

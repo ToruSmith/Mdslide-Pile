@@ -26,7 +26,10 @@ for (const t of lib.topics) {
   for (const p of t.projects) {
     const deck = await loadDeck(source, p);
     const total = deck.sections.reduce((n, s) => n + s.slides.length, 0);
-    console.log(`  ▪ ${deck.title}${deck.date ? `(${deck.date})` : ''}— ${deck.sections.length} 章、${total} 張${p.hasConfig ? '' : '、沒有 deck.yml'}`);
+    const all = deck.sections.flatMap(s => s.slides);
+    const noted = all.filter(sl => sl.notes).length;
+    const layouts = new Set(all.map(sl => sl.layout)).size;
+    console.log(`  ▪ ${deck.title}${deck.date ? `(${deck.date})` : ''}— ${deck.sections.length} 章、${total} 張、${layouts} 種版型、備註 ${noted}/${total}${p.hasConfig ? '' : '、沒有 deck.yml'}`);
     for (const s of deck.sections) {
       console.log(`      ${s.title || '(開場)'}:${s.slides.length} 張`);
       for (const sl of s.slides) {

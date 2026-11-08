@@ -1,0 +1,32 @@
+mdslide: 1
+title: 台股一週重挫 5,510 點
+subtitle: 2026 年 11 月 2 日至 6 日,發生了什麼、為什麼、接下來看什麼
+kicker: 財經時事 · 資料截至 2026/11/6 收盤
+author: Mdslide Pile 範例
+event: 15 分鐘時事簡報
+date: 2026-11-08
+theme: paper
+tags: [台股, 時事, 國安基金]
+layout:
+  stage: pile
+sections:
+  - folder: 01-發生了什麼
+    title: 發生了什麼
+    subtitle: 用四個數字看這一週
+    color: "#b0566e"
+    notes: 第一章只講事實,先不解釋原因。大約 4 分鐘。
+  - folder: 02-為什麼跌
+    title: 為什麼跌
+    subtitle: 外部導火線,加上內部的放大器
+    color: "#4f73a6"
+    notes: 第二章講原因。重點是「導火線」和「放大器」要分開講。大約 5 分鐘。
+  - folder: 03-接下來看什麼
+    title: 接下來看什麼
+    subtitle: 政策工具與四個觀察訊號
+    color: "#5f8a64"
+    notes: 第三章往前看,最後一定要講免責聲明。大約 5 分鐘。
+end: 謝謝聆聽
+end_notes: 進入問答。被問到買賣建議時,重申本簡報不構成投資建議。
+cover_notes: |
+  開場:先問台下,這週有沒有人看盤看到心臟不舒服?
+  說明資料截止時間是 11/6 收盤,之後的變化不在這份簡報裡。

@@ -1,0 +1,32 @@
+mdslide: 1
+title: 股市大跌時,政府的兩套救市工具
+subtitle: 國安基金與限空令,一次講清楚
+kicker: 財經時事 · 投資人教育 · 資料截至 2026/11/6
+author: Mdslide Pile 範例
+event: 15 分鐘時事簡報
+date: 2026-11-08
+theme: slate
+tags: [台股, 國安基金, 限空令, 投資人教育]
+layout:
+  stage: coverflow
+sections:
+  - folder: 01-兩套工具
+    title: 兩套工具
+    subtitle: 一個買、一個限制賣
+    color: "#b08a3a"
+    notes: 第一章講定義。大約 5 分鐘。
+  - folder: 02-過去有用嗎
+    title: 過去有用嗎
+    subtitle: 從歷史紀錄看效果與限制
+    color: "#4f73a6"
+    notes: 第二章講歷史數據,提醒觀眾樣本很少。大約 5 分鐘。
+  - folder: 03-投資人能做什麼
+    title: 投資人能做什麼
+    subtitle: 先檢查自己,再看市場
+    color: "#5f8a64"
+    notes: 第三章不做買賣建議,只給檢查清單。大約 4 分鐘。
+end: 謝謝聆聽
+end_notes: 進入問答。被問到買賣建議時,重申本簡報不構成投資建議。
+cover_notes: |
+  開場說明:這份簡報是工具說明,不是預測,也不是投資建議。
+  背景:2026/11/6 台股盤中重挫 3,737 點,國安基金與金管會當天同時出手。

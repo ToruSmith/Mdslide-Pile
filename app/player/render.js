@@ -42,6 +42,7 @@ export function renderSlide(slide, ctx) {
   const sec = section.title || '';
   const foot = showFoot ? `<div class="foot"><span>${esc(sec || deck.title)}</span><span class="page">${ctx.globalIndex + 1} / ${ctx.total}</span></div>` : '';
   const bg = meta.background ? ` data-bg="${esc(resolveMediaPath(String(meta.background), pathCtx))}"` : '';
+  inner = inner.replace(/<p>((?:資料來源|來源|資料截至|註|備考|Source|Note)\s*[:：]?)/g, '<p class="source">$1');
   const extra = (layout === 'title' && deck.coverImage ? ' has-image' : '') + (meta.class ? ' ' + esc(meta.class) : '');
   return `<div class="slide l-${layout}${extra}" style="--c:${esc(c)}"${bg}>${inner}${foot}</div>`;
 }
@@ -78,11 +79,15 @@ function mediaFigure(m, ctx, pathCtx, meta, showCaption = true) {
 /** 清單項目「**數字** 說明」→ 數字卡。清單之外的文字放在下方。 */
 function statsSlide(body, md) {
   const { head, items, rest } = splitList(body);
-  const stats = items.map(t => {
-    const m = t.match(/^\*\*(.+?)\*\*\s*(.*)$/);
-    return `<div class="stat"><b>${renderInline(m ? m[1] : t)}</b><span>${renderInline(m ? m[2] : '')}</span></div>`;
-  });
-  return `<div class="md">${md(head)}</div><div class="stats" style="--n:${Math.min(Math.max(stats.length, 1), 4)}">${stats.join('')}</div>${rest.trim() ? `<div class="after md">${md(rest)}</div>` : ''}`;
+  const n = Math.min(Math.max(items.length, 1), 4);
+  const colW = (1056 - 32 * (n - 1)) / n;
+  const base = [0, 120, 104, 88, 72][n];
+  const parsed = items.map(t => { const m = t.match(/^\*\*(.+?)\*\*\s*(.*)$/); return { value: m ? m[1] : t, label: m ? m[2] : '' }; });
+  // 依最長的數值決定字級(所有卡片同一大小),避免「−5,510 點」這類較長的數值換行或超出
+  const units = v => [...v].reduce((u, ch) => u + (/[\u2e80-\u9fff\uff00-\uffef]/.test(ch) ? 1 : ch === ' ' ? 0.3 : 0.6), 0);
+  const size = Math.floor(Math.min(base, ...parsed.map(p => (colW * 0.96) / Math.max(units(p.value), 1))));
+  const stats = parsed.map(p => `<div class="stat"><b style="font-size:${size}px">${renderInline(p.value)}</b><span>${renderInline(p.label)}</span></div>`);
+  return `<div class="md">${md(head)}</div><div class="stats" style="--n:${n}">${stats.join('')}</div>${rest.trim() ? `<div class="after md">${md(rest)}</div>` : ''}`;
 }
 
 /** 清單項目「**時間** 事件」;子項目變成小字說明;項目結尾加 (now) 會被標成目前位置。 */
