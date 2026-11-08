@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Mdslide Pile 書庫檢查工具(單檔版 v1.6.3)
+// Mdslide Pile 書庫檢查工具(單檔版 v1.6.4)
 // 由 scripts/bundle-check.mjs 自動產生,請不要手動修改。原始碼:https://github.com/ToruSmith/Mdslide-Pile
 //
 // 用法(需要 Node.js 18 以上):
@@ -216,7 +216,7 @@ const LOCALE_ZH_HANT = {
   'key.full': '全螢幕',
   'key.presenter': '開啟講者視窗',
   'key.print': '列印 / 存成 PDF',
-  'key.video': '影片播放 / 暫停',
+  'key.video': '放大時播放 / 暫停本機影片',
   'key.reload': '重新載入簡報',
   'key.help': '這個說明',
   'toast.theme': '主題:{name}',
@@ -287,6 +287,11 @@ const LOCALE_ZH_HANT = {
   'update.reload': '重新整理',
   'update.later': '稍後',
   'pv.fullscreenHint': '全螢幕要在觀眾畫面按 F(或點一下觀眾畫面再按),瀏覽器不允許從講者視窗代為切換。',
+  'toast.kNone': '這張沒有影片或音訊(K 用來播放 / 暫停放大投影片上的本機影片)',
+  'toast.kZoom': '先按 Enter 放大投影片,K 才能播放 / 暫停上面的影片',
+  'toast.kEmbed': '線上影片請直接點影片上的播放鈕,K 只控制本機影片',
+  'toast.kPlay': '▶ 播放',
+  'toast.kPause': '❚❚ 暫停',
 };
 
 // ───────── app/core/locales/en.js ─────────
@@ -492,7 +497,7 @@ const LOCALE_EN = {
   'key.full': 'Full screen',
   'key.presenter': 'Open presenter view',
   'key.print': 'Print / save as PDF',
-  'key.video': 'Play / pause video',
+  'key.video': 'Play / pause local video on the zoomed slide',
   'key.reload': 'Reload the deck',
   'key.help': 'This help',
   'toast.theme': 'Theme: {name}',
@@ -563,6 +568,11 @@ const LOCALE_EN = {
   'update.reload': 'Reload',
   'update.later': 'Later',
   'pv.fullscreenHint': 'Press F on the audience window to go full screen (click it first). Browsers do not allow the presenter view to do it.',
+  'toast.kNone': 'No video or audio on this slide (K plays / pauses local video on the zoomed slide)',
+  'toast.kZoom': 'Press Enter to zoom in first; K then plays / pauses the video on it',
+  'toast.kEmbed': 'Use the play button on online videos; K only controls local video',
+  'toast.kPlay': '▶ Playing',
+  'toast.kPause': '❚❚ Paused',
 };
 
 // ───────── app/core/i18n.js ─────────

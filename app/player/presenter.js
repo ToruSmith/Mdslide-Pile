@@ -88,11 +88,11 @@ export function startPresenter(root) {
     if (e.key === ' ' || e.key.startsWith('Arrow')) e.preventDefault();
   });
   window.addEventListener('resize', () => { if (last) ch.onmessage({ data: last }); });
-  $('.reset').onclick = () => { startedAt = Date.now(); };
+  $('.pv-clock .reset').onclick = () => { startedAt = Date.now(); };
   const tick = () => {
     const s = Math.floor((Date.now() - startedAt) / 1000);
-    $('.elapsed').textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
-    $('.now').textContent = new Date().toLocaleTimeString(getLang() === 'en' ? 'en-GB' : 'zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false });
+    $('.pv-clock .elapsed').textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+    $('.pv-clock .now').textContent = new Date().toLocaleTimeString(getLang() === 'en' ? 'en-GB' : 'zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false });
   };
   tick();
   setInterval(tick, 1000);

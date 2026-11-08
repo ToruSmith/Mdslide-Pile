@@ -151,7 +151,7 @@ Want a ready-made library? Download `Mdslide-library-v….zip` from [Releases](h
 | `D` | Pen and laser pointer | `S` | Presenter view |
 | `X` | Clear drawings on this slide | `P` | Print / save as PDF |
 | `B` | Black screen | `F` | Full screen |
-| `K` | Play / pause video | `R` | Reload the deck |
+| `K` | Play / pause local video when zoomed | `R` | Reload the deck |
 | `?` | Help | | |
 
 Phones and tablets: swipe left/right for slides and up/down for sections; tap an image to enlarge it; a hint suggests turning the phone sideways.

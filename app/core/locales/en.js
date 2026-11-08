@@ -200,7 +200,7 @@ export const LOCALE_EN = {
   'key.full': 'Full screen',
   'key.presenter': 'Open presenter view',
   'key.print': 'Print / save as PDF',
-  'key.video': 'Play / pause video',
+  'key.video': 'Play / pause local video on the zoomed slide',
   'key.reload': 'Reload the deck',
   'key.help': 'This help',
   'toast.theme': 'Theme: {name}',
@@ -271,4 +271,9 @@ export const LOCALE_EN = {
   'update.reload': 'Reload',
   'update.later': 'Later',
   'pv.fullscreenHint': 'Press F on the audience window to go full screen (click it first). Browsers do not allow the presenter view to do it.',
+  'toast.kNone': 'No video or audio on this slide (K plays / pauses local video on the zoomed slide)',
+  'toast.kZoom': 'Press Enter to zoom in first; K then plays / pauses the video on it',
+  'toast.kEmbed': 'Use the play button on online videos; K only controls local video',
+  'toast.kPlay': '▶ Playing',
+  'toast.kPause': '❚❚ Paused',
 };

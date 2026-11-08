@@ -200,7 +200,7 @@ export const LOCALE_ZH_HANT = {
   'key.full': '全螢幕',
   'key.presenter': '開啟講者視窗',
   'key.print': '列印 / 存成 PDF',
-  'key.video': '影片播放 / 暫停',
+  'key.video': '放大時播放 / 暫停本機影片',
   'key.reload': '重新載入簡報',
   'key.help': '這個說明',
   'toast.theme': '主題:{name}',
@@ -271,4 +271,9 @@ export const LOCALE_ZH_HANT = {
   'update.reload': '重新整理',
   'update.later': '稍後',
   'pv.fullscreenHint': '全螢幕要在觀眾畫面按 F(或點一下觀眾畫面再按),瀏覽器不允許從講者視窗代為切換。',
+  'toast.kNone': '這張沒有影片或音訊(K 用來播放 / 暫停放大投影片上的本機影片)',
+  'toast.kZoom': '先按 Enter 放大投影片,K 才能播放 / 暫停上面的影片',
+  'toast.kEmbed': '線上影片請直接點影片上的播放鈕,K 只控制本機影片',
+  'toast.kPlay': '▶ 播放',
+  'toast.kPause': '❚❚ 暫停',
 };

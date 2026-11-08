@@ -479,7 +479,7 @@ export class Player {
       case 'f': case 'F': document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.(); break;
       case 's': case 'S': this.openPresenter(); break;
       case 'p': case 'P': this.print(); break;
-      case 'k': case 'K': this.el.frame.querySelectorAll('video, audio').forEach(v => (v.paused ? v.play() : v.pause())); break;
+      case 'k': case 'K': this.toggleMedia(); break;
       case 'r': case 'R': this.reload(); break;
       case '?': case '/': this.toggleHelp(); break;
       default:
@@ -631,6 +631,18 @@ export class Player {
     }
     this.ink.mount(this.el.frame, this.focus);
     hydrate(this.el.frame, this.source, { full: true }).then(() => { if (this.viewing) playMedia(this.el.frame, { sound: true }); });
+  }
+
+  /** K:放大的投影片上的本機影片 / 音訊播放或暫停,並顯示結果(沒有影片時也說明)。 */
+  toggleMedia() {
+    const media = this.viewing ? [...this.el.frame.querySelectorAll('video, audio')] : [];
+    if (!media.length) {
+      const embed = this.viewing && this.el.frame.querySelector('iframe, [data-embed]');
+      return this.toast(t(embed ? 'toast.kEmbed' : this.viewing ? 'toast.kNone' : 'toast.kZoom'));
+    }
+    const play = media.every(v => v.paused);
+    media.forEach(v => (play ? v.play().catch(() => {}) : v.pause()));
+    this.toast(t(play ? 'toast.kPlay' : 'toast.kPause'));
   }
 
   // ---------------- 畫筆與雷射筆(D) ----------------
