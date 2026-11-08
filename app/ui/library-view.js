@@ -5,6 +5,8 @@ import { escapeHTML as esc } from '../core/markdown.js';
 import { renderSlide } from '../player/render.js';
 import { hydrate } from '../player/hydrate.js';
 import { applyTheme } from '../player/themes.js';
+import { checkLibrary } from '../core/check.js';
+import { openCheckPanel } from './check-view.js';
 
 const coverLimit = limiter(3);
 
@@ -22,6 +24,7 @@ export function renderLibrary(root, { lib, source, sourceKey, onOpen, onRefresh,
         </div>
         <div class="lib-tools">
           <input type="search" class="search" placeholder="搜尋簡報標題、標籤…">
+          <button class="btn ghost check" title="檢查所有簡報是否符合規則">✓ 檢查</button>
           ${onRefresh ? '<button class="btn ghost refresh" title="重新讀取資料夾">↻ 重新整理</button>' : ''}
         </div>
       </div>
@@ -106,6 +109,10 @@ export function renderLibrary(root, { lib, source, sourceKey, onOpen, onRefresh,
   }));
   root.querySelector('.search')?.addEventListener('input', e => { q = e.target.value.trim().toLowerCase(); apply(); });
   root.querySelector('.refresh')?.addEventListener('click', onRefresh);
+  root.querySelector('.check')?.addEventListener('click', () => {
+    source.refresh?.(); // 讀最新的檔案(使用者可能剛改過)
+    openCheckPanel(document.body, onProgress => checkLibrary(source, onProgress));
+  });
   return () => io.disconnect();
 }
 

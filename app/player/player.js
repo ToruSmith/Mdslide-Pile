@@ -6,6 +6,8 @@ import { renderSlide } from './render.js';
 import { hydrate, playMedia, stopMedia } from './hydrate.js';
 import { STAGES, STAGE_ORDER, CW, poseTransform, worldTransform } from './layouts.js';
 import { THEMES, THEME_NAMES, applyTheme, currentTheme } from './themes.js';
+import { checkDeck } from '../core/check.js';
+import { openCheckPanel } from '../ui/check-view.js';
 
 const EASE = 'cubic-bezier(.65, 0, .35, 1)';
 const pad = n => String(n).padStart(2, '0');
@@ -54,6 +56,7 @@ export class Player {
           <div class="ptools">
             <select class="stage-select" title="排列方式(L)">${Object.entries(STAGES).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join('')}</select>
             <button class="pbtn" data-act="theme" title="切換主題(T)">主題</button>
+            <button class="pbtn" data-act="check" title="檢查這份簡報">檢查</button>
             <button class="pbtn" data-act="present" title="放大播放(Enter)">▶</button>
             <button class="pbtn" data-act="help" title="快捷鍵(?)">?</button>
           </div>
@@ -115,6 +118,7 @@ export class Player {
       if (act === 'theme') this.cycleTheme();
       if (act === 'present') this.viewing ? this.closeViewer() : this.openViewer();
       if (act === 'help') this.toggleHelp();
+      if (act === 'check') this.openCheck();
     });
     this.el.select.value = this.stage;
     this.el.select.addEventListener('change', () => { this.setStage(this.el.select.value); this.el.select.blur(); });
@@ -331,6 +335,14 @@ export class Player {
         return false;
     }
     return true;
+  }
+
+  openCheck() {
+    const d = this.deck;
+    openCheckPanel(this.el.player, async () => {
+      const r = await checkDeck(this.source, d);
+      return { kind: 'deck', title: d.title, topics: [{ title: '', decks: [r] }], problems: r.problems };
+    });
   }
 
   toggleHelp(force) { this.el.help.classList.toggle('on', force); }

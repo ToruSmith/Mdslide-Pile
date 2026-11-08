@@ -163,6 +163,38 @@ body.dragging::after { content: "放開來開啟這個資料夾"; position: fixe
 .toast { position: absolute; z-index: 45; left: 50%; bottom: 60px; transform: translate(-50%, 20px); background: var(--ink); color: var(--bg); padding: 9px 18px; border-radius: 999px; font-size: 14px; opacity: 0; transition: all .3s; pointer-events: none; }
 .toast.on { opacity: 1; transform: translate(-50%, 0); }
 
+/* ---------- 檢查面板 ---------- */
+.check-panel { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: color-mix(in srgb, var(--bg) 70%, transparent); backdrop-filter: blur(6px); opacity: 0; transition: opacity .25s; }
+.check-panel.on { opacity: 1; }
+.check-card { width: min(760px, 94vw); max-height: 86vh; display: flex; flex-direction: column; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 30px 80px rgb(var(--shadow) / .25); font-family: var(--font-body); }
+.check-card header { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid var(--line); }
+.check-card h2 { font-size: 18px; }
+.check-close { border: 0; background: none; font-size: 24px; color: var(--muted); cursor: pointer; width: 34px; height: 34px; border-radius: 8px; }
+.check-close:hover { background: var(--bg-deep); }
+.check-body { padding: 18px 24px 22px; overflow: auto; font-size: 14px; line-height: 1.6; }
+.check-progress { height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; margin: 8px 0 12px; }
+.check-progress i { display: block; height: 100%; background: var(--accent); transform: scaleX(0); transform-origin: 0 0; transition: transform .3s; }
+.check-status { color: var(--muted); }
+.check-summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 10px; }
+.check-summary.good { background: color-mix(in srgb, #5f8a64 16%, var(--surface)); }
+.check-summary.bad { background: color-mix(in srgb, #d9a55b 18%, var(--surface)); }
+.check-summary b { font-size: 16px; }
+.check-summary span { color: var(--muted); font-size: 13px; }
+.check-body h3 { font-size: 13px; letter-spacing: .08em; color: var(--muted); margin: 20px 0 8px; }
+.check-problems { padding-left: 20px; }
+.check-problems li { margin-bottom: 6px; }
+.check-problems code, .check-deck em { font-family: var(--font-mono); font-size: 12px; font-style: normal; background: var(--bg-deep); border-radius: 5px; padding: 1px 6px; margin-right: 8px; }
+.check-deck { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 8px; }
+.check-deck summary { display: flex; gap: 14px; align-items: center; padding: 10px 14px; cursor: pointer; }
+.check-deck summary .t { flex: 1; font-weight: 600; }
+.check-deck summary .n { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.check-deck summary .n.warn { color: #b0566e; font-weight: 600; }
+.check-deck ol { margin: 0 0 12px; padding: 0 16px 0 44px; font-size: 13px; }
+.check-deck ol small { color: var(--muted); }
+.check-empty, .check-foot { color: var(--muted); font-size: 13px; }
+.check-foot { margin-top: 18px; }
+.check-bad { color: #b0566e; }
+
 /* ---------- 講者視窗 ---------- */
 .presenter { position: fixed; inset: 0; display: grid; grid-template-columns: 1.55fr 1fr; gap: 24px; padding: 24px; background: var(--bg-deep); }
 .pv-main, .pv-side { min-width: 0; display: flex; flex-direction: column; gap: 10px; }

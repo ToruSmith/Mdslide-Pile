@@ -30,10 +30,12 @@ app/
     media.js             媒體分類(本機 / YouTube / Bilibili / Drive / Vimeo)與路徑規則
     slide.js             一個 MD 檔 → 投影片資料(front matter、拆張、備註、自動版型)
     library.js           書庫掃描三層:scanLibrary / loadCover / loadDeck
+    check.js             檢查規則(網站按鈕、check.mjs、單檔版共用)
   sources/
     sources.js           HttpSource(倉庫)、HandleSource(Chrome/Edge 資料夾)、FileListSource(其他瀏覽器)
     store.js             IndexedDB:記住最近開啟的資料夾
   ui/library-view.js     目錄頁(封面懶載入)
+  ui/check-view.js       檢查結果面板
   player/
     render.js            投影片資料 → HTML(所有版型在這裡)
     hydrate.js           媒體佔位 → 真實網址
@@ -47,8 +49,10 @@ app/
     app.css              介面外框
 scripts/
   build-catalog.mjs      產生 catalog.json(部署時執行)
-  check.mjs              檢查資料夾是否符合規則
+  check.mjs              檢查資料夾是否符合規則(命令列)
+  bundle-check.mjs       產生 dist/mdslide-check.mjs 單檔版
   node-source.mjs        Node 版資料來源
+dist/                    自動產生的單檔檢查工具與雙擊捷徑(不要手動修改)
 content/                 內建書庫;00-官方範例 是驗收基準,不要刪
 tests/                   node:test 單元測試
 ```
@@ -70,6 +74,8 @@ tests/                   node:test 單元測試
 
 **新增 3D 排列**:在 `app/player/layouts.js` 寫一個純函式並加進 `STAGES`(要在牌堆輪替中出現就加進 `STAGE_ORDER`),並更新指南的 `layout.stage` 說明。
 
+**新增檢查規則**:只改 `app/core/check.js`,然後執行 `node scripts/bundle-check.mjs` 更新單檔版(`tests/bundle.test.mjs` 會在不同步時失敗)。
+
 **新增線上影片平台**:`app/core/media.js` 的 `classifyMedia`,並在 `tests/core.test.mjs` 加測試。
 
 ## 開發與驗證
@@ -85,6 +91,7 @@ python3 -m http.server 8000           # 開 http://localhost:8000
 
 提交前的檢查:
 
+- [ ] 改過 `app/core/` 就執行 `node scripts/bundle-check.mjs`
 - [ ] 測試全部通過
 - [ ] `check.mjs content` 沒有警告
 - [ ] 用瀏覽器開過官方範例,牌堆、放大、六種排列、三套主題、講者視窗(S)、列印(P)都正常

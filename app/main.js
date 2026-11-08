@@ -15,7 +15,7 @@ import { Player } from './player/player.js';
 import { startPresenter } from './player/presenter.js';
 import { applyTheme } from './player/themes.js';
 
-export const VERSION = '1.1.0';
+export const VERSION = '1.2.0';
 const REPO_URL = 'https://github.com/ToruSmith/Mdslide-Pile';
 
 const app = document.getElementById('app');
