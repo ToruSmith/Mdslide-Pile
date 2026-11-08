@@ -1,0 +1,31 @@
+mdslide: 1
+title: Mdslide Pile
+subtitle: 把資料夾變成會動的簡報
+kicker: 官方範例 · 功能總覽
+author: Mdslide Pile
+event: 範例簡報
+date: 2026-11-08
+theme: paper
+tags: [範例, 功能總覽, 驗收]
+layout:
+  stage: pile
+sections:
+  - folder: 01-為什麼
+    title: 為什麼需要它
+    subtitle: 做簡報的三個老問題
+    color: "#c0674a"
+  - folder: 02-怎麼運作
+    title: 怎麼運作
+    subtitle: 網站是遊戲機,資料夾是遊戲片
+    color: "#4f73a6"
+  - folder: 03-功能展示
+    title: 功能展示
+    subtitle: 每一種版型都在這裡
+    color: "#5f8a64"
+  - folder: 04-開始使用
+    title: 開始使用
+    subtitle: 三分鐘做出第一份
+    color: "#b08a3a"
+cover_notes: |
+  開場先停三秒,讓觀眾看清楚標題。
+  一句話介紹:這是一個把資料夾變成簡報的工具。

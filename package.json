@@ -1,0 +1,1 @@
+{"type":"module","private":true,"name":"mdslide-pile","scripts":{"test":"node --test tests/*.test.mjs","check":"node scripts/check.mjs"}}
