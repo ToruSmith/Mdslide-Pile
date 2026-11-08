@@ -121,6 +121,7 @@ export const LOCALE_EN = {
   'lib.local': 'Local library',
   'lib.eyebrow': '{kind} · {topics} topics · {decks} decks',
   'lib.search': 'Search titles and tags…',
+  'lib.noResults': 'No decks match “{q}”',
   'lib.check': '✓ Check',
   'lib.checkTitle': 'Check every deck against the rules',
   'lib.refresh': '↻ Refresh',

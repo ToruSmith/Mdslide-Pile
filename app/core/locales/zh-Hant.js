@@ -121,6 +121,7 @@ export const LOCALE_ZH_HANT = {
   'lib.local': '本機書庫',
   'lib.eyebrow': '{kind} · {topics} 個主題 · {decks} 份簡報',
   'lib.search': '搜尋簡報標題、標籤…',
+  'lib.noResults': '找不到符合「{q}」的簡報',
   'lib.check': '✓ 檢查',
   'lib.checkTitle': '檢查所有簡報是否符合規則',
   'lib.refresh': '↻ 重新整理',

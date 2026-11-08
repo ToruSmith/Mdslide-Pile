@@ -27,6 +27,9 @@ def main():
         assert page.locator('.hero').count() == 1, '首頁沒有載入'
         page.goto(BASE + '#/repo'); page.wait_for_timeout(2000)
         assert page.locator('.deck-card').count() >= 3, '內建書庫沒有載入'
+        page.fill('.search', 'feature tour'); page.wait_for_timeout(200)
+        assert page.locator('.deck-card:not([hidden])').count() == 1, '搜尋沒有篩選簡報'
+        page.fill('.search', ''); page.wait_for_timeout(200)
         page.locator('.deck-card').first.click(); page.wait_for_timeout(2500)
         assert page.locator('.card').count() > 10, '播放器沒有載入'
 

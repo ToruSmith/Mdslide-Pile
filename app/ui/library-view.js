@@ -31,13 +31,14 @@ export function renderLibrary(root, { lib, source, sourceKey, onOpen, onRefresh,
       </div>
       ${lib.topics.length > 1 ? `<nav class="chips"><button class="chip on" data-topic="*">${esc(t('lib.all'))}</button>${lib.topics.map(tp => `<button class="chip" data-topic="${esc(tp.id)}" style="--c:${esc(tp.color)}">${esc(tp.title)}<small>${tp.projects.length}</small></button>`).join('')}</nav>` : ''}
       ${lib.issues.length ? `<details class="lib-issues"><summary>${esc(t('lib.issues', { n: lib.issues.length }))}</summary><ul>${lib.issues.map(i => `<li><code>${esc(i.path)}</code>${esc(i.message)}</li>`).join('')}</ul></details>` : ''}
+      <p class="empty search-empty" hidden></p>
       <div class="topics">
         ${lib.topics.map(tp => `
           <section class="topic" data-topic="${esc(tp.id)}" style="--c:${esc(tp.color)}">
             ${lib.kind === 'library' ? `<header><h2><i></i>${esc(tp.title)}</h2>${tp.description ? `<p>${esc(tp.description)}</p>` : ''}</header>` : ''}
             <div class="grid">
               ${tp.projects.map(p => `
-                <a class="deck-card" href="#/${sourceKey}/${encodeURIComponent(tp.id)}/${encodeURIComponent(p.id)}" data-topic="${esc(tp.id)}" data-project="${esc(p.id)}" data-search="${esc([p.title, p.subtitle, p.author, p.event, ...p.tags, tp.title].join(' ').toLowerCase())}">
+                <a class="deck-card" href="#/${sourceKey}/${encodeURIComponent(tp.id)}/${encodeURIComponent(p.id)}" data-topic="${esc(tp.id)}" data-project="${esc(p.id)}" data-search="${esc([p.title, p.subtitle, p.author, p.event, p.date, p.id, ...p.tags, tp.title].filter(Boolean).join(' ').toLowerCase())}">
                   <div class="thumb"><div class="thumb-inner"></div><div class="shine"></div></div>
                   <div class="info">
                     <h3>${esc(p.title)}</h3>
@@ -92,29 +93,41 @@ export function renderLibrary(root, { lib, source, sourceKey, onOpen, onRefresh,
   }
 
   // 篩選與搜尋
-  let topic = '*', q = '';
+  // 多個關鍵字用空白分開,全部符合才顯示;只搜尋目錄層已有的資料(不讀 MD 檔)
+  let topic = '*', words = [], raw = '';
   const apply = () => {
+    let total = 0;
     root.querySelectorAll('.topic').forEach(sec => {
       let shown = 0;
       sec.querySelectorAll('.deck-card').forEach(c => {
-        const ok = (topic === '*' || c.dataset.topic === topic) && (!q || c.dataset.search.includes(q));
+        const ok = (topic === '*' || c.dataset.topic === topic) && words.every(w => c.dataset.search.includes(w));
         c.hidden = !ok; if (ok) shown++;
       });
-      sec.hidden = shown === 0 && (topic !== '*' || q);
+      sec.hidden = shown === 0 && (topic !== '*' || words.length > 0);
+      total += shown;
     });
+    const empty = root.querySelector('.search-empty');
+    empty.hidden = !(words.length && total === 0);
+    empty.textContent = empty.hidden ? '' : t('lib.noResults', { q: raw });
   };
   root.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => {
     topic = b.dataset.topic;
     root.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === b));
     apply();
   }));
-  root.querySelector('.search')?.addEventListener('input', e => { q = e.target.value.trim().toLowerCase(); apply(); });
+  const search = root.querySelector('.search');
+  search.addEventListener('input', () => { raw = search.value.trim(); words = raw.toLowerCase().split(/\s+/).filter(Boolean); apply(); });
+  const slash = e => {
+    if (e.key === '/' && !e.target.closest?.('input, textarea, select')) { e.preventDefault(); search.focus(); }
+    if (e.key === 'Escape' && e.target === search && search.value) { search.value = ''; search.dispatchEvent(new Event('input')); }
+  };
+  window.addEventListener('keydown', slash);
   root.querySelector('.refresh')?.addEventListener('click', onRefresh);
   root.querySelector('.check')?.addEventListener('click', () => {
     source.refresh?.(); // 讀最新的檔案(使用者可能剛改過)
     openCheckPanel(document.body, onProgress => checkLibrary(source, onProgress));
   });
-  return () => io.disconnect();
+  return () => { io.disconnect(); window.removeEventListener('keydown', slash); };
 }
 
 function coverHTML(project, firstSlide) {
