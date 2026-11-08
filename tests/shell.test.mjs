@@ -43,5 +43,10 @@ test('CSP:允許四個嵌入網域,其他框架與行內程式一律擋下', asy
 test('manifest.webmanifest 格式正確', async () => {
   const m = JSON.parse(await read('manifest.webmanifest'));
   assert.equal(m.start_url, './');
-  assert.ok(m.icons.length && m.name);
+  assert.ok(m.name);
+  // Chrome 安裝需要 192 與 512 的 PNG;iPhone 主畫面需要 apple-touch-icon(PNG)
+  for (const size of ['192x192', '512x512']) assert.ok(m.icons.some(i => i.sizes === size && i.type === 'image/png'), size);
+  assert.ok(m.icons.some(i => i.purpose === 'maskable'));
+  for (const i of m.icons) await access(new URL('../' + i.src, import.meta.url));
+  assert.match(await read('index.html'), /rel="apple-touch-icon" href="icons\/apple-touch-icon\.png"/);
 });

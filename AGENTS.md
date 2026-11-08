@@ -23,7 +23,7 @@ Mdslide Pile 把「資料夾 + Markdown」播放成 3D 牌堆簡報。網站是�
 index.html               入口(只載入 CSS 與 app/main.js;含 CSP)
 sw.js                    離線快取(依 shell-manifest.js 預先快取網站本身,不快取簡報內容)
 offline.html             沒網路也沒快取時的說明頁
-manifest.webmanifest     安裝成 App 用;icon.svg 是圖示
+manifest.webmanifest     安裝成 App 用;icon.svg 與 icons/(PNG)是圖示
 app/
   main.js                路由、首頁、資料來源切換、介面語言、即時重新載入
   standalone.js          匯出的單一 HTML 檔的入口(內嵌資料來源)

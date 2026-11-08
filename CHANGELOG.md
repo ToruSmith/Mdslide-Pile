@@ -1,5 +1,9 @@
 # 更新紀錄
 
+## 1.3.1 — 2026-11-08
+
+- 補上 PNG App 圖示(192、512、可遮罩 512、iPhone 主畫面 180),Chrome / Edge / Android 可正常安裝,iPhone「加入主畫面」顯示正確圖示
+
 ## 1.3.0 — 2026-11-08
 
 依升級建議書(UPGRADE-PROPOSAL)一次完成的工作包。`deck.yml` 規則版本仍是 `mdslide: 1`,舊簡報不用改。
