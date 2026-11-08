@@ -567,8 +567,9 @@ export class Player {
   // ---------------- 放大檢視 ----------------
   fit() {
     const pad = window.innerHeight < 500 ? 24 : 96; // 手機橫放時高度很小,少留一點邊
-    const sc = Math.min(window.innerWidth * 0.92 / 1280, (window.innerHeight - pad) / 720);
-    return { sc, t: `translate(${(window.innerWidth - 1280 * sc) / 2}px, ${(window.innerHeight - 720 * sc) / 2 - 6}px) scale(${sc})` };
+    const bar = this.ink?.enabled ? 64 : 0; // 畫筆工具列:投影片縮小一點、往上移,工具列放在下面空出來的位置
+    const sc = Math.min(window.innerWidth * 0.92 / 1280, (window.innerHeight - pad - bar) / 720);
+    return { sc, t: `translate(${(window.innerWidth - 1280 * sc) / 2}px, ${(window.innerHeight - bar - 720 * sc) / 2 - 6}px) scale(${sc})` };
   }
 
   renderFull(gi) {
@@ -628,8 +629,14 @@ export class Player {
   // ---------------- 畫筆與雷射筆(D) ----------------
   toggleInk(on = !this.ink.enabled) {
     if (on && !this.viewing) this.openViewer();
+    const before = this.el.frame.style.transform;
     this.ink.setEnabled(on);
     this.el.player.classList.toggle('inking', on);
+    if (this.viewing) {
+      const to = this.fit().t;
+      this.el.frame.style.transform = to;
+      if (before && before !== to) this.el.frame.animate([{ transform: before }, { transform: to }], { duration: 260, easing: 'cubic-bezier(.2, .8, .2, 1)' });
+    }
   }
 
   updateInkBar() {

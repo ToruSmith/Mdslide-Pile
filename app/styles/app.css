@@ -300,7 +300,7 @@ body.dragging::after { content: attr(data-drop); position: fixed; inset: 16px; z
 .ink:not(.on) .ink-dot { display: none; }
 .ink.on:not([data-tool="laser"]) .ink-dot { display: none; }
 .ink-print { position: absolute; left: 0; top: 0; }
-.ink-bar { position: absolute; left: 50%; bottom: 18px; z-index: 26; display: flex; gap: 4px; align-items: center; padding: 6px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
+.ink-bar { position: absolute; left: 50%; bottom: 14px; z-index: 30; display: flex; gap: 4px; align-items: center; padding: 6px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
   background: var(--surface); border: 1px solid var(--line); border-radius: 999px; box-shadow: 0 12px 40px rgb(var(--shadow) / .22); transition: opacity .2s, transform .2s; }
 .player.inking .ink-bar { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
 .ink-bar button { font: inherit; font-size: 13px; padding: 7px 12px; border: 0; border-radius: 999px; background: none; color: var(--ink); cursor: pointer; white-space: nowrap; }
@@ -312,6 +312,7 @@ body.dragging::after { content: attr(data-drop); position: fixed; inset: 16px; z
 .ink-sep { width: 1px; height: 20px; background: var(--line); margin: 0 4px; }
 .pbtn[data-act="ink"].on { background: var(--accent); color: #fff; border-color: var(--accent); }
 .player.inking .frame { cursor: default; }
+.player.inking .pfoot { opacity: 0; pointer-events: none; } /* 畫畫時收起進度條,不和工具列重疊 */
 @media (max-width: 600px) { .ink-bar { bottom: 10px; max-width: 96vw; overflow-x: auto; } .ink-bar button { padding: 7px 9px; } }
 .pv-frame { position: relative; }
 .pv-ink-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
