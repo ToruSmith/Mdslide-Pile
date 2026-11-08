@@ -1,13 +1,15 @@
-// 判斷媒體類型:本機圖片 / 本機影片 / 線上嵌入(YouTube、Bilibili、Google Drive、Vimeo)。
+// 判斷媒體類型:本機圖片 / 本機影片 / 線上嵌入(YouTube、Bilibili、Google Drive、Vimeo)/
+// 互動網頁(GitHub Pages、CodePen、簡報資料夾裡的 .html 檔)。
 
 import { ext, isURL } from './names.js';
 
 const IMAGE = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'avif', 'bmp']);
 const VIDEO = new Set(['mp4', 'webm', 'mov', 'm4v', 'ogv']);
 const AUDIO = new Set(['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac']);
+const PAGE = new Set(['html', 'htm']);
 
 /**
- * @returns {{ kind: 'image'|'video'|'audio'|'embed'|'unknown', src: string, provider?: string, embed?: string, thumb?: string, remote: boolean }}
+ * @returns {{ kind: 'image'|'video'|'audio'|'embed'|'page'|'unknown', src: string, provider?: string, embed?: string, thumb?: string, interactive?: boolean, remote: boolean }}
  */
 export function classifyMedia(src) {
   const s = src.trim();
@@ -33,8 +35,18 @@ export function classifyMedia(src) {
     if ((m = s.match(/vimeo\.com\/(?:video\/)?(\d+)/))) {
       return { kind: 'embed', src: s, remote, provider: 'Vimeo', embed: `https://player.vimeo.com/video/${m[1]}` };
     }
+    // 互動網頁:CodePen 的作品(顯示執行結果)、GitHub Pages 上的網頁
+    if ((m = s.match(/^https:\/\/codepen\.io\/([\w-]+)\/(?:pen|full|details|embed)\/([\w-]+)/i))) {
+      return { kind: 'embed', src: s, remote, provider: 'CodePen', interactive: true,
+        embed: `https://codepen.io/${m[1]}/embed/${m[2]}?default-tab=result&editable=false` };
+    }
+    const path = s.split(/[?#]/)[0];
+    if (/^https:\/\/[\w-]+\.github\.io(\/|$)/i.test(s) && !IMAGE.has(ext(path)) && !VIDEO.has(ext(path)) && !AUDIO.has(ext(path))) {
+      return { kind: 'embed', src: s, remote, provider: 'GitHub Pages', interactive: true, embed: s };
+    }
   }
   const e = ext(s.split(/[?#]/)[0]);
+  if (!remote && PAGE.has(e)) return { kind: 'page', src: s, remote, provider: 'HTML', interactive: true };
   if (IMAGE.has(e)) return { kind: 'image', src: s, remote };
   if (VIDEO.has(e)) return { kind: 'video', src: s, remote };
   if (AUDIO.has(e)) return { kind: 'audio', src: s, remote };

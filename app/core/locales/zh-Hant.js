@@ -276,4 +276,6 @@ export const LOCALE_ZH_HANT = {
   'toast.kEmbed': '線上影片請直接點影片上的播放鈕,K 只控制本機影片',
   'toast.kPlay': '▶ 播放',
   'toast.kPause': '❚❚ 暫停',
+  'slide.interactive': '互動頁面',
+  'slide.openPage': '↗ 在新分頁開啟',
 };

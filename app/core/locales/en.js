@@ -276,4 +276,6 @@ export const LOCALE_EN = {
   'toast.kEmbed': 'Use the play button on online videos; K only controls local video',
   'toast.kPlay': '▶ Playing',
   'toast.kPause': '❚❚ Paused',
+  'slide.interactive': 'Interactive page',
+  'slide.openPage': '↗ Open in new tab',
 };

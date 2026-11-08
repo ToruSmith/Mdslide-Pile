@@ -77,11 +77,19 @@ function mediaFigure(m, ctx, pathCtx, meta, showCaption = true, tl = key => t(ke
   if (!m) return `<figure class="media"><div class="missing">${esc(tl('slide.noMedia'))}</div></figure>`;
   const fit = meta.fit === 'contain' ? ' contain' : '';
   const cap = showCaption && m.caption ? `<figcaption>${esc(m.caption)}</figcaption>` : '';
+  // 互動網頁:放大時才載入;另外提供「在新分頁開啟」
+  const open = href => ctx.mode === 'full' ? href : '';
   if (m.kind === 'embed') {
     const thumb = m.thumb ? `<img data-thumb="${esc(m.thumb)}" alt="">` : ''; // 由 hydrate.js 載入,失敗時移除
-    return `<figure class="media" data-embed="${esc(m.embed)}"><div class="poster">${thumb}<div class="play"></div><div class="provider">${esc(m.provider)}</div></div>${ctx.mode === 'full' ? '' : cap}</figure>`;
+    const label = m.interactive ? `<div class="page-tag">${esc(tl('slide.interactive'))}</div>` : '<div class="play"></div>';
+    const link = m.interactive ? open(`<a class="open-page" href="${esc(m.src)}" target="_blank" rel="noopener">${esc(tl('slide.openPage'))}</a>`) : '';
+    return `<figure class="media${m.interactive ? ' page' : ''}" data-embed="${esc(m.embed)}"${m.interactive ? ' data-interactive="1"' : ''}><div class="poster">${thumb}${label}<div class="provider">${esc(m.provider)}</div></div>${link}${ctx.mode === 'full' ? '' : cap}</figure>`;
   }
   const path = resolveMediaPath(m.src, pathCtx);
+  if (m.kind === 'page') {
+    const name = path.split('/').pop();
+    return `<figure class="media page" data-page="${esc(path)}"><div class="poster"><div class="page-tag">${esc(tl('slide.interactive'))}</div><div class="provider">${esc(name)}</div></div>${open(`<button class="open-page" data-open-page="${esc(path)}">${esc(tl('slide.openPage'))}</button>`)}${ctx.mode === 'full' ? '' : cap}</figure>`;
+  }
   if (m.kind === 'video') return `<figure class="media${fit}"><video data-media="${esc(path)}" muted playsinline loop preload="none"></video>${cap}</figure>`;
   if (m.kind === 'audio') return `<figure class="media"><div class="poster"><div class="play"></div><div class="provider">AUDIO</div></div><audio data-media="${esc(path)}" preload="none"></audio>${cap}</figure>`;
   return `<figure class="media${fit}"><img data-media="${esc(path)}" alt="${esc(m.alt)}">${cap}</figure>`;

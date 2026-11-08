@@ -33,6 +33,7 @@ Write slides in Markdown, group them into sections with folders, and play them a
 - **Live reload**: folders opened in Chrome / Edge update on screen as soon as you save a Markdown file (or press `R`).
 - **Checker**: the "Check" button on the site, or double-click the checker in your library, to find anything that breaks the rules.
 - **Media**: local images and video; YouTube, Bilibili, Google Drive and Vimeo embeds.
+- **Interactive pages**: `.html` files in the deck folder, GitHub Pages pages and CodePen pens run right on the zoomed slide, in an isolated frame.
 
 **Design principles**
 - **Local first**: open folders on your computer or a USB drive directly; nothing is uploaded. Chrome / Edge remember your libraries for one-click reconnects.

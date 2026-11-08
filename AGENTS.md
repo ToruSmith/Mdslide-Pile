@@ -23,6 +23,7 @@ Mdslide Pile 把「資料夾 + Markdown」播放成 3D 牌堆簡報。網站是�
 index.html               入口(只載入 CSS 與 app/main.js;含 CSP)
 sw.js                    離線快取(依 shell-manifest.js 預先快取網站本身,不快取簡報內容)
 offline.html             沒網路也沒快取時的說明頁
+embed.html               播放本機資料夾 .html 的中繼頁(刻意不設 CSP;內容放進沒有 allow-same-origin 的隔離框框;程式在 app/embed-host.js)
 manifest.webmanifest     安裝成 App 用;icon.svg 與 icons/(PNG)是圖示
 app/
   main.js                路由、首頁、資料來源切換、介面語言、即時重新載入
@@ -31,7 +32,7 @@ app/
     names.js             檔名、排序前綴、略過規則
     yaml.js              精簡 YAML 解析
     markdown.js          精簡 Markdown → HTML(跳脫所有 HTML)
-    media.js             媒體分類(本機 / YouTube / Bilibili / Drive / Vimeo)與路徑規則
+    media.js             媒體分類(本機 / YouTube / Bilibili / Drive / Vimeo / 互動網頁:GitHub Pages、CodePen、.html)與路徑規則
     slide.js             一個 MD 檔 → 投影片資料(front matter、拆張、備註、自動版型)
     library.js           書庫掃描三層:scanLibrary / loadCover / loadDeck
     check.js             檢查規則(網站按鈕、check.mjs、單檔版共用)
@@ -98,7 +99,7 @@ tests/                   node:test 單元測試;smoke/smoke.py 是瀏覽器冒�
 
 **新增檢查規則**:只改 `app/core/check.js`,然後執行 `node scripts/bundle-check.mjs` 更新單檔版(`tests/bundle.test.mjs` 會在不同步時失敗)。
 
-**新增線上影片平台**:`app/core/media.js` 的 `classifyMedia`,並在 `tests/core.test.mjs` 加測試。
+**新增線上影片平台或可嵌入的網站**:`app/core/media.js` 的 `classifyMedia`,`index.html` CSP 的 `frame-src` 加上網域(不要放寬成任意網站),並在 `tests/core.test.mjs`、`tests/shell.test.mjs` 加測試。嵌入框框的 sandbox 在 `app/player/hydrate.js`:和本網站同網域的頁面絕不能給 `allow-same-origin`。
 
 ## 開發與驗證
 

@@ -32,11 +32,13 @@ test('CSP:允許四個嵌入網域,其他框架與行內程式一律擋下', asy
   const dir = name => csp.split(';').map(s => s.trim()).find(s => s.startsWith(name + ' '))?.split(/\s+/).slice(1) || [];
   assert.deepEqual(dir('script-src'), ["'self'"]);
   const frames = dir('frame-src');
-  for (const url of ['https://youtu.be/aqz-KE-bpKQ', 'https://www.bilibili.com/video/BV1xx411c7mD', 'https://drive.google.com/file/d/abc123/view', 'https://vimeo.com/76979871']) {
+  for (const url of ['https://youtu.be/aqz-KE-bpKQ', 'https://www.bilibili.com/video/BV1xx411c7mD', 'https://drive.google.com/file/d/abc123/view', 'https://vimeo.com/76979871', 'https://codepen.io/jo/pen/AbCd12']) {
     const m = classifyMedia(url);
     assert.ok(m.embed, url);
     assert.ok(frames.includes(new URL(m.embed).origin), `${new URL(m.embed).origin} 不在 frame-src`);
   }
+  assert.ok(frames.includes('https://*.github.io') && frames.includes("'self'"), 'GitHub Pages 與倉庫裡的 HTML 要能嵌入');
+  assert.ok(!frames.includes('https:') && !frames.includes('*'), '不開放任意網站');
   assert.ok(!/\son[a-z]+=/i.test(html), 'index.html 不能有行內事件');
 });
 

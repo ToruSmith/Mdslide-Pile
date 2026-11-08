@@ -56,6 +56,19 @@ def main():
             page.locator('.frame img[data-media]').first.click(); page.wait_for_timeout(400)
             assert page.locator('.lightbox').count() == 1, '點圖片沒有放大'
             page.keyboard.press('Escape'); page.keyboard.press('Escape'); page.wait_for_timeout(700)
+        # 互動網頁:倉庫裡的 .html 放大後可以操作
+        page_at = page.evaluate("[...document.querySelectorAll('.card')].findIndex(c => c.querySelector('[data-page]'))")
+        if page_at >= 0:
+            page.evaluate("n => { location.hash = location.hash.replace(/[/][0-9]+$/, '/' + n) }", page_at + 1); page.wait_for_timeout(900)
+            page.keyboard.press('Enter'); page.wait_for_timeout(2000)
+            demo = page.frame_locator('.frame figure.page iframe')
+            before_v = demo.locator('#out').inner_text()
+            demo.locator('#years').fill('35'); page.wait_for_timeout(300)
+            assert demo.locator('#out').inner_text() != before_v, '互動網頁沒有反應'
+            here = page.url
+            page.locator('.frame h1').first.click(); page.wait_for_timeout(500)  # 點回投影片:拿回鍵盤,不翻頁
+            assert page.url == here, '從互動網頁點回投影片時不應翻頁'
+            page.keyboard.press('Escape'); page.wait_for_timeout(700)
         # 閱讀模式(M)
         page.keyboard.press('m'); page.wait_for_timeout(1000)
         assert page.locator('.reader .ritem').count() == page.locator('.card').count(), '閱讀模式的張數不對'

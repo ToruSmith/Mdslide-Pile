@@ -276,3 +276,14 @@ test('程式碼上色:關鍵字、字串、註解、數字;HTML 一律跳脫', (
   assert.equal(highlight('<b>', 'unknown'), '&lt;b&gt;');
   assert.match(renderMarkdown('```py\nx = 1 # <b>\n```'), /<pre data-lang="py"><code>x = <span class="tk-n">1<\/span> <span class="tk-c"># &lt;b&gt;<\/span><\/code><\/pre>/);
 });
+
+test('classifyMedia:互動網頁(GitHub Pages、CodePen、資料夾裡的 .html)', async () => {
+  const { classifyMedia } = await import('../app/core/media.js');
+  const gh = classifyMedia('https://someone.github.io/demo/');
+  assert.equal(gh.kind, 'embed'); assert.equal(gh.provider, 'GitHub Pages'); assert.ok(gh.interactive);
+  assert.equal(classifyMedia('https://someone.github.io/a/pic.png').kind, 'image', 'GitHub Pages 上的圖片仍是圖片');
+  const cp = classifyMedia('https://codepen.io/jo/pen/AbCd12');
+  assert.equal(cp.embed, 'https://codepen.io/jo/embed/AbCd12?default-tab=result&editable=false');
+  assert.equal(classifyMedia('media/demo.html').kind, 'page');
+  assert.equal(classifyMedia('https://example.com/demo.html').kind, 'image', '其他網站不嵌入');
+});

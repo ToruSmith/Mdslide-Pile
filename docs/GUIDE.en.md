@@ -218,6 +218,12 @@ An image on **a line of its own** is the slide's main media:
 - **Paths**: `media/a.jpg` is relative to the **deck folder** (recommended; works from any section); `./a.jpg` is relative to the Markdown file.
 - **Local formats**: images jpg, png, gif, webp, svg, avif; video mp4, webm, mov.
 - **Online video**: YouTube, Bilibili, Google Drive (shared as "anyone with the link") and Vimeo. Paste the normal share URL. Needs a network connection.
+- **Interactive pages**: same syntax; zoom into the slide and use the page right there.
+  - An `.html` file in the deck folder, e.g. `![Caption](media/demo.html)`. Played from the repository (the site's built-in library), CSS, JS and images next to it load too; played from a local folder, make it a **single file** (CSS and JS inside the HTML).
+  - A GitHub Pages page, e.g. `![Caption](https://user.github.io/project/)`.
+  - A CodePen pen, e.g. `![Caption](https://codepen.io/user/pen/ID)`; the result view is shown.
+  - Once zoomed, "Open in new tab" is at the top right. The page runs in an isolated frame and cannot reach your folder or the site's data; pages from other sites are not supported.
+  - After you click into the page the keyboard goes with it; click outside the page and the arrow keys control the deck again. In an exported single HTML file, `.html` files from the folder cannot play.
 - Prefer online video; compress local video to 1080p and under 100 MB per file.
 - An image inside a paragraph (not on its own line) is shown inline.
 

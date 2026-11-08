@@ -4,7 +4,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 
-const TOP = ['index.html', 'offline.html', 'manifest.webmanifest', 'icon.svg',
+const TOP = ['index.html', 'offline.html', 'embed.html', 'manifest.webmanifest', 'icon.svg',
   'icons/apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png'];
 
 async function walk(root, dir, out) {

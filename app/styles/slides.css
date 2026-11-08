@@ -70,6 +70,15 @@
 .media .poster .play { position: relative; width: 104px; height: 104px; border-radius: 50%; background: rgba(255, 255, 255, .92); display: grid; place-items: center; box-shadow: 0 8px 30px rgba(0, 0, 0, .35); }
 .media .poster .play::after { content: ""; margin-left: 10px; border-left: 34px solid #222; border-top: 21px solid transparent; border-bottom: 21px solid transparent; }
 .media .poster .provider { position: relative; font-size: 20px; letter-spacing: .1em; opacity: .9; }
+/* 互動網頁:淺色卡片,放大後才載入;右上角可在新分頁開啟 */
+.media.page { background: var(--slide-bg); border: 2px solid var(--line); }
+.media.page .poster { background: repeating-linear-gradient(135deg, var(--slide-soft) 0 14px, var(--slide-bg) 14px 28px); color: var(--slide-ink, #222); }
+.media.page .poster .page-tag { position: relative; padding: 10px 22px; border-radius: 999px; background: var(--c); color: #fff; font-size: 22px; font-weight: 700; letter-spacing: .06em; }
+.media.page .poster .provider { color: var(--slide-muted); font-size: 18px; }
+.media.page iframe { background: #fff; }
+.media .open-page { position: absolute; top: 12px; right: 12px; z-index: 2; padding: 6px 14px; border-radius: 999px; border: 0; font: inherit; font-size: 15px; text-decoration: none; cursor: pointer;
+  background: rgba(20, 16, 12, .72); color: #fff; }
+.media .open-page:hover { background: rgba(20, 16, 12, .9); }
 .media .missing { position: absolute; inset: 0; display: grid; place-items: center; font-size: 22px; color: var(--slide-muted); border: 3px dashed var(--line); border-radius: 12px; text-align: center; padding: 24px; }
 
 /* ---------- 版型 ---------- */
