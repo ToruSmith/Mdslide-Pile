@@ -73,6 +73,7 @@ export const LOCALE_EN = {
   'stage.helix': 'Helix',
   'stage.sphere': 'Sphere',
   'stage.overview': 'Overview',
+  'stage.side': 'Side by side',
 
   // ---------- Home and navigation ----------
   'doc.title': 'Mdslide Pile · Turn folders into moving slides',
@@ -192,6 +193,7 @@ export const LOCALE_EN = {
   'key.jump': 'Jump to section',
   'key.homeEnd': 'First / last slide',
   'key.overview': 'Overview',
+  'key.side': 'Side by side (large slide + thumbnails)',
   'key.stage': 'Switch stage',
   'key.theme': 'Switch theme',
   'key.black': 'Black screen',

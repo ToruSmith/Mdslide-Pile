@@ -13,7 +13,7 @@ Write slides in Markdown, group them into sections with folders, and play them a
 - **Folders are the structure**: library → topic → deck → section → slide. Every config file is optional.
 - **Local first**: open folders on your computer or a USB drive directly. Chrome / Edge remember your libraries for one-click reconnects.
 - **Reads only what it needs**: the catalog first, covers as you scroll, content when you open a deck, media just before it is shown. Large libraries stay fast.
-- **Six 3D stages**: pile (shuffles when you change sections), cover flow, carousel, helix, sphere and overview.
+- **Six 3D stages**: pile (shuffles when you change sections), cover flow, carousel, helix, sphere and overview, plus a side-by-side view (`V`: large slide with a thumbnail strip, like a slide editor; the default on phones).
 - **Three themes**: paper, ink (dark) and slate.
 - **Over a dozen layouts**: split, full-bleed, quote, big number, stat cards, timeline, columns, automatic agenda, bar and line charts, and more.
 - **Presenting tools**: step-by-step reveal, presenter view (notes, next slide, timer), black screen, full screen, clicker support, PDF export, and export to a single HTML file that plays offline with a double-click.
@@ -133,7 +133,7 @@ Want a ready-made library? Download `Mdslide-library-v….zip` from [Releases](h
 | `1`–`9` | Jump to section | `P` | Print / save as PDF |
 | `B` | Black screen | `F` | Full screen |
 | `K` | Play / pause video | `R` | Reload the deck |
-| `?` | Help | | |
+| `?` | Help | `V` | Side by side |
 
 ## Browser support
 

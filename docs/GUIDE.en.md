@@ -85,7 +85,7 @@ accent: "#b4654a"              # accent color when a section has none
 cover_image: media/cover.jpg   # image on the right of the title slide (optional)
 tags: [book-club, notes]
 layout:
-  stage: pile                  # opening stage: pile / coverflow / carousel / helix / sphere / overview
+  stage: pile                  # opening stage: pile / coverflow / carousel / helix / sphere / overview / side (large slide + thumbnails; default on phones)
 cover: true                    # false = no automatic title slide
 section_covers: true           # false = no automatic section covers
 end: Thank you                 # adds an automatic closing slide (optional)

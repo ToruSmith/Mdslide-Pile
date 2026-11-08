@@ -30,5 +30,5 @@ for (const [name, stage] of Object.entries(STAGES)) {
 
 test('牌堆輪替清單不變', () => {
   assert.deepEqual(STAGE_ORDER, ['pile', 'coverflow', 'carousel', 'helix', 'sphere']);
-  assert.deepEqual(Object.keys(STAGES), ['pile', 'coverflow', 'carousel', 'helix', 'sphere', 'overview']);
+  assert.deepEqual(Object.keys(STAGES), ['pile', 'coverflow', 'carousel', 'helix', 'sphere', 'overview', 'side']);
 });

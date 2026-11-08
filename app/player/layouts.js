@@ -100,6 +100,43 @@ function overview({ slides, sections, focus, vw, vh }) {
   return { poses, world: { rx: 0, ry: 0, z: 0, scale } };
 }
 
+/** 對照:目前那張放大在一側,其他投影片排成縮圖列(橫放在左、直放在下),像簡報軟體的編輯畫面。
+ *  目前那張會從縮圖列「抽出來」放大,列上留一個小空位;不同章節之間多留一點間隔。 */
+function side({ slides, focus, vw, vh }) {
+  const ox = 0, oy = vh * 0.53;            // 世界原點在畫面的 (50%, 53%)
+  const short = vh < 500; // 手機橫放
+  const top = vw < 600 || short ? 64 : 84, bottom = short ? 22 : 44, pad = vw < 600 || short ? 12 : 24, G = short ? 8 : 12;
+  const H = vh - top - bottom;              // 可用高度
+  const landscape = vw >= vh * 1.1;
+  const at = (px, py) => [px - vw / 2 - ox, py - oy]; // 螢幕座標 → 世界座標
+  const secGap = (i, f) => (slides[i].sec - slides[f].sec) * G * 1.5;
+  let big, place;
+  if (landscape) {
+    const tw = Math.max(110, Math.min(220, vw * 0.17)), th = tw * CH / CW;
+    const bw = Math.min(vw - tw - pad * 4, (H - pad) * CW / CH), bh = bw * CH / CW;
+    const bx = pad * 2 + tw + (vw - tw - pad * 3 - bw) / 2 + bw / 2;
+    const limit = H / 2 - th / 2; // 縮圖整張都在頂列與底列之間才顯示
+    big = P(...at(bx, top + H / 2), 0, 1, { s: bw / CW });
+    place = (k, i) => {
+      const y = top + H / 2 + (k - Math.sign(k) * 0.4) * (th + G) + secGap(i, focus);
+      const visible = Math.abs(y - (top + H / 2)) <= limit;
+      return P(...at(pad + tw / 2, y), 0, visible ? 1 : 0, { s: tw / CW });
+    };
+  } else {
+    const bw = vw - pad * 2, bh = bw * CH / CW;
+    const tw = Math.max(96, Math.min(180, vw * 0.3)), th = tw * CH / CW;
+    const by = top + Math.max(0, (H - bh - th - G * 3) / 2) + bh / 2;
+    big = P(...at(vw / 2, by), 0, 1, { s: bw / CW });
+    place = (k, i) => {
+      const x = vw / 2 + (k - Math.sign(k) * 0.4) * (tw + G) + secGap(i, focus);
+      const visible = Math.abs(x - vw / 2) < vw / 2 + tw; // 左右超出畫面的自然被裁掉
+      return P(...at(x, by + bh / 2 + G * 2 + th / 2), 0, visible ? 1 : 0, { s: tw / CW });
+    };
+  }
+  const poses = slides.map((_, i) => (i === focus ? big : place(i - focus, i)));
+  return { poses, world: { rx: 0, ry: 0, z: 0, scale: 1 } };
+}
+
 export const STAGES = {
   // 顯示名稱在 locales 的 stage.<名稱>
   pile: { fn: pile, shuffle: true },
@@ -108,6 +145,7 @@ export const STAGES = {
   helix: { fn: helix },
   sphere: { fn: sphere },
   overview: { fn: overview },
+  side: { fn: side },
 };
 export const STAGE_ORDER = ['pile', 'coverflow', 'carousel', 'helix', 'sphere'];
 

@@ -116,7 +116,7 @@ python3 -m http.server 8000           # 開 http://localhost:8000
 - [ ] 新增的介面文字兩份 locale 都有,鍵與參數一致(`i18n.test.mjs`)
 - [ ] 改了播放器或匯出:`python3 tests/smoke/smoke.py http://localhost:8000/` 通過(需要先 `pip install playwright`,不要寫進 package.json)
 - [ ] `check.mjs content` 沒有警告
-- [ ] 用瀏覽器開過官方範例,牌堆、放大、六種排列、三套主題、講者視窗(S)、列印(P)都正常
+- [ ] 用瀏覽器開過官方範例,牌堆、放大、六種排列與對照模式(V)、三套主題、講者視窗(S)、列印(P)都正常
 - [ ] 規則有變動時,`製作專案指南.md` 與 `docs/GUIDE.en.md` 已同步
 - [ ] `CHANGELOG.md` 已記錄
 

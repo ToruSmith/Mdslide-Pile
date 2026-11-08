@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Mdslide Pile 書庫檢查工具(單檔版 v1.4.1)
+// Mdslide Pile 書庫檢查工具(單檔版 v1.5.0)
 // 由 scripts/bundle-check.mjs 自動產生,請不要手動修改。原始碼:https://github.com/ToruSmith/Mdslide-Pile
 //
 // 用法(需要 Node.js 18 以上):
@@ -89,6 +89,7 @@ const LOCALE_ZH_HANT = {
   'stage.helix': '螺旋',
   'stage.sphere': '球體',
   'stage.overview': '總覽',
+  'stage.side': '對照',
 
   // ---------- 首頁與導覽 ----------
   'doc.title': 'Mdslide Pile · 把資料夾變成會動的簡報',
@@ -208,6 +209,7 @@ const LOCALE_ZH_HANT = {
   'key.jump': '跳到第幾章',
   'key.homeEnd': '第一張 / 最後一張',
   'key.overview': '總覽',
+  'key.side': '對照模式(大圖 + 縮圖列)',
   'key.stage': '切換排列',
   'key.theme': '切換主題',
   'key.black': '黑屏',
@@ -334,6 +336,7 @@ const LOCALE_EN = {
   'stage.helix': 'Helix',
   'stage.sphere': 'Sphere',
   'stage.overview': 'Overview',
+  'stage.side': 'Side by side',
 
   // ---------- Home and navigation ----------
   'doc.title': 'Mdslide Pile · Turn folders into moving slides',
@@ -453,6 +456,7 @@ const LOCALE_EN = {
   'key.jump': 'Jump to section',
   'key.homeEnd': 'First / last slide',
   'key.overview': 'Overview',
+  'key.side': 'Side by side (large slide + thumbnails)',
   'key.stage': 'Switch stage',
   'key.theme': 'Switch theme',
   'key.black': 'Black screen',

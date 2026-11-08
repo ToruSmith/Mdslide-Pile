@@ -263,8 +263,11 @@ body.dragging::after { content: attr(data-drop); position: fixed; inset: 16px; z
   .pbar { grid-template-columns: auto 1fr; gap: 10px; }
   .ptools { justify-self: end; }
 }
-/* 手機橫放:放大時把進度條收起來,讓投影片用滿高度 */
+/* 手機橫放:放大時把進度條收起來,讓投影片用滿高度;工具列和手機直放一樣精簡 */
 @media (max-height: 500px) {
+  .pbar { grid-template-columns: auto 1fr auto; padding: 10px 14px; }
+  .deck-name, .tabs, .hint { display: none; }
+  .ptools .pbtn[data-act="help"], .ptools .pbtn[data-act="check"], .ptools .pbtn[data-act="export"] { display: none; }
   .player.viewing .pfoot { opacity: 0; }
 }
 
@@ -282,3 +285,6 @@ body.dragging::after { content: attr(data-drop); position: fixed; inset: 16px; z
 .rotate-phone { width: 34px; height: 58px; margin: 6px auto 0; border: 3px solid var(--ink); border-radius: 8px; animation: rotate-phone 2.4s ease-in-out infinite; }
 @keyframes rotate-phone { 0%, 25% { transform: rotate(0); } 50%, 80% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }
 @media (prefers-reduced-motion: reduce) { .rotate-phone { animation: none; transform: rotate(-90deg); } }
+
+/* 對照模式:放大的那張不畫焦點外框(外框會跟著卡片一起放大),縮圖列也不需要 */
+.player[data-stage="side"] .card.focus { outline-color: transparent; }

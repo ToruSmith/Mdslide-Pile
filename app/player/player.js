@@ -18,7 +18,7 @@ const ROTATE_KEY = 'mdslide-rotate-hint'; // 這次瀏覽只提示一次
 const KEYS = [
   ['← →', 'key.prevNext'], ['↑ ↓', 'key.section'], ['Enter', 'key.enter'],
   ['Esc', 'key.esc'], ['1–9', 'key.jump'], ['Home End', 'key.homeEnd'],
-  ['O', 'key.overview'], ['L', 'key.stage'], ['T', 'key.theme'], ['B', 'key.black'], ['F', 'key.full'],
+  ['O', 'key.overview'], ['V', 'key.side'], ['L', 'key.stage'], ['T', 'key.theme'], ['B', 'key.black'], ['F', 'key.full'],
   ['S', 'key.presenter'], ['P', 'key.print'], ['K', 'key.video'], ['R', 'key.reload'], ['?', 'key.help'],
 ];
 
@@ -49,6 +49,8 @@ export class Player {
     this.focus = Math.min(Math.max(0, start), this.slides.length - 1);
     this.cur = this.slides[this.focus]?.sec ?? 0;
     this.stage = STAGES[deck.stage] ? deck.stage : 'pile';
+    // 手機:縮圖太小看不清楚,預設用「對照」(大圖 + 縮圖列);隨時可以換回牌堆
+    if (window.matchMedia?.('(pointer: coarse) and (max-width: 600px), (pointer: coarse) and (max-height: 600px)').matches) this.stage = 'side';
     this.lastStage = this.stage === 'overview' ? 'pile' : this.stage;
     this.viewing = false;
     this.steps = [];
@@ -218,6 +220,7 @@ export class Player {
 
   // ---------------- 版面與動畫 ----------------
   computeLayout() {
+    this.el.player.dataset.stage = this.stage; // 讓樣式知道目前的排列(對照模式要隱藏放大後的外框)
     const { innerWidth: vw, innerHeight: vh } = window;
     return STAGES[this.stage].fn({ slides: this.slides, sections: this.sections, cur: this.cur, focus: this.focus, vw, vh });
   }
@@ -360,6 +363,13 @@ export class Player {
 
   toggleOverview() { this.setStage(this.stage === 'overview' ? this.lastStage : 'overview'); }
 
+  /** 對照模式(V):大圖 + 縮圖列;再按一次回到原本的排列。 */
+  toggleSide() {
+    if (this.stage === 'side') return this.setStage(this.prevStage && this.prevStage !== 'side' ? this.prevStage : 'pile');
+    this.prevStage = this.stage;
+    this.setStage('side');
+  }
+
   cycleTheme() {
     const i = THEMES.indexOf(currentTheme());
     applyTheme(THEMES[(i + 1) % THEMES.length]);
@@ -411,6 +421,7 @@ export class Player {
         else this.exit();
         break;
       case 'o': case 'O': this.toggleOverview(); break;
+      case 'v': case 'V': this.toggleSide(); break;
       case 'l': case 'L': this.cycleStage(); break;
       case 't': case 'T': this.cycleTheme(); break;
       case 'b': case 'B': case '.': this.el.black.classList.add('on'); break;

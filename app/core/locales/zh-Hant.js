@@ -73,6 +73,7 @@ export const LOCALE_ZH_HANT = {
   'stage.helix': '螺旋',
   'stage.sphere': '球體',
   'stage.overview': '總覽',
+  'stage.side': '對照',
 
   // ---------- 首頁與導覽 ----------
   'doc.title': 'Mdslide Pile · 把資料夾變成會動的簡報',
@@ -192,6 +193,7 @@ export const LOCALE_ZH_HANT = {
   'key.jump': '跳到第幾章',
   'key.homeEnd': '第一張 / 最後一張',
   'key.overview': '總覽',
+  'key.side': '對照模式(大圖 + 縮圖列)',
   'key.stage': '切換排列',
   'key.theme': '切換主題',
   'key.black': '黑屏',
