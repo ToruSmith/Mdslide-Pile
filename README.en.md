@@ -166,6 +166,27 @@ Phones and tablets: swipe left/right for slides and up/down for sections; tap an
 | Firefox / Safari (desktop) | ✓ (choose a folder) | Choose again each time | ✓ |
 | Mobile | Best for viewing the built-in decks | | |
 
+## Using it offline
+
+The site itself needs no network: no third-party packages, no web fonts, no external calls. There are three ways to work offline.
+
+**1. Install it as an app (easiest)**
+Open the [site](https://torusmith.github.io/Mdslide-Pile/) once while online and click "Install" at the right of Chrome / Edge's address bar. After that it opens without a connection and plays folders from your computer or a USB drive.
+
+**2. Export a single HTML file**
+Click "Export" in the player for an `.html` file that presents with a double-click — handy for sending a deck or for a venue with no internet.
+
+**3. Download the project and run it yourself**
+After downloading the source, **do not open `index.html` by double-clicking it**: browsers block module loading from disk for security (the page stops at "Loading…" and explains what to do). Serve it with any static server instead:
+
+```bash
+python3 -m http.server 8000     # run in the project folder, then open http://localhost:8000
+```
+
+No network is needed at any point. To play the built-in `content/` library, first run `node scripts/build-catalog.mjs` to generate `catalog.json` (needs Node); playing your own folders needs neither.
+
+Online video (YouTube and friends) and CodePen embeds need a connection by nature; everything else — the pile, pen, reading view, presenter view, printing, export and editing — works offline.
+
 ## What is in the repository
 
 - `app/`: the website (the console)

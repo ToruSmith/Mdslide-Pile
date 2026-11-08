@@ -55,7 +55,7 @@ export const LOCALE_ZH_HANT = {
   // ---------- 資料來源 ----------
   'source.repoLabel': '內建範例',
   'source.localLabel': '本機資料夾',
-  'source.noCatalog': '找不到 catalog.json',
+  'source.noCatalog': '找不到 catalog.json。倉庫模式需要它:請在專案資料夾執行 node scripts/build-catalog.mjs 產生。若只是要播放自己的簡報,回首頁選「開啟本機資料夾」就好',
 
   // ---------- 投影片自動文字(依簡報語言)----------
   'slide.thanks': '謝謝',

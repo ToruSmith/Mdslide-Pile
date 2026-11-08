@@ -55,7 +55,7 @@ export const LOCALE_EN = {
   // ---------- Sources ----------
   'source.repoLabel': 'Built-in examples',
   'source.localLabel': 'Local folder',
-  'source.noCatalog': 'catalog.json not found',
+  'source.noCatalog': 'catalog.json not found. The built-in library needs it: run node scripts/build-catalog.mjs in the project folder. To play your own decks, go back home and choose "Open local folder" instead',
 
   // ---------- Auto slide text (follows the deck language) ----------
   'slide.thanks': 'Thank you',

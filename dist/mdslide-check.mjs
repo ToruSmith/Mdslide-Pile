@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Mdslide Pile 書庫檢查工具(單檔版 v1.8.0)
+// Mdslide Pile 書庫檢查工具(單檔版 v1.8.1)
 // 由 scripts/bundle-check.mjs 自動產生,請不要手動修改。原始碼:https://github.com/ToruSmith/Mdslide-Pile
 //
 // 用法(需要 Node.js 18 以上):
@@ -71,7 +71,7 @@ const LOCALE_ZH_HANT = {
   // ---------- 資料來源 ----------
   'source.repoLabel': '內建範例',
   'source.localLabel': '本機資料夾',
-  'source.noCatalog': '找不到 catalog.json',
+  'source.noCatalog': '找不到 catalog.json。倉庫模式需要它:請在專案資料夾執行 node scripts/build-catalog.mjs 產生。若只是要播放自己的簡報,回首頁選「開啟本機資料夾」就好',
 
   // ---------- 投影片自動文字(依簡報語言)----------
   'slide.thanks': '謝謝',
@@ -393,7 +393,7 @@ const LOCALE_EN = {
   // ---------- Sources ----------
   'source.repoLabel': 'Built-in examples',
   'source.localLabel': 'Local folder',
-  'source.noCatalog': 'catalog.json not found',
+  'source.noCatalog': 'catalog.json not found. The built-in library needs it: run node scripts/build-catalog.mjs in the project folder. To play your own decks, go back home and choose "Open local folder" instead',
 
   // ---------- Auto slide text (follows the deck language) ----------
   'slide.thanks': 'Thank you',

@@ -413,3 +413,11 @@ body.dragging::after { content: attr(data-drop); position: fixed; inset: 16px; z
 .ebar[data-yaml="1"] [data-e="add"], .ebar[data-yaml="1"] [data-e="archive"] { display: none; }
 .ebar .pbtn.gh { text-decoration: none; display: inline-flex; align-items: center; }
 .ebar .pbtn.gh[hidden] { display: none; } /* display 會蓋掉 hidden 屬性 */
+
+/* 程式沒載入時的說明(例如用 file:// 直接開檔案)。載入成功就會被換掉,所以永遠看不到 */
+.boot-hint { max-width: 560px; margin: 28px auto 0; padding: 20px 24px; text-align: left; font-size: 14px; line-height: 1.75; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px; opacity: 0; animation: boot-hint 0s linear 2.5s forwards; }
+.boot-hint p { margin: 0 0 10px; }
+.boot-hint ul { margin: 0 0 10px; padding-left: 1.3em; }
+.boot-hint code { font-family: var(--font-mono); font-size: 13px; background: var(--bg-deep); padding: .1em .4em; border-radius: 5px; }
+@keyframes boot-hint { to { opacity: 1; } }
