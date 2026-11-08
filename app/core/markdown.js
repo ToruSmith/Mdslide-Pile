@@ -125,21 +125,32 @@ function cells(line) {
   return t.split(/(?<!\\)\|/).map(c => c.trim().replace(/\\\|/g, '|'));
 }
 
-function inline(text, ctx) {
-  const slots = [];
+// 網址可以含一層成對括號,例如 https://en.wikipedia.org/wiki/Foo_(bar)
+const URL_PART = '((?:[^()\\s<>]|\\([^()\\s<>]*\\))+)';
+const IMAGE_RE = new RegExp(`!\\[([^\\]]*)\\]\\(\\s*<?${URL_PART}>?(?:\\s+"[^"]*")?\\s*\\)`, 'g');
+const LINK_RE = new RegExp(`\\[((?:[^\\[\\]]|\\[[^\\]]*\\])+)\\]\\(\\s*<?${URL_PART}>?(?:\\s+"[^"]*")?\\s*\\)`, 'g');
+const BARE_URL_RE = /\bhttps?:\/\/[^\s<>\u0000]+/g;
+const SAFE_HREF = /^(https?:|mailto:|#|\.{0,2}\/)/i;
+
+/** slots 由巢狀呼叫共用,連結文字裡的圖片才不會變成 undefined。 */
+function inline(text, ctx, slots = []) {
   const keep = html => `\u0000${slots.push(html) - 1}\u0000`;
   let s = text;
   s = s.replace(/`([^`]+)`/g, (_, c) => keep(`<code>${escapeHTML(c)}</code>`));
-  s = s.replace(/!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g, (_, alt, src) => keep(ctx.image(src, alt)));
-  s = s.replace(/\[([^\]]+)\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g, (_, label, href) => {
-    const safe = /^(https?:|mailto:|#|\.{0,2}\/)/i.test(href) || !/^[a-z]+:/i.test(href);
-    return keep(`<a href="${safe ? escapeHTML(href) : '#'}" target="_blank" rel="noopener">${inline(label, ctx)}</a>`);
+  s = s.replace(IMAGE_RE, (_, alt, src) => keep(ctx.image(src, alt)));
+  s = s.replace(LINK_RE, (_, label, href) => {
+    const safe = SAFE_HREF.test(href) || !/^[a-z][a-z0-9+.-]*:/i.test(href);
+    return keep(`<a href="${safe ? escapeHTML(href) : '#'}" target="_blank" rel="noopener">${inline(label, ctx, slots)}</a>`);
   });
+  s = s.replace(BARE_URL_RE, url => keep(escapeHTML(url))); // 裸網址不做粗體、斜體處理
   s = escapeHTML(s);
+  const W = '\\p{L}\\p{N}_';
   s = s.replace(/\*\*(?=\S)([\s\S]*?\S)\*\*/g, '<strong>$1</strong>')
-       .replace(/__(?=\S)([\s\S]*?\S)__/g, '<strong>$1</strong>')
+       .replace(new RegExp(`(^|[^${W}])__(?=\\S)([\\s\\S]*?\\S)__(?![${W}])`, 'gu'), '$1<strong>$2</strong>')
        .replace(/(^|[^*])\*(?=\S)([^*]*?\S)\*(?!\*)/g, '$1<em>$2</em>')
        .replace(/~~(?=\S)([\s\S]*?\S)~~/g, '<del>$1</del>')
        .replace(/==(?=\S)([\s\S]*?\S)==/g, '<mark>$1</mark>');
-  return s.replace(/\u0000(\d+)\u0000/g, (_, n) => slots[n]);
+  // 還原佔位(可能有多層)
+  for (let i = 0; i < 5 && s.includes('\u0000'); i++) s = s.replace(/\u0000(\d+)\u0000/g, (_, n) => slots[n]);
+  return s;
 }

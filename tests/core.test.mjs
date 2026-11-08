@@ -179,3 +179,42 @@ test('library: 單一簡報資料夾(零設定)', async () => {
   assert.equal(deck.title, '我的報告');
   assert.deepEqual(flatten(deck).map(s => s.title), ['我的報告', '開場', '你好', '結尾', '再見']);
 });
+
+test('markdown:網址可含成對括號', () => {
+  const h = renderMarkdown('[維基](https://en.wikipedia.org/wiki/Foo_(bar))');
+  assert.match(h, /href="https:\/\/en\.wikipedia\.org\/wiki\/Foo_\(bar\)"/);
+  assert.ok(!h.includes('</a>)'));
+});
+
+test('markdown:裸網址不做強調處理', () => {
+  assert.equal(renderMarkdown('https://a.com/x__y__z'), '<p>https://a.com/x__y__z</p>');
+});
+
+test('markdown:連結內可以放圖片', () => {
+  const h = renderMarkdown('[![x](a.png)](https://x.com)');
+  assert.match(h, /<a href="https:\/\/x\.com"[^>]*><img data-media="a\.png" alt="x"><\/a>/);
+});
+
+test('markdown:__ 粗體要在字詞邊界,* 維持原樣', () => {
+  assert.equal(renderMarkdown('snake__case__name'), '<p>snake__case__name</p>');
+  assert.equal(renderMarkdown('__粗體__ 與 **粗體**'), '<p><strong>粗體</strong> 與 <strong>粗體</strong></p>');
+});
+
+test('markdown:XSS 回歸', () => {
+  const cases = [
+    '<img src=x onerror=alert(1)>',
+    '<script>alert(1)</script>',
+    '[a](javascript:alert(1))',
+    '[a](JaVaScRiPt:alert(1))',
+    '[a](  javascript:alert(1) )',
+    '[a](data:text/html,<script>alert(1)</script>)',
+    '[a](vbscript:msgbox(1))',
+    '[a](" onmouseover="alert(1))',
+    '![x](" onerror="alert(1))',
+  ];
+  for (const c of cases) {
+    const h = renderMarkdown(c);
+    assert.ok(!/<script|<img src|href="\s*(javascript|vbscript|data):|\son\w+="/i.test(h), `${c} → ${h}`);
+  }
+  assert.match(renderMarkdown('[a](JaVaScRiPt:alert(1))'), /^<p><a href="#"[^>]*>a<\/a><\/p>$/);
+});
