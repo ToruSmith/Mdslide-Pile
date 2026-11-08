@@ -105,7 +105,7 @@ jobs:
           node-version: 22
       - name: 產生 catalog.json 與 shell-manifest.js
         run: node scripts/build-catalog.mjs
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .
