@@ -27,3 +27,14 @@ test('new-deck:資料夾已有檔案就停止', async () => {
   assert.throws(() => run(join(dir, 'x')));
   assert.equal(await readFile(join(dir, 'x', 'a.md'), 'utf8'), '# keep');
 });
+
+test('build-starter:範例書庫含檢查工具、不含官方範例,且通過檢查', async () => {
+  const root = fileURLToPath(new URL('..', import.meta.url));
+  const out = join(await mkdtemp(join(tmpdir(), 'mdslide-')), 'lib');
+  execFileSync(process.execPath, ['scripts/build-starter.mjs', out], { cwd: root });
+  const names = await readdir(out);
+  for (const n of ['README.md', '_site.yml', 'mdslide-check.mjs']) assert.ok(names.includes(n), n);
+  assert.ok(!names.some(n => n.startsWith('00-')));
+  const report = execFileSync(process.execPath, [join(out, 'mdslide-check.mjs'), out, '--lang', 'en'], { encoding: 'utf8' });
+  assert.match(report, /No problems found/);
+});

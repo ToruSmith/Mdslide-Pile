@@ -62,6 +62,8 @@ scripts/
   shell-files.mjs        網站本身的檔案清單與雜湊(給 sw.js)
   check.mjs              檢查資料夾是否符合規則(命令列)
   new-deck.mjs           建立新簡報骨架(內容文字在 locale 的 scaffold.*)
+  build-starter.mjs      組出範例書庫(starter/ + content/ 的主題 + dist/),發布時打包
+starter/                 範例書庫的 README 與 _site.yml
   bundle-check.mjs       產生 dist/mdslide-check.mjs 單檔版
   node-source.mjs        Node 版資料來源
 dist/                    自動產生的單檔檢查工具與雙擊捷徑(不要手動修改)
@@ -120,3 +122,9 @@ python3 -m http.server 8000           # 開 http://localhost:8000
 ## 部署
 
 推送到 `main` 後,`.github/workflows/deploy.yml` 會跑測試、產生 `catalog.json` 與 `shell-manifest.js`,再部署到 GitHub Pages。這兩個檔案不進版本控制。推送與 PR 另外會跑 `.github/workflows/ci.yml`(單元測試、書庫檢查、單檔版同步、冒煙測試)。
+
+## 發布新版
+
+1. `package.json`、`app/main.js` 的 `VERSION`、`CHANGELOG.md` 改成新版本號(`tests/version.test.mjs` 會檢查三處一致)。
+2. 推送到 `main`,等 CI 通過、網站部署完成。
+3. 打標籤並推送:`git tag v1.4.0 && git push origin v1.4.0`。`.github/workflows/release.yml` 會建立 GitHub Release,附上 `Mdslide書庫.zip`(範例書庫 + 檢查工具)與 `mdslide-check.mjs`,說明取自 CHANGELOG 該版本的段落。
