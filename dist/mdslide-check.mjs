@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Mdslide Pile 書庫檢查工具(單檔版 v1.4.0)
+// Mdslide Pile 書庫檢查工具(單檔版 v1.4.1)
 // 由 scripts/bundle-check.mjs 自動產生,請不要手動修改。原始碼:https://github.com/ToruSmith/Mdslide-Pile
 //
 // 用法(需要 Node.js 18 以上):
@@ -173,6 +173,9 @@ const LOCALE_ZH_HANT = {
   'player.theme': '主題',
   'player.themeTitle': '切換主題(T)',
   'player.check': '檢查',
+  'player.rotate': '把手機轉成橫向,投影片會大很多。',
+  'player.rotateLock': '全螢幕橫放',
+  'player.rotateOk': '知道了',
   'player.export': '匯出',
   'player.exportTitle': '匯出成單一 HTML 檔(離線也能播放)',
   'export.title': '匯出成單一 HTML 檔',
@@ -415,6 +418,9 @@ const LOCALE_EN = {
   'player.theme': 'Theme',
   'player.themeTitle': 'Switch theme (T)',
   'player.check': 'Check',
+  'player.rotate': 'Turn your phone sideways for much bigger slides.',
+  'player.rotateLock': 'Full screen, landscape',
+  'player.rotateOk': 'Got it',
   'player.export': 'Export',
   'player.exportTitle': 'Export as a single HTML file (plays offline)',
   'export.title': 'Export as a single HTML file',

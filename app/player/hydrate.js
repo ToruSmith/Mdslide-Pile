@@ -36,6 +36,8 @@ export async function hydrate(root, source, { full = false } = {}) {
       f.allow = 'autoplay; fullscreen; picture-in-picture; encrypted-media';
       f.allowFullscreen = true;
       f.referrerPolicy = 'strict-origin-when-cross-origin';
+      // 嵌入的播放器不能把整頁導走、不能下載或送出表單;播放、全螢幕、在新分頁開啟仍可用
+      f.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation allow-popups allow-popups-to-escape-sandbox');
       fig.querySelector('.poster')?.remove();
       fig.prepend(f);
     }

@@ -65,6 +65,8 @@ def main():
             m = mob.new_page()
             m.on('pageerror', lambda e: errors.append(f'mobile pageerror: {e}'))
             m.goto(page.url.rsplit('/', 1)[0] + '/1'); m.wait_for_timeout(2000)
+            assert m.locator('.rotate-hint').count() == 1, '手機直放時沒有提示轉橫向'
+            m.click('.rotate-hint [data-r=ok]'); m.wait_for_timeout(300)
             m.evaluate("""() => { const el = document.querySelector('.stage'); const mk = x => new Touch({ identifier: 1, target: el, clientX: x, clientY: 400 });
               el.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, touches: [mk(300)], changedTouches: [mk(300)] }));
               el.dispatchEvent(new TouchEvent('touchend', { bubbles: true, touches: [], changedTouches: [mk(60)] })); }""")

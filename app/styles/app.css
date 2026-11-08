@@ -273,3 +273,12 @@ body.dragging::after { content: attr(data-drop); position: fixed; inset: 16px; z
 .export-panel .export-video { display: block; margin-top: 16px; font-size: 14px; cursor: pointer; }
 .export-panel .export-status { margin-top: 12px; font-size: 14px; color: var(--ink); }
 .export-panel .export-actions { margin-top: 20px; text-align: right; }
+
+/* 手機直放:提示轉成橫向 */
+.rotate-hint { position: absolute; inset: 0; z-index: 46; display: grid; place-items: center; background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(6px); }
+.rotate-card { width: min(320px, 86vw); text-align: center; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 28px 24px 22px; box-shadow: 0 30px 80px rgb(var(--shadow) / .2); }
+.rotate-card p { margin: 18px 0 20px; font-size: 16px; line-height: 1.6; color: var(--ink); }
+.rotate-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.rotate-phone { width: 34px; height: 58px; margin: 6px auto 0; border: 3px solid var(--ink); border-radius: 8px; animation: rotate-phone 2.4s ease-in-out infinite; }
+@keyframes rotate-phone { 0%, 25% { transform: rotate(0); } 50%, 80% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }
+@media (prefers-reduced-motion: reduce) { .rotate-phone { animation: none; transform: rotate(-90deg); } }

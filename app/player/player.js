@@ -14,6 +14,7 @@ const EASE = 'cubic-bezier(.65, 0, .35, 1)';
 const pad = n => String(n).padStart(2, '0');
 
 // 快捷鍵說明(文字在 locales 的 key.*)
+const ROTATE_KEY = 'mdslide-rotate-hint'; // 這次瀏覽只提示一次
 const KEYS = [
   ['← →', 'key.prevNext'], ['↑ ↓', 'key.section'], ['Enter', 'key.enter'],
   ['Esc', 'key.esc'], ['1–9', 'key.jump'], ['Home End', 'key.homeEnd'],
@@ -59,6 +60,7 @@ export class Player {
     this.build();
     this.bind();
     this.intro();
+    this.rotateHint();
   }
 
   // ---------------- 建立畫面 ----------------
@@ -173,7 +175,36 @@ export class Player {
     this.el.black.addEventListener('click', () => this.el.black.classList.remove('on'));
   }
 
+  // ---------------- 手機直放提示 ----------------
+  // 投影片是 16:9,手機直放時很小:提示轉成橫向。Android 可一鍵全螢幕並鎖定橫向;iPhone 只能提示。
+  rotateHint() {
+    const portrait = window.matchMedia?.('(orientation: portrait) and (pointer: coarse) and (max-width: 600px)');
+    if (!portrait?.matches) return;
+    try { if (sessionStorage.getItem(ROTATE_KEY)) return; } catch { /* 隱私模式 */ }
+    const canLock = !!(document.fullscreenEnabled && screen.orientation?.lock);
+    const box = document.createElement('div');
+    box.className = 'rotate-hint';
+    box.innerHTML = `<div class="rotate-card"><div class="rotate-phone" aria-hidden="true"></div><p>${esc(t('player.rotate'))}</p><div class="rotate-actions">${canLock ? `<button class="btn primary" data-r="lock">${esc(t('player.rotateLock'))}</button>` : ''}<button class="btn ghost" data-r="ok">${esc(t('player.rotateOk'))}</button></div></div>`;
+    this.el.player.append(box);
+    const close = () => {
+      box.remove();
+      portrait.removeEventListener?.('change', onChange);
+      try { sessionStorage.setItem(ROTATE_KEY, '1'); } catch { /* 隱私模式 */ }
+    };
+    const onChange = e => { if (!e.matches) close(); }; // 轉成橫向就自動關掉
+    portrait.addEventListener?.('change', onChange);
+    this.closeRotateHint = close;
+    box.addEventListener('click', async e => {
+      const act = e.target.closest('[data-r]')?.dataset.r;
+      if (act === 'lock') {
+        try { await document.documentElement.requestFullscreen(); await screen.orientation.lock('landscape'); } catch { /* 不支援就算了 */ }
+      }
+      if (act) close();
+    });
+  }
+
   destroy() {
+    if (this.el?.player?.querySelector('.rotate-hint')) this.closeRotateHint?.();
     window.removeEventListener('keydown', this.handlers.key);
     window.removeEventListener('resize', this.handlers.resize);
     this.channel?.removeEventListener('message', this.handlers.msg);
