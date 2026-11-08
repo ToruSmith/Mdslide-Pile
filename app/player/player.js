@@ -163,12 +163,7 @@ export class Player {
       touchEnd: e => this.onTouchEnd(e),
       wheel: e => this.onWheel(e),
       msg: e => this.onPresenterMessage(e.data),
-      // 鍵盤進入嵌入的網頁 / 影片框框時記下來,點回投影片時不要順便翻頁
-      blur: () => setTimeout(() => { if (document.activeElement?.tagName === 'IFRAME') this.inEmbed = true; }),
-      focus: () => { if (this.inEmbed) { this.inEmbed = false; this.embedReturnAt = Date.now(); } },
     };
-    window.addEventListener('blur', this.handlers.blur);
-    window.addEventListener('focus', this.handlers.focus);
     window.addEventListener('keydown', this.handlers.key);
     window.addEventListener('resize', this.handlers.resize);
     this.el.stage.addEventListener('wheel', this.handlers.wheel, { passive: false });
@@ -191,11 +186,13 @@ export class Player {
     this.el.frame.addEventListener('click', e => {
       e.stopPropagation();
       if (this.ink.enabled || Date.now() - (this.swipedAt || 0) < 400) return;
-      if (Date.now() - (this.embedReturnAt || 0) < 500) return; // 剛從嵌入網頁點回來:這一下只是拿回鍵盤,不翻頁
+      if (this.reclaim) { this.reclaim = false; return; } // 剛從嵌入網頁點回來:這一下只是拿回鍵盤,不翻頁
       const img = zoomableImage(e.target); // 點圖片 = 放大看完整的圖
       if (img) { this.closeLight = openLightbox(this.el.player, img, { onClose: () => { this.closeLight = null; } }); return; }
       if (!e.target.closest('video, audio, iframe, a, button')) this.next();
     });
+    // 按下滑鼠的那一刻,鍵盤若還在嵌入的網頁 / 影片框框裡,這一下只是點回投影片(各瀏覽器都一致)
+    this.el.frame.addEventListener('pointerdown', () => { this.reclaim = document.activeElement?.tagName === 'IFRAME'; }, true);
     this.root.querySelector('.ink-bar').addEventListener('click', e => {
       e.stopPropagation();
       const k = e.target.closest('[data-ink]')?.dataset.ink;
@@ -250,8 +247,6 @@ export class Player {
     if (this.el?.player?.querySelector('.rotate-hint')) this.closeRotateHint?.();
     window.removeEventListener('keydown', this.handlers.key);
     window.removeEventListener('resize', this.handlers.resize);
-    window.removeEventListener('blur', this.handlers.blur);
-    window.removeEventListener('focus', this.handlers.focus);
     this.channel?.removeEventListener('message', this.handlers.msg);
     this.channel?.close();
     stopMedia(this.root);

@@ -43,7 +43,7 @@ export async function hydrate(root, source, { full = false } = {}) {
       const flags = ['allow-scripts', 'allow-presentation', 'allow-popups', 'allow-popups-to-escape-sandbox'];
       if (!sameSite) flags.push('allow-same-origin');
       if (fig.dataset.interactive) flags.push('allow-forms', 'allow-modals');
-      f.setAttribute('sandbox', flags.join(' '));
+      f.setAttribute('sandbox', flags.filter(x => f.sandbox?.supports?.(x) ?? true).join(' ')); // Safari 不認得 allow-presentation
       fig.querySelector('.poster')?.remove();
       fig.prepend(f);
     }
@@ -88,7 +88,7 @@ async function mountPage(fig, source) {
   f.title = path.split('/').pop();
   try {
     if (source.kind === 'repo') {
-      f.setAttribute('sandbox', PAGE_FLAGS);
+      f.setAttribute('sandbox', PAGE_FLAGS.split(' ').filter(x => f.sandbox?.supports?.(x) ?? true).join(' '));
       f.src = await source.mediaURL(path);
     } else {
       const html = await readPage(path, source);
