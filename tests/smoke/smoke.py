@@ -39,6 +39,28 @@ def main():
         page.wait_for_timeout(1600)
         after = page.evaluate("[...document.querySelectorAll('.card')].slice(0, 8).map(c => getComputedStyle(c).transform)")
         assert before != after, '換章節後卡片位置沒有改變(洗牌動畫可能失效)'
+        # 畫筆(D):在放大的投影片上畫一筆,Esc 關閉
+        page.keyboard.press('d'); page.wait_for_timeout(900)
+        fb = page.locator('.frame').bounding_box()
+        page.click('.ink-bar [data-ink=pen]')
+        page.mouse.move(fb['x'] + 300, fb['y'] + 400); page.mouse.down()
+        for i in range(1, 15): page.mouse.move(fb['x'] + 300 + i * 12, fb['y'] + 400)
+        page.mouse.up(); page.wait_for_timeout(200)
+        assert page.locator('.frame .ink-strokes path').count() == 1, '畫筆沒有留下筆跡'
+        page.keyboard.press('Escape'); page.keyboard.press('Escape'); page.wait_for_timeout(700)
+        # 點圖片放大
+        img_at = page.evaluate("[...document.querySelectorAll('.card')].findIndex(c => c.querySelector('img[data-media]:not(.logo)'))")
+        if img_at >= 0:
+            page.evaluate("n => { location.hash = location.hash.replace(/[/][0-9]+$/, '/' + n) }", img_at + 1); page.wait_for_timeout(900)
+            page.keyboard.press('Enter'); page.wait_for_timeout(900)
+            page.locator('.frame img[data-media]').first.click(); page.wait_for_timeout(400)
+            assert page.locator('.lightbox').count() == 1, '點圖片沒有放大'
+            page.keyboard.press('Escape'); page.keyboard.press('Escape'); page.wait_for_timeout(700)
+        # 閱讀模式(M)
+        page.keyboard.press('m'); page.wait_for_timeout(1000)
+        assert page.locator('.reader .ritem').count() == page.locator('.card').count(), '閱讀模式的張數不對'
+        assert '/read' in page.url, '閱讀模式的網址沒有 /read'
+        page.keyboard.press('Escape'); page.wait_for_timeout(900)
         page.keyboard.press('v'); page.wait_for_timeout(1300)
         assert page.evaluate("document.querySelector('.player').dataset.stage") == 'side', 'V 沒有切到對照模式'
         big = page.evaluate("document.querySelector('.card.focus').getBoundingClientRect().width")

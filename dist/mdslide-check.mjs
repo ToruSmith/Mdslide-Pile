@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Mdslide Pile 書庫檢查工具(單檔版 v1.5.0)
+// Mdslide Pile 書庫檢查工具(單檔版 v1.6.0)
 // 由 scripts/bundle-check.mjs 自動產生,請不要手動修改。原始碼:https://github.com/ToruSmith/Mdslide-Pile
 //
 // 用法(需要 Node.js 18 以上):
@@ -258,6 +258,31 @@ const LOCALE_ZH_HANT = {
   'scaffold.slide3': '## 3 倍\n\n用一個數字讓觀眾記住重點\n\n資料來源:請填寫出處與日期',
   'scaffold.slide4File': '01-總結.md',
   'scaffold.slide4': '# 帶走三件事\n\n1. 第一件\n2. 第二件\n3. 第三件',
+  'player.read': '閱讀',
+  'player.readTitle': '閱讀模式:整份往下捲,附講者備註(M)',
+  'player.inkTitle': '畫筆與雷射筆(D)',
+  'ink.bar': '畫筆工具',
+  'ink.laser': '雷射筆',
+  'ink.pen': '畫筆',
+  'ink.highlight': '螢光筆',
+  'ink.eraser': '橡皮擦',
+  'ink.color': '換畫筆顏色',
+  'ink.undo': '復原',
+  'ink.undoTitle': '復原(Ctrl+Z)',
+  'ink.clear': '清除',
+  'ink.clearTitle': '清除這張的畫(X)',
+  'ink.offTitle': '關閉畫筆(Esc)',
+  'lightbox.label': '放大的圖片',
+  'lightbox.hint': '點一下或按 Esc 關閉',
+  'reader.label': '閱讀模式',
+  'reader.close': '‹ 回到投影片',
+  'reader.closeTitle': '回到投影片(M 或 Esc)',
+  'reader.print': '列印講義',
+  'reader.printTitle': '印成附講者備註的講義(P)',
+  'key.ink': '畫筆與雷射筆',
+  'key.read': '閱讀模式(附備註)',
+  'pv.inkNone': '不畫',
+  'pv.inkHint': '在上面的投影片畫,觀眾畫面同步出現',
 };
 
 // ───────── app/core/locales/en.js ─────────
@@ -505,6 +530,31 @@ const LOCALE_EN = {
   'scaffold.slide3': '## 3x\n\nOne number the audience will remember\n\nSource: add the source and date',
   'scaffold.slide4File': '01-Summary.md',
   'scaffold.slide4': '# Three things to take away\n\n1. First\n2. Second\n3. Third',
+  'player.read': 'Read',
+  'player.readTitle': 'Reading view: scroll through with speaker notes (M)',
+  'player.inkTitle': 'Pen and laser pointer (D)',
+  'ink.bar': 'Drawing tools',
+  'ink.laser': 'Laser',
+  'ink.pen': 'Pen',
+  'ink.highlight': 'Highlighter',
+  'ink.eraser': 'Eraser',
+  'ink.color': 'Change pen colour',
+  'ink.undo': 'Undo',
+  'ink.undoTitle': 'Undo (Ctrl+Z)',
+  'ink.clear': 'Clear',
+  'ink.clearTitle': 'Clear drawings on this slide (X)',
+  'ink.offTitle': 'Close drawing tools (Esc)',
+  'lightbox.label': 'Enlarged image',
+  'lightbox.hint': 'Click or press Esc to close',
+  'reader.label': 'Reading view',
+  'reader.close': '‹ Back to slides',
+  'reader.closeTitle': 'Back to slides (M or Esc)',
+  'reader.print': 'Print handout',
+  'reader.printTitle': 'Print a handout with speaker notes (P)',
+  'key.ink': 'Pen and laser pointer',
+  'key.read': 'Reading view (with notes)',
+  'pv.inkNone': 'Off',
+  'pv.inkHint': 'Draw on the slide above; it appears on the audience screen',
 };
 
 // ───────── app/core/i18n.js ─────────

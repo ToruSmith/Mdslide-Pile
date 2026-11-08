@@ -51,6 +51,9 @@ app/
     layouts.js           3D 排列(純函式)
     player.js            播放器:動畫、放大、逐步、鍵盤、講者同步、列印、重新載入、動畫偏好
     export.js            匯出單一 HTML(import map + data: 網址,不需打包工具)
+    ink.js               畫筆與雷射筆(SVG,投影片座標 1280×720;主畫面與講者視窗互相同步)
+    reader.js            閱讀模式(整份往下捲 + 備註;網址結尾 /read)
+    lightbox.js          點圖片放大
     presenter.js         講者視窗
     themes.js            主題名稱登記
   styles/
@@ -116,7 +119,7 @@ python3 -m http.server 8000           # 開 http://localhost:8000
 - [ ] 新增的介面文字兩份 locale 都有,鍵與參數一致(`i18n.test.mjs`)
 - [ ] 改了播放器或匯出:`python3 tests/smoke/smoke.py http://localhost:8000/` 通過(需要先 `pip install playwright`,不要寫進 package.json)
 - [ ] `check.mjs content` 沒有警告
-- [ ] 用瀏覽器開過官方範例,牌堆、放大、六種排列與對照模式(V)、三套主題、講者視窗(S)、列印(P)都正常
+- [ ] 用瀏覽器開過官方範例,牌堆、放大、六種排列與對照模式(V)、畫筆(D)、閱讀模式(M)與列印講義、點圖片放大、三套主題、講者視窗(S)、列印(P)都正常
 - [ ] 規則有變動時,`製作專案指南.md` 與 `docs/GUIDE.en.md` 已同步
 - [ ] `CHANGELOG.md` 已記錄
 

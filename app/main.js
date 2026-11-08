@@ -17,7 +17,7 @@ import { startPresenter } from './player/presenter.js';
 import { applyTheme } from './player/themes.js';
 import { t, setLang, getLang, normalizeLang } from './core/i18n.js';
 
-export const VERSION = '1.5.0';
+export const VERSION = '1.6.0';
 const REPO_URL = 'https://github.com/ToruSmith/Mdslide-Pile';
 
 const app = document.getElementById('app');
@@ -50,12 +50,18 @@ async function route() {
   else if (parts[0] === 'local' && parts[1]) { key = `local/${parts[1]}`; rest = parts.slice(2); }
   else return leavePlayer(), home();
 
-  const [topicId, projectId, n] = rest;
+  const [topicId, projectId, n, view] = rest;
   if (topicId && projectId) {
     const deckKey = `${key}/${topicId}/${projectId}`;
-    if (state.player && state.playerKey === deckKey) { if (n) state.player.goTo(Number(n) - 1); return; }
+    const reading = view === 'read'; // …/第幾張/read = 閱讀模式(可以直接分享這個連結)
+    if (state.player && state.playerKey === deckKey) {
+      if (reading && !state.player.reader) state.player.openReading();
+      else if (!reading && state.player.reader) state.player.closeReading();
+      else if (n && !state.player.reader) state.player.goTo(Number(n) - 1);
+      return;
+    }
     leavePlayer();
-    return openDeck(key, topicId, projectId, Number(n || 1) - 1);
+    return openDeck(key, topicId, projectId, Number(n || 1) - 1, reading);
   }
   leavePlayer();
   return showLibrary(key);
@@ -221,7 +227,7 @@ function permissionScreen(rec) {
   };
 }
 
-async function openDeck(key, topicId, projectId, start) {
+async function openDeck(key, topicId, projectId, start, reading = false) {
   loading(t('loading.deck'));
   try {
     const source = await getSource(key);
@@ -247,10 +253,10 @@ async function openDeck(key, topicId, projectId, start) {
       } finally { busy = false; }
     } : null;
     state.player = new Player(app, {
-      deck, source, start, theme: deck.theme || lib.theme, onReload: reload,
+      deck, source, start, reading, theme: deck.theme || lib.theme, onReload: reload,
       onExport: openExportDialog,
       onExit: () => { location.hash = backToLibrary; },
-      onIndex: i => history.replaceState(null, '', `${base}/${i + 1}`),
+      onIndex: (i, read) => history.replaceState(null, '', `${base}/${i + 1}${read ?? state.player?.reader ? '/read' : ''}`),
     });
     document.title = `${deck.title} · Mdslide Pile`;
     if (reload) {

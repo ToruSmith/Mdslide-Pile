@@ -9,6 +9,9 @@ import { THEMES, themeName, applyTheme, currentTheme } from './themes.js';
 import { t } from '../core/i18n.js';
 import { checkDeck } from '../core/check.js';
 import { openCheckPanel } from '../ui/check-view.js';
+import { Ink, PEN_COLORS, inkMarkup } from './ink.js';
+import { zoomableImage, openLightbox } from './lightbox.js';
+import { openReader } from './reader.js';
 
 const EASE = 'cubic-bezier(.65, 0, .35, 1)';
 const pad = n => String(n).padStart(2, '0');
@@ -18,7 +21,7 @@ const ROTATE_KEY = 'mdslide-rotate-hint'; // 這次瀏覽只提示一次
 const KEYS = [
   ['← →', 'key.prevNext'], ['↑ ↓', 'key.section'], ['Enter', 'key.enter'],
   ['Esc', 'key.esc'], ['1–9', 'key.jump'], ['Home End', 'key.homeEnd'],
-  ['O', 'key.overview'], ['V', 'key.side'], ['L', 'key.stage'], ['T', 'key.theme'], ['B', 'key.black'], ['F', 'key.full'],
+  ['O', 'key.overview'], ['V', 'key.side'], ['D', 'key.ink'], ['M', 'key.read'], ['L', 'key.stage'], ['T', 'key.theme'], ['B', 'key.black'], ['F', 'key.full'],
   ['S', 'key.presenter'], ['P', 'key.print'], ['K', 'key.video'], ['R', 'key.reload'], ['?', 'key.help'],
 ];
 
@@ -35,7 +38,7 @@ function motionReduced() {
 }
 
 export class Player {
-  constructor(root, { deck, source, start = 0, onExit, onIndex, theme, onReload, onExport }) {
+  constructor(root, { deck, source, start = 0, onExit, onIndex, theme, onReload, onExport, reading = false }) {
     this.onReload = onReload;
     this.reduced = motionReduced();
     this.root = root;
@@ -58,11 +61,13 @@ export class Player {
     this.hydrated = new Set();
     this.channel = 'BroadcastChannel' in window ? new BroadcastChannel('mdslide-presenter') : null;
     this.startedAt = Date.now();
+    // 畫筆:主畫面與講者視窗互相同步
+    this.ink = new Ink({ onOp: op => this.presenterSeen && this.channel?.postMessage({ type: 'ink', op }), onChange: () => this.updateInkBar() });
     applyTheme(theme || deck.theme || 'paper');
     this.build();
     this.bind();
     this.intro();
-    this.rotateHint();
+    if (reading) this.openReading(); else this.rotateHint();
   }
 
   // ---------------- 建立畫面 ----------------
@@ -79,12 +84,22 @@ export class Player {
             <button class="pbtn" data-act="theme" title="${esc(t('player.themeTitle'))}">${esc(t('player.theme'))}</button>
             ${this.source.list ? `<button class="pbtn" data-act="check" title="${esc(t('player.checkTitle'))}">${esc(t('player.check'))}</button>` : ''}
             ${this.onExport ? `<button class="pbtn" data-act="export" title="${esc(t('player.exportTitle'))}">${esc(t('player.export'))}</button>` : ''}
+            <button class="pbtn" data-act="read" title="${esc(t('player.readTitle'))}">${esc(t('player.read'))}</button>
+            <button class="pbtn" data-act="ink" title="${esc(t('player.inkTitle'))}" aria-label="${esc(t('player.inkTitle'))}">✎</button>
             <button class="pbtn" data-act="present" title="${esc(t('player.presentTitle'))}" aria-label="${esc(t('player.presentTitle'))}">▶</button>
             <button class="pbtn" data-act="help" title="${esc(t('player.helpTitle'))}" aria-label="${esc(t('player.helpTitle'))}">?</button>
           </div>
         </header>
         <div class="stage"><div class="world"></div></div>
         <div class="viewer"><div class="frame"></div></div>
+        <div class="ink-bar" role="toolbar" aria-label="${esc(t('ink.bar'))}">
+          ${['laser', 'pen', 'highlight', 'eraser'].map(k => `<button data-ink="${k}" title="${esc(t('ink.' + k))}">${esc(t('ink.' + k))}</button>`).join('')}
+          <button data-ink="color" class="ink-color" title="${esc(t('ink.color'))}" aria-label="${esc(t('ink.color'))}"><i></i></button>
+          <span class="ink-sep"></span>
+          <button data-ink="undo" title="${esc(t('ink.undoTitle'))}">${esc(t('ink.undo'))}</button>
+          <button data-ink="clear" title="${esc(t('ink.clearTitle'))}">${esc(t('ink.clear'))}</button>
+          <button data-ink="off" title="${esc(t('ink.offTitle'))}" aria-label="${esc(t('ink.offTitle'))}">✕</button>
+        </div>
         <footer class="pfoot"><div class="progress"></div><div class="hint">${esc(t('player.hint'))}</div></footer>
         <div class="black"></div>
         <div class="help-panel"><div class="help-card"><h2>${esc(t('help.title'))}</h2><dl>${KEYS.map(([k, v]) => `<dt>${k.split(' ').map(x => `<kbd>${x}</kbd>`).join('')}</dt><dd>${esc(t(v))}</dd>`).join('')}</dl><p>${esc(t('help.foot'))}</p><div class="motion-row"><span>${esc(t('help.motion'))}</span><button data-motion="full">${esc(t('help.motionFull'))}</button><button data-motion="reduced">${esc(t('help.motionReduced'))}</button></div></div></div>
@@ -160,13 +175,31 @@ export class Player {
       if (act === 'exit') this.exit();
       if (act === 'theme') this.cycleTheme();
       if (act === 'present') this.viewing ? this.closeViewer() : this.openViewer();
+      if (act === 'read') this.openReading();
+      if (act === 'ink') this.toggleInk();
       if (act === 'help') this.toggleHelp();
       if (act === 'check') this.openCheck();
       if (act === 'export') this.onExport?.(this);
     });
     this.el.select.value = this.stage;
     this.el.select.addEventListener('change', () => { this.setStage(this.el.select.value); this.el.select.blur(); });
-    this.el.frame.addEventListener('click', e => { e.stopPropagation(); if (Date.now() - (this.swipedAt || 0) < 400) return; if (!e.target.closest('video, audio, iframe, a')) this.next(); });
+    this.el.frame.addEventListener('click', e => {
+      e.stopPropagation();
+      if (this.ink.enabled || Date.now() - (this.swipedAt || 0) < 400) return;
+      const img = zoomableImage(e.target); // 點圖片 = 放大看完整的圖
+      if (img) { this.closeLight = openLightbox(this.el.player, img, { onClose: () => { this.closeLight = null; } }); return; }
+      if (!e.target.closest('video, audio, iframe, a')) this.next();
+    });
+    this.root.querySelector('.ink-bar').addEventListener('click', e => {
+      e.stopPropagation();
+      const k = e.target.closest('[data-ink]')?.dataset.ink;
+      if (!k) return;
+      if (k === 'off') return this.toggleInk(false);
+      if (k === 'undo') return this.ink.undo();
+      if (k === 'clear') return this.ink.clear();
+      if (k === 'color') { this.ink.color = PEN_COLORS[(PEN_COLORS.indexOf(this.ink.color) + 1) % PEN_COLORS.length]; if (this.ink.tool !== 'pen') this.ink.setTool('pen'); else this.updateInkBar(); return; }
+      this.ink.setTool(k);
+    });
     this.el.viewer.addEventListener('click', () => this.closeViewer());
     this.el.help.addEventListener('click', e => {
       const m = e.target.closest('[data-motion]')?.dataset.motion;
@@ -206,6 +239,8 @@ export class Player {
   }
 
   destroy() {
+    this.reader?.close();
+    this.closeLight?.();
     if (this.el?.player?.querySelector('.rotate-hint')) this.closeRotateHint?.();
     window.removeEventListener('keydown', this.handlers.key);
     window.removeEventListener('resize', this.handlers.resize);
@@ -396,8 +431,12 @@ export class Player {
   }
 
   onKey(e) {
-    if (e.target.closest?.('input, textarea, select') || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.target.closest?.('input, textarea, select')) return;
     const k = e.key;
+    if (this.ink.enabled && (e.metaKey || e.ctrlKey) && (k === 'z' || k === 'Z')) { e.preventDefault(); this.ink.undo(); return; }
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (this.reader) { if (this.reader.key(k)) e.preventDefault(); return; }
+    if (this.closeLight) { e.preventDefault(); this.closeLight(); return; }
     if (this.el.black.classList.contains('on')) { e.preventDefault(); this.el.black.classList.remove('on'); return; }
     if (this.el.help.classList.contains('on') && k !== '?') { this.toggleHelp(false); if (k === 'Escape') return; }
     const handled = this.command(k);
@@ -415,13 +454,17 @@ export class Player {
       case 'End': this.goTo(this.slides.length - 1); break;
       case 'Enter': this.viewing ? this.closeViewer() : this.openViewer(); break;
       case 'Escape':
-        if (this.viewing) this.closeViewer();
+        if (this.ink.enabled) this.toggleInk(false);
+        else if (this.viewing) this.closeViewer();
         else if (this.stage === 'overview') this.toggleOverview();
         else if (document.fullscreenElement) document.exitFullscreen();
         else this.exit();
         break;
       case 'o': case 'O': this.toggleOverview(); break;
       case 'v': case 'V': this.toggleSide(); break;
+      case 'd': case 'D': this.toggleInk(); break;
+      case 'x': case 'X': if (!this.ink.enabled) return false; this.ink.clear(); break;
+      case 'm': case 'M': this.openReading(); break;
       case 'l': case 'L': this.cycleStage(); break;
       case 't': case 'T': this.cycleTheme(); break;
       case 'b': case 'B': case '.': this.el.black.classList.add('on'); break;
@@ -499,7 +542,7 @@ export class Player {
   // ---------------- 觸控(手機、平板) ----------------
   // 左右滑 = 上一張 / 下一張;沒放大時上下滑 = 換章節。點一下仍然是原本的點擊。
   onTouchStart(e) {
-    if (e.touches.length !== 1 || e.target.closest('.pbar, .help-panel, .issues, video, audio, iframe, select')) { this.touch = null; return; }
+    if (e.touches.length !== 1 || e.target.closest('.pbar, .help-panel, .issues, .ink-bar, .ink.on, .lightbox, .reader, video, audio, iframe, select')) { this.touch = null; return; }
     const p = e.touches[0];
     this.touch = { x: p.clientX, y: p.clientY, at: Date.now() };
   }
@@ -557,6 +600,7 @@ export class Player {
     const r = card.getBoundingClientRect();
     this.el.viewer.classList.remove('on');
     this.el.player.classList.remove('viewing');
+    if (this.ink.enabled) this.toggleInk(false);
     const a = this.el.frame.animate([{ transform: this.fit().t }, { transform: `translate(${r.left}px, ${r.top}px) scale(${r.width / 1280})` }], { duration: 440, easing: 'cubic-bezier(.4, 0, .2, 1)' });
     this.el.frame.style.opacity = 0;
     a.onfinish = () => { this.showCard(); card.classList.add('focus'); this.el.frame.innerHTML = ''; this.syncThumbVideo(); };
@@ -576,8 +620,46 @@ export class Player {
       this.steps = [...this.el.frame.querySelectorAll('.md > ul > li, .md > ol > li, .stat, .tl-item, .col, .ag')];
       this.steps.forEach(s => s.classList.add('step', 'hidden'));
     }
+    this.ink.mount(this.el.frame, this.focus);
     hydrate(this.el.frame, this.source, { full: true }).then(() => { if (this.viewing) playMedia(this.el.frame, { sound: true }); });
   }
+
+  // ---------------- 畫筆與雷射筆(D) ----------------
+  toggleInk(on = !this.ink.enabled) {
+    if (on && !this.viewing) this.openViewer();
+    this.ink.setEnabled(on);
+    this.el.player.classList.toggle('inking', on);
+  }
+
+  updateInkBar() {
+    const bar = this.root.querySelector('.ink-bar');
+    if (!bar) return;
+    bar.querySelectorAll('[data-ink]').forEach(b => b.classList.toggle('on', b.dataset.ink === this.ink.tool));
+    bar.querySelector('.ink-color i').style.background = this.ink.color;
+    bar.querySelector('[data-ink="undo"]').disabled = !this.ink.history.get(this.focus)?.length;
+    this.root.querySelector('[data-act="ink"]')?.classList.toggle('on', this.ink.enabled);
+  }
+
+  // ---------------- 閱讀模式(M) ----------------
+  openReading() {
+    if (this.reader) return;
+    if (this.viewing) this.closeViewer();
+    if (this.ink.enabled) this.toggleInk(false);
+    if (this.el.player.querySelector('.rotate-hint')) this.closeRotateHint?.();
+    this.el.player.classList.add('reading');
+    this.reader = openReader(this, this.focus, {
+      onIndex: gi => this.onIndex?.(gi, true),
+      onPrint: () => this.print({ handout: true }),
+      onClose: gi => {
+        this.reader = null;
+        this.el.player.classList.remove('reading');
+        this.goTo(gi);
+        this.onIndex?.(gi, false);
+      },
+    });
+  }
+
+  closeReading() { this.reader?.close(); }
 
   showInViewer(dir) {
     this.hideCard(this.cards[this.focus]);
@@ -597,6 +679,7 @@ export class Player {
     if (!m) return;
     if (m.type === 'hello') { this.presenterSeen = true; this.broadcast(); }
     if (m.type === 'key') this.command(m.key);
+    if (m.type === 'ink' && m.op) this.ink.apply(m.op);
   }
 
   async broadcast() {
@@ -611,21 +694,33 @@ export class Player {
     this.channel.postMessage({
       type: 'state', title: this.deck.title, section: this.sections[s.sec]?.title || '',
       n: gi + 1, total: this.slides.length, cur, next, media, theme: currentTheme(),
+      ink: this.ink.get(gi), gi,
       notes: s.notes ? renderMarkdown(s.notes) : '', steps: this.steps.length, step: this.stepIndex, viewing: this.viewing, startedAt: this.startedAt,
     });
   }
 
   // ---------------- 列印 / PDF ----------------
-  async print() {
+  /** handout = 講義:每張投影片縮小,下面附講者備註(A4 直式)。畫筆畫的內容一併印出。 */
+  async print({ handout = false } = {}) {
     this.toast(t('toast.printing'));
     const box = document.createElement('div');
     box.id = 'print-root';
-    box.innerHTML = this.slides.map((_, gi) => `<div class="print-page">${this.renderFull(gi)}</div>`).join('');
+    let pageStyle = null;
+    if (handout) {
+      // 講義用 A4 直式(暫時蓋過投影片用的 1280×720 頁面,印完拿掉)
+      pageStyle = document.createElement('style');
+      pageStyle.textContent = '@page { size: A4 portrait; margin: 14mm; }';
+      document.head.append(pageStyle);
+      box.className = 'handout';
+      box.innerHTML = `<h1 class="handout-title">${esc(this.deck.title)}</h1>` + this.slides.map((s, gi) => `<section class="handout-item"><div class="handout-slide"><div class="handout-scale">${this.renderFull(gi)}${inkMarkup(this.ink.get(gi))}</div></div>${s.notes ? `<div class="handout-notes">${renderMarkdown(s.notes)}</div>` : ''}</section>`).join('');
+    } else {
+      box.innerHTML = this.slides.map((_, gi) => `<div class="print-page">${this.renderFull(gi)}${inkMarkup(this.ink.get(gi))}</div>`).join('');
+    }
     document.body.appendChild(box);
     await hydrate(box, this.source);
     await Promise.all([...box.querySelectorAll('img')].map(img => img.complete ? null : new Promise(r => { img.onload = img.onerror = r; })));
     document.documentElement.classList.add('printing');
-    const done = () => { document.documentElement.classList.remove('printing'); box.remove(); window.removeEventListener('afterprint', done); };
+    const done = () => { document.documentElement.classList.remove('printing'); box.remove(); pageStyle?.remove(); window.removeEventListener('afterprint', done); };
     window.addEventListener('afterprint', done);
     window.print();
     setTimeout(() => { if (document.getElementById('print-root')) done(); }, 60000);

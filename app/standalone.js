@@ -36,12 +36,14 @@ document.documentElement.lang = getLang();
 if (location.hash === '#/presenter') {
   startPresenter(app);
 } else {
-  const start = Math.max(0, (parseInt(location.hash.slice(2), 10) || 1) - 1);
+  const [n, view] = location.hash.slice(2).split('/');
+  const start = Math.max(0, (parseInt(n, 10) || 1) - 1);
   new Player(app, {
+    reading: view === 'read',
     deck: data.deck,
     source: new EmbeddedSource(data.media),
     theme: data.theme,
     start,
-    onIndex: i => history.replaceState(null, '', `#/${i + 1}`),
+    onIndex: (i, read) => history.replaceState(null, '', `#/${i + 1}${read ? '/read' : ''}`),
   });
 }

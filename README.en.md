@@ -10,19 +10,34 @@ Write slides in Markdown, group them into sections with folders, and play them a
 
 ## Features
 
-- **Folders are the structure**: library → topic → deck → section → slide. Every config file is optional.
-- **Local first**: open folders on your computer or a USB drive directly. Chrome / Edge remember your libraries for one-click reconnects.
-- **Reads only what it needs**: the catalog first, covers as you scroll, content when you open a deck, media just before it is shown. Large libraries stay fast.
-- **Six 3D stages**: pile (shuffles when you change sections), cover flow, carousel, helix, sphere and overview, plus a side-by-side view (`V`: large slide with a thumbnail strip, like a slide editor; the default on phones).
+**Playing**
+- **Six 3D stages**: pile (shuffles when you change sections), cover flow, carousel, helix, sphere and overview.
+- **Side by side** (`V`): a large slide with a thumbnail strip, like a slide editor. The default on phones.
+- **Reading view** (`M`): the whole deck as one scrolling page, with speaker notes under each slide. The link ends in `/read`, so you can send it to people who missed the talk.
+- **Click to enlarge**: when a chart is cropped or shrunk by the layout, click it to see the whole image.
 - **Three themes**: paper, ink (dark) and slate.
-- **Over a dozen layouts**: split, full-bleed, quote, big number, stat cards, timeline, columns, automatic agenda, bar and line charts, and more.
-- **Presenting tools**: step-by-step reveal, presenter view (notes, next slide, timer), black screen, full screen, clicker support, PDF export, and export to a single HTML file that plays offline with a double-click.
+
+**Presenting**
+- **Pen and laser pointer** (`D`): laser strokes fade out together once you stop drawing; there is also a pen, a highlighter, an eraser and undo. You can draw in the presenter view too, and it appears on the audience screen.
+- **Presenter view** (`S`): notes, next slide and a timer.
+- **Step-by-step reveal, black screen, full screen and clicker support.**
+
+**Sharing and output**
+- **Print / PDF** (`P`): one slide per page. In reading view, "Print handout" gives an A4 handout with slides and notes. Drawings are printed too.
+- **Export to a single HTML file**: double-click it to present offline. Handy for sending a deck or presenting on a computer without internet.
+- **Install as an app**: on Chrome, Edge and phones. Once installed it opens without a network.
+
+**Making decks**
+- **Folders are the structure**: library → topic → deck → section → slide. Every config file is optional.
+- **Over a dozen layouts**: split, full-bleed, quote, big number, stat cards, timeline, columns, automatic agenda, bar and line charts, and more; footnotes and code highlighting too.
 - **Live reload**: folders opened in Chrome / Edge update on screen as soon as you save a Markdown file (or press `R`).
-- **Phones and tablets**: swipe left/right to change slides and up/down to change sections; zoomed slides re-center when you rotate, and a hint suggests turning the phone sideways.
-- **Motion preference**: reduced transitions when the system asks for reduced motion; switch between "Full" and "Reduced" in the help panel (`?`).
+- **Checker**: the "Check" button on the site, or double-click the checker in your library, to find anything that breaks the rules.
 - **Media**: local images and video; YouTube, Bilibili, Google Drive and Vimeo embeds.
-- **Works offline**: after one visit, the site plays local decks without a network.
-- **English and Traditional Chinese**: switch the interface with the `中 / EN` button; each deck's generated text follows its own `lang`.
+
+**Design principles**
+- **Local first**: open folders on your computer or a USB drive directly; nothing is uploaded. Chrome / Edge remember your libraries for one-click reconnects.
+- **Reads only what it needs**: the catalog first, covers as you scroll, content when you open a deck, media just before it is shown. Large libraries stay fast.
+- **English and Traditional Chinese**: switch with the `中 / EN` button. Transitions are simplified when the system asks for reduced motion.
 - **Zero dependencies**: no third-party packages and no build step.
 
 ## Three-minute start
@@ -51,6 +66,8 @@ Write slides in Markdown, group them into sections with folders, and play them a
    ```
 
 3. Open the website, press "Open a local folder" or drag the folder in. Press `Enter` to zoom, and use the arrow keys or a clicker to advance.
+
+Want a ready-made library to try? Download `Mdslide-library-v….zip` from [Releases](https://github.com/ToruSmith/Mdslide-Pile/releases/latest) and open the unzipped "Mdslide書庫" folder on the site.
 
 The full rules are in **[docs/GUIDE.en.md](docs/GUIDE.en.md)**. The guide is written for AI too; ready-made prompts are below in "[Ask an AI to make a deck](#ask-an-ai-to-make-a-deck)".
 
@@ -127,13 +144,17 @@ Want a ready-made library? Download `Mdslide-library-v….zip` from [Releases](h
 | Key | Action | Key | Action |
 |---|---|---|---|
 | `←` `→` | Previous / next slide | `O` | Overview |
-| `↑` `↓` | Previous / next section | `L` | Switch stage |
-| `Enter` | Zoom in / out | `T` | Switch theme |
-| `Esc` | Zoom out, back to library | `S` | Presenter view |
-| `1`–`9` | Jump to section | `P` | Print / save as PDF |
+| `↑` `↓` | Previous / next section | `V` | Side by side |
+| `Enter` | Zoom in / out | `M` | Reading view |
+| `Esc` | Zoom out, back to library | `L` | Switch stage |
+| `1`–`9` | Jump to section | `T` | Switch theme |
+| `D` | Pen and laser pointer | `S` | Presenter view |
+| `X` | Clear drawings on this slide | `P` | Print / save as PDF |
 | `B` | Black screen | `F` | Full screen |
 | `K` | Play / pause video | `R` | Reload the deck |
-| `?` | Help | `V` | Side by side |
+| `?` | Help | | |
+
+Phones and tablets: swipe left/right for slides and up/down for sections; tap an image to enlarge it; a hint suggests turning the phone sideways.
 
 ## Browser support
 
@@ -149,8 +170,10 @@ Want a ready-made library? Download `Mdslide-library-v….zip` from [Releases](h
 - `content/`: the built-in library. `00-官方範例` demonstrates every feature and is the acceptance baseline; `04-Feature-Tour` is the English version
 - `docs/GUIDE.en.md` / `製作專案指南.md`: rules for making decks (for people and AI)
 - `AGENTS.md`: how to maintain the tool itself (architecture, principles, extension points)
-- `scripts/check.mjs`: checks whether a folder follows the rules
+- `scripts/`: command-line tools such as the checker (`check.mjs`) and the deck scaffold (`new-deck.mjs`)
 - `dist/`: the single-file checker you can copy into a library (generated)
+- `starter/`: the readme for the sample library in Releases
+- `tests/`: unit tests, browser tests and screenshot comparison
 
 Public decks can go into `content/<topic>/` and are deployed with the site; keep private or company decks on your own computer and use local mode. Note that a GitHub Pages site is always public.
 

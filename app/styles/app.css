@@ -288,3 +288,80 @@ body.dragging::after { content: attr(data-drop); position: fixed; inset: 16px; z
 
 /* 對照模式:放大的那張不畫焦點外框(外框會跟著卡片一起放大),縮圖列也不需要 */
 .player[data-stage="side"] .card.focus { outline-color: transparent; }
+
+/* ---------- 畫筆與雷射筆 ---------- */
+.ink { position: absolute; left: 0; top: 0; width: 1280px; height: 720px; z-index: 5; pointer-events: none; overflow: visible; }
+.ink.on { pointer-events: auto; touch-action: none; cursor: crosshair; }
+.ink.on[data-tool="laser"] { cursor: none; }
+.ink.on[data-tool="eraser"] { cursor: cell; }
+.ink-hl { fill: none; stroke: #ffd84a; stroke-width: 26; stroke-linecap: round; stroke-linejoin: round; opacity: .42; mix-blend-mode: multiply; }
+.ink-laser path { fill: none; stroke: #ff3b30; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 6px rgb(255 59 48 / .85)); }
+.ink-dot { fill: #ff3b30; filter: drop-shadow(0 0 8px rgb(255 59 48 / .9)); pointer-events: none; }
+.ink:not(.on) .ink-dot { display: none; }
+.ink.on:not([data-tool="laser"]) .ink-dot { display: none; }
+.ink-print { position: absolute; left: 0; top: 0; }
+.ink-bar { position: absolute; left: 50%; bottom: 18px; z-index: 26; display: flex; gap: 4px; align-items: center; padding: 6px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 999px; box-shadow: 0 12px 40px rgb(var(--shadow) / .22); transition: opacity .2s, transform .2s; }
+.player.inking .ink-bar { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+.ink-bar button { font: inherit; font-size: 13px; padding: 7px 12px; border: 0; border-radius: 999px; background: none; color: var(--ink); cursor: pointer; white-space: nowrap; }
+.ink-bar button:hover { background: var(--bg-deep); }
+.ink-bar button.on { background: var(--accent); color: #fff; }
+.ink-bar button:disabled { opacity: .35; cursor: default; }
+.ink-bar .ink-color { padding: 7px 9px; }
+.ink-bar .ink-color i { display: block; width: 16px; height: 16px; border-radius: 50%; box-shadow: inset 0 0 0 2px rgb(255 255 255 / .6); }
+.ink-sep { width: 1px; height: 20px; background: var(--line); margin: 0 4px; }
+.pbtn[data-act="ink"].on { background: var(--accent); color: #fff; border-color: var(--accent); }
+.player.inking .frame { cursor: default; }
+@media (max-width: 600px) { .ink-bar { bottom: 10px; max-width: 96vw; overflow-x: auto; } .ink-bar button { padding: 7px 9px; } }
+.pv-frame { position: relative; }
+.pv-ink-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.pv-ink { display: flex; gap: 4px; flex-wrap: wrap; }
+.pv-ink button { font: inherit; font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.pv-ink button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pv-ink-hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+/* ---------- 點圖片放大 ---------- */
+.frame img[data-media]:not(.logo), .rslide img[data-media]:not(.logo) { cursor: zoom-in; }
+.player.inking .frame img { cursor: inherit; }
+.lightbox { position: absolute; inset: 0; z-index: 60; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 3vh 3vw;
+  background: color-mix(in srgb, var(--bg-deep) 94%, transparent); backdrop-filter: blur(4px); cursor: zoom-out; touch-action: pinch-zoom; animation: fade-in .2s; }
+.lightbox img { max-width: 100%; max-height: calc(100% - 64px); object-fit: contain; border-radius: 8px; background: var(--slide-bg, #fff); box-shadow: 0 30px 90px rgb(var(--shadow) / .3); }
+.lightbox-cap { font-size: 15px; color: var(--ink); text-align: center; max-width: 80ch; }
+.lightbox-hint { font-size: 12px; color: var(--muted); }
+@keyframes fade-in { from { opacity: 0; } }
+
+/* ---------- 閱讀模式 ---------- */
+.reader { position: absolute; inset: 0; z-index: 45; display: flex; flex-direction: column; background: var(--bg); animation: fade-in .25s; }
+.rbar { display: flex; align-items: center; gap: 14px; padding: 12px 20px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 92%, transparent); }
+.rtitle { flex: 1; min-width: 0; font-family: var(--font-display); font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rbody { flex: 1; overflow-y: auto; scroll-snap-type: y proximity; padding: 28px 20px 30vh; outline: none; }
+.ritem { max-width: 880px; margin: 0 auto 56px; scroll-snap-align: start; scroll-margin-top: 20px; }
+.rslide { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 10px; box-shadow: 0 2px 4px rgb(var(--shadow) / .06), 0 18px 50px rgb(var(--shadow) / .14); }
+.rscale { width: 1280px; height: 720px; transform: scale(var(--rs, .6)); transform-origin: 0 0; }
+.rmeta { margin-top: 12px; font-size: 13px; color: var(--muted); letter-spacing: .04em; }
+.rnotes { margin-top: 10px; font-size: 17px; line-height: 1.85; color: var(--ink); max-width: 72ch; }
+.rnotes p { margin: 0 0 .7em; }
+.rnotes ul, .rnotes ol { margin: 0 0 .7em 1.3em; }
+.rrail { position: absolute; right: 6px; top: 70px; bottom: 16px; width: 6px; display: flex; flex-direction: column; gap: 2px; }
+.rrail i { flex: 1; border-radius: 3px; background: var(--line); cursor: pointer; transition: background .2s; }
+.rrail i.sec { margin-top: 6px; }
+.rrail i.on { background: var(--accent); }
+.player.reading .pbar, .player.reading .pfoot { visibility: hidden; }
+@media (max-width: 600px) { .rbody { padding: 16px 12px 30vh; } .rnotes { font-size: 16px; } .rbar { padding: 10px 12px; } .rrail { right: 2px; width: 4px; } }
+
+/* ---------- 列印講義(A4 直式,投影片 + 備註) ---------- */
+@media print {
+  #print-root.handout { font-family: var(--font-body); color: #222; }
+  .handout-title { font-size: 20pt; margin: 0 0 8mm; }
+  .handout-item { break-inside: avoid; page-break-inside: avoid; margin-bottom: 8mm; }
+  /* 用 zoom 而不是 transform:transform 不會縮小版面寬度,Chrome 列印時會把整頁一起縮小 */
+  .handout-slide { width: 678px; height: 381px; overflow: hidden; border: 1px solid #ddd; border-radius: 6px; }
+  .handout-scale { position: relative; width: 1280px; height: 720px; zoom: .53; }
+  .handout-scale .slide { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .handout-notes { margin-top: 3mm; font-size: 10.5pt; line-height: 1.6; }
+  .handout-notes p { margin: 0 0 2mm; }
+  .print-page { position: relative; }
+}
+
+/* 很窄的手機:主題用不太到,讓位給閱讀與畫筆 */
+@media (max-width: 480px) { .ptools .pbtn[data-act="theme"] { display: none; } }
