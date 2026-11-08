@@ -76,7 +76,7 @@ jobs:
           sleep 3
       - name: 畫面比對
         run: python tests/visual/compare.py http://localhost:8001/ http://localhost:8000/ visual-diff
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: visual-diff
