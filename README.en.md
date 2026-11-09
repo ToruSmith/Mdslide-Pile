@@ -214,3 +214,7 @@ node scripts/new-deck.mjs content/02-work/2026-11-Q4-update   # create a new dec
 ```
 
 See [AGENTS.md](AGENTS.md) for details. Pushing to `main` deploys to GitHub Pages automatically once all tests pass (including browser tests in Chromium, Firefox and WebKit) (the first time, set Settings → Pages → Source to **GitHub Actions**).
+
+## Feedback and contributing
+
+Open an issue for bugs and ideas (templates provided). To change code, see [CONTRIBUTING.md](CONTRIBUTING.md). Report security problems privately as described in [SECURITY.md](SECURITY.md).

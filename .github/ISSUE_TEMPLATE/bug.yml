@@ -1,0 +1,50 @@
+name: 錯誤回報 / Bug report
+description: 某個功能沒有照預期運作 / Something does not work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: 發生了什麼 / What happened
+      description: 你看到什麼,原本預期看到什麼 / What you saw and what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 重現步驟 / Steps to reproduce
+      description: 最好附上一份能重現的最小簡報資料夾(壓縮後拖進來) / Ideally attach a minimal deck folder (zipped)
+      placeholder: |
+        1. 開啟本機資料夾…
+        2. 按 …
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: 使用方式 / How you use it
+      options:
+        - 網站(GitHub Pages) / Website
+        - 安裝成 App(PWA) / Installed app
+        - 匯出的單一 HTML / Exported HTML
+        - 本機伺服器 / Local server
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: 瀏覽器與作業系統 / Browser and OS
+      placeholder: Chrome 131 / Windows 11
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 版本 / Version
+      description: 首頁最下方或 CHANGELOG 的版本號 / Shown at the bottom of the home page
+  - type: textarea
+    id: check
+    attributes:
+      label: 檢查結果 / Checker output
+      description: 如果和簡報內容有關,貼上「檢查」按鈕或 check.mjs 的結果 / If deck-related, paste the checker output
+      render: text

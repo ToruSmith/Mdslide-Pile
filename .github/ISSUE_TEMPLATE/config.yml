@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 安全問題 / Security issue
+    url: https://github.com/ToruSmith/Mdslide-Pile/security/advisories/new
+    about: 請私下回報,不要開公開 Issue / Please report privately, not as a public issue
+  - name: 製作簡報的說明 / How to make a deck
+    url: https://github.com/ToruSmith/Mdslide-Pile/blob/main/%E8%A3%BD%E4%BD%9C%E5%B0%88%E6%A1%88%E6%8C%87%E5%8D%97.md
+    about: 資料夾規則、版型與設定檔 / Folder rules, layouts and settings

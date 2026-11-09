@@ -127,7 +127,7 @@ order: [2026-12-year-end, 2026-11-book-club]   # optional; defaults to prefix or
 ```yaml
 title: Toru's slide shelf
 description: One sentence about it
-theme: paper
+theme: paper                   # library page theme; switches to ink when the computer uses dark mode
 topics: [02-work, 01-teaching]                 # optional
 ```
 
@@ -379,6 +379,7 @@ If no command line is available, ask the user to open the folder on the website,
 - [ ] Every slide heading is a conclusion
 - [ ] No list longer than 5 items, no invented numbers
 - [ ] Every section has a title and color; section and slide counts fit the talk length
+- [ ] No empty slides (settings but no content; the checker warns about them)
 - [ ] Every slide has speaker notes (the checker shows note coverage)
 - [ ] Every slide with numbers has a "Source:" footer, and the deck ends with a sources slide
 - [ ] Time-sensitive decks date their data in `kicker`; sensitive topics have a disclaimer
@@ -400,7 +401,7 @@ Follow the steps in section 7 of the guide to create the folder and files, then 
 
 ## 8. FAQ
 
-- **Wrong order on screen?** Check the number prefixes. They sort numerically (`2-` before `10-`), but two digits (`02-`) also keep file explorers in the same order.
+- **Wrong order on screen?** Check the number prefixes. They sort numerically (`2-` before `10-`), but two digits (`02-`) also keep file explorers in the same order. The checker warns about duplicate prefixes and mixed widths at the same level.
 - **Can I edit the content on the site?** Yes. Zoom into a slide and press `E` (or "Edit" in the toolbar): Markdown on the left, live preview on the right, `Ctrl+S` saves back to the file in your folder (needs a local folder opened in Chrome / Edge; the browser asks once for permission to write).
   - The toolbar also has "+ New slide" (numbering continues automatically) and "Archive", which moves the file to `_封存/` inside the deck folder — **it is not deleted** and you can move it back yourself.
   - Automatic cover and section pages have no file of their own, so `E` edits `deck.yml` instead.

@@ -29,6 +29,10 @@ export const LOCALE_EN = {
   'check.missingMedia': 'Missing media {src} (resolved path {path})',
   'check.missingBg': 'Missing background image {src}',
   'check.missingCover': 'Missing cover_image {src}',
+  'check.dupPrefix': 'More than one item at this level uses prefix {prefix}: {names}. Their order is decided by name and may not be what you want',
+  'check.mixedPrefix': 'Prefixes have different widths: {names}. Your file manager may sort them differently from the player; use two digits (01-, 02-)',
+  'check.emptySlide': 'Slide {n} is empty (settings only, no content)',
+  'check.sep': ', ',
   'check.missingLogo': 'Missing brand.logo {src}',
   'check.missingFootnote': 'Footnote [^{id}] is not defined',
   'check.deckFolder': '(deck folder)',
@@ -122,6 +126,7 @@ export const LOCALE_EN = {
   'lib.local': 'Local library',
   'lib.eyebrow': '{kind} · {topics} topics · {decks} decks',
   'lib.search': 'Search titles and tags…',
+  'lib.found': 'Showing {n} of {total} decks',
   'lib.noResults': 'No decks match “{q}”',
   'lib.check': '✓ Check',
   'lib.checkTitle': 'Check every deck against the rules',
@@ -130,7 +135,7 @@ export const LOCALE_EN = {
   'lib.all': 'All',
   'lib.issues': '⚠ {n} config problems',
   'lib.empty': 'No decks in this topic yet',
-  'lib.chapters': '{n} sections',
+  'lib.chapters': 'Sections: {n}',
 
   // ---------- Check panel ----------
   'checkp.aria': 'Check results',

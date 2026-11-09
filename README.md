@@ -212,3 +212,7 @@ node scripts/new-deck.mjs content/02-工作報告/2026-11-Q4週報   # 建立新
 ```
 
 詳細請看 [AGENTS.md](AGENTS.md)。推送到 `main` 後,測試(含 Chrome、Firefox、Safari 核心的瀏覽器測試)全部通過才會自動部署到 GitHub Pages(第一次需要在 Settings → Pages 把 Source 設成 **GitHub Actions**)。
+
+## 回報問題與參與
+
+錯誤回報與功能建議請開 Issue(有範本可用);想改程式請看 [CONTRIBUTING.md](CONTRIBUTING.md);安全問題請依 [SECURITY.md](SECURITY.md) 私下回報。

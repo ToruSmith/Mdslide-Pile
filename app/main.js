@@ -14,10 +14,10 @@ import { renderLibrary } from './ui/library-view.js';
 import { Player } from './player/player.js';
 import { openExportDialog } from './player/export.js';
 import { startPresenter } from './player/presenter.js';
-import { applyTheme } from './player/themes.js';
+import { applyUITheme } from './player/themes.js';
 import { t, setLang, getLang, normalizeLang } from './core/i18n.js';
 
-export const VERSION = '1.8.1';
+export const VERSION = '1.9.0';
 const REPO_URL = 'https://github.com/ToruSmith/Mdslide-Pile';
 
 const app = document.getElementById('app');
@@ -129,7 +129,7 @@ function showError(err) {
 }
 
 async function home() {
-  applyTheme('paper');
+  applyUITheme('paper');
   document.title = t('doc.title');
   const recent = await listRecent();
   let repoOK = true;

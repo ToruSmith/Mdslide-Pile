@@ -4,7 +4,7 @@ import { loadCover, limiter } from '../core/library.js';
 import { escapeHTML as esc } from '../core/markdown.js';
 import { renderSlide } from '../player/render.js';
 import { hydrate } from '../player/hydrate.js';
-import { applyTheme } from '../player/themes.js';
+import { applyUITheme } from '../player/themes.js';
 import { checkLibrary } from '../core/check.js';
 import { t } from '../core/i18n.js';
 import { openCheckPanel } from './check-view.js';
@@ -12,7 +12,7 @@ import { openCheckPanel } from './check-view.js';
 const coverLimit = limiter(3);
 
 export function renderLibrary(root, { lib, source, sourceKey, onOpen, onRefresh, header }) {
-  applyTheme(lib.theme || 'paper');
+  applyUITheme(lib.theme || 'paper');
   const total = lib.topics.reduce((n, tp) => n + tp.projects.length, 0);
   root.innerHTML = `
     <div class="library">
@@ -29,8 +29,9 @@ export function renderLibrary(root, { lib, source, sourceKey, onOpen, onRefresh,
           ${onRefresh ? `<button class="btn ghost refresh" title="${esc(t('lib.refreshTitle'))}">${esc(t('lib.refresh'))}</button>` : ''}
         </div>
       </div>
-      ${lib.topics.length > 1 ? `<nav class="chips"><button class="chip on" data-topic="*">${esc(t('lib.all'))}</button>${lib.topics.map(tp => `<button class="chip" data-topic="${esc(tp.id)}" style="--c:${esc(tp.color)}">${esc(tp.title)}<small>${tp.projects.length}</small></button>`).join('')}</nav>` : ''}
+      ${lib.topics.length > 1 ? `<nav class="chips"><button class="chip on" data-topic="*">${esc(t('lib.all'))}</button>${lib.topics.map(tp => `<button class="chip${tp.projects.length ? '' : ' zero'}" data-topic="${esc(tp.id)}" style="--c:${esc(tp.color)}">${esc(tp.title)}<small>${tp.projects.length}</small></button>`).join('')}</nav>` : ''}
       ${lib.issues.length ? `<details class="lib-issues"><summary>${esc(t('lib.issues', { n: lib.issues.length }))}</summary><ul>${lib.issues.map(i => `<li><code>${esc(i.path)}</code>${esc(i.message)}</li>`).join('')}</ul></details>` : ''}
+      <p class="found" hidden></p>
       <p class="empty search-empty" hidden></p>
       <div class="topics">
         ${lib.topics.map(tp => `
@@ -43,8 +44,8 @@ export function renderLibrary(root, { lib, source, sourceKey, onOpen, onRefresh,
                   <div class="info">
                     <h3>${esc(p.title)}</h3>
                     ${p.subtitle ? `<p class="sub">${esc(p.subtitle)}</p>` : ''}
-                    <div class="meta"><span>${esc(p.date || '')}</span><span class="count"></span></div>
                     ${p.tags.length ? `<div class="tags">${p.tags.map(x => `<span>#${esc(x)}</span>`).join('')}</div>` : ''}
+                    <div class="meta">${p.author ? `<span class="author">${esc(p.author)}</span>` : ''}<span class="date">${esc(p.date || '')}</span><span class="count"></span></div>
                   </div>
                 </a>`).join('') || `<p class="empty">${esc(t('lib.empty'))}</p>`}
             </div>
@@ -59,7 +60,7 @@ export function renderLibrary(root, { lib, source, sourceKey, onOpen, onRefresh,
   for (const el of cards) {
     const p = find(el);
     const inner = el.querySelector('.thumb-inner');
-    if (p.theme) inner.dataset.theme = p.theme; // 封面用簡報自己的主題
+    inner.dataset.theme = p.theme || lib.theme || 'paper'; // 封面用簡報播放時的主題,不跟著目錄頁的深色模式
     inner.innerHTML = coverHTML(p, null);
   }
 
@@ -106,6 +107,9 @@ export function renderLibrary(root, { lib, source, sourceKey, onOpen, onRefresh,
       sec.hidden = shown === 0 && (topic !== '*' || words.length > 0);
       total += shown;
     });
+    const found = root.querySelector('.found');
+    found.hidden = topic === '*' && !words.length;
+    found.textContent = found.hidden ? '' : t('lib.found', { n: total, total: cards.length });
     const empty = root.querySelector('.search-empty');
     empty.hidden = !(words.length && total === 0);
     empty.textContent = empty.hidden ? '' : t('lib.noResults', { q: raw });

@@ -1,0 +1,24 @@
+name: 功能建議 / Feature request
+description: 想要新功能或改善 / Suggest an idea
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        這個專案刻意保持簡單(零依賴、本機優先、以資料夾和 Markdown 為主)。請先描述**想解決的問題**,而不是只寫解法。
+        This project stays simple on purpose (no dependencies, local-first, folders and Markdown). Please describe the **problem** first, not only the solution.
+  - type: textarea
+    id: problem
+    attributes:
+      label: 想解決的問題 / Problem
+      description: 什麼情況下你覺得不方便 / When does it get in your way
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: 你的想法 / Idea
+  - type: textarea
+    id: workaround
+    attributes:
+      label: 目前的替代做法 / Current workaround

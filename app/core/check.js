@@ -7,6 +7,7 @@ import { resolveMediaPath } from './media.js';
 import { parseChartTable } from './chart.js';
 import { undefinedFootnotes } from './markdown.js';
 import { t } from './i18n.js';
+import { isHidden, isMarkdown, RESERVED_DIRS } from './names.js';
 
 export const MAX_SLIDES = 45;
 
@@ -20,6 +21,65 @@ async function exists(source, path) {
 }
 
 /**
+ * 同一層的排序前綴:數字重複(`01-a`、`1-b`)或位數混用(`2-`、`10-`)。
+ * 日期前綴(`2026-11-…`)不是排序數字,不檢查。
+ * @param {string[]} names 同一層、同一種類(都是檔案或都是資料夾)的名稱
+ * @returns {{ kind: 'dup' | 'width', prefix?: string, names: string[] }[]}
+ */
+export function prefixProblems(names) {
+  const out = [];
+  const nums = names
+    .filter(n => !/^\d{4}-\d{2}(-\d{2})?[\s._-]/.test(n))
+    .map(n => ({ name: n, m: n.match(/^(\d+)[\s._-]/) }))
+    .filter(x => x.m);
+  const byNum = new Map();
+  for (const x of nums) {
+    const k = Number(x.m[1]);
+    byNum.set(k, [...(byNum.get(k) || []), x.name]);
+  }
+  for (const [, list] of byNum) if (list.length > 1) out.push({ kind: 'dup', prefix: list[0].match(/^\d+/)[0], names: list });
+  // 位數混用:已經回報為重複的不再算一次;依數字排序,每種位數只列第一個,訊息不會太長
+  const rest = nums.filter(x => byNum.get(Number(x.m[1])).length === 1).sort((a, b) => Number(a.m[1]) - Number(b.m[1]));
+  const widths = new Set(rest.map(x => x.m[1].length));
+  if (widths.size > 1) {
+    const seen = new Set();
+    out.push({ kind: 'width', names: rest.filter(x => !seen.has(x.m[1].length) && seen.add(x.m[1].length)).map(x => x.name) });
+  }
+  return out;
+}
+
+const visibleDirs = entries => entries.filter(e => e.kind === 'dir' && !isHidden(e.name) && !RESERVED_DIRS.has(e.name.toLowerCase())).map(e => e.name);
+const mdNames = entries => entries.filter(e => e.kind === 'file' && isMarkdown(e.name)).map(e => e.name);
+
+/** 檢查簡報資料夾與各章節資料夾裡的前綴。 */
+async function orderProblems(source, project) {
+  const problems = [];
+  const report = (path, list) => {
+    for (const p of prefixProblems(list)) {
+      problems.push({ path: path || t('check.deckFolder'), message: p.kind === 'dup'
+        ? t('check.dupPrefix', { prefix: p.prefix, names: p.names.join(t('check.sep')) })
+        : t('check.mixedPrefix', { names: p.names.join(t('check.sep')) }) });
+    }
+  };
+  let entries;
+  try { entries = await source.list(project.path); } catch { return problems; }
+  const dirs = visibleDirs(entries);
+  report(project.path, mdNames(entries));
+  report(project.path, dirs);
+  for (const d of dirs) {
+    const path = project.path ? project.path + '/' + d : d;
+    try { report(path, mdNames(await source.list(path))); } catch { /* 讀不到的資料夾由其他規則回報 */ }
+  }
+  return problems;
+}
+
+/** 只有設定、沒有內容的投影片(自動產生的標題頁、章節頁、結尾頁不算)。 */
+function isEmptySlide(sl) {
+  if (sl.auto || ['title', 'section', 'end'].includes(sl.layout)) return false;
+  return !sl.body.trim() && !sl.media.length && !sl.meta?.background;
+}
+
+/**
  * 檢查一份簡報。
  * @returns {{ title, date, hasConfig, total, noted, layouts: string[], sections: {title, count}[], slides: {layout, title, notes: boolean, auto: boolean}[], problems: {path, message}[] }}
  */
@@ -28,7 +88,10 @@ export async function checkDeck(source, project) {
   const problems = [...deck.issues];
   const all = deck.sections.flatMap(s => s.slides);
 
+  problems.push(...await orderProblems(source, project));
+
   for (const sl of all) {
+    if (isEmptySlide(sl)) problems.push({ path: sl.file, message: t('check.emptySlide', { n: sl.index + 1 }) });
     if (sl.layout === 'chart') {
       const tbl = parseChartTable(sl.body);
       if (!tbl) problems.push({ path: sl.file, message: t('check.noTable') });

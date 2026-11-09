@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Mdslide Pile 書庫檢查工具(單檔版 v1.8.1)
+// Mdslide Pile 書庫檢查工具(單檔版 v1.9.0)
 // 由 scripts/bundle-check.mjs 自動產生,請不要手動修改。原始碼:https://github.com/ToruSmith/Mdslide-Pile
 //
 // 用法(需要 Node.js 18 以上):
@@ -45,6 +45,10 @@ const LOCALE_ZH_HANT = {
   'check.missingMedia': '找不到素材 {src}(實際路徑 {path})',
   'check.missingBg': '找不到背景圖 {src}',
   'check.missingCover': '找不到 cover_image {src}',
+  'check.dupPrefix': '同一層有兩個以上的 {prefix} 前綴:{names}。播放順序會依名稱決定,可能不是你要的',
+  'check.mixedPrefix': '前綴位數不一致:{names}。檔案總管裡的順序可能和播放順序不同,建議統一用兩位數(01-、02-)',
+  'check.emptySlide': '第 {n} 張是空白投影片(只有設定、沒有內容)',
+  'check.sep': '、',
   'check.missingLogo': '找不到 brand.logo {src}',
   'check.missingFootnote': '腳註 [^{id}] 沒有定義',
   'check.deckFolder': '(簡報資料夾)',
@@ -138,6 +142,7 @@ const LOCALE_ZH_HANT = {
   'lib.local': '本機書庫',
   'lib.eyebrow': '{kind} · {topics} 個主題 · {decks} 份簡報',
   'lib.search': '搜尋簡報標題、標籤…',
+  'lib.found': '找到 {n} 份,共 {total} 份',
   'lib.noResults': '找不到符合「{q}」的簡報',
   'lib.check': '✓ 檢查',
   'lib.checkTitle': '檢查所有簡報是否符合規則',
@@ -367,6 +372,10 @@ const LOCALE_EN = {
   'check.missingMedia': 'Missing media {src} (resolved path {path})',
   'check.missingBg': 'Missing background image {src}',
   'check.missingCover': 'Missing cover_image {src}',
+  'check.dupPrefix': 'More than one item at this level uses prefix {prefix}: {names}. Their order is decided by name and may not be what you want',
+  'check.mixedPrefix': 'Prefixes have different widths: {names}. Your file manager may sort them differently from the player; use two digits (01-, 02-)',
+  'check.emptySlide': 'Slide {n} is empty (settings only, no content)',
+  'check.sep': ', ',
   'check.missingLogo': 'Missing brand.logo {src}',
   'check.missingFootnote': 'Footnote [^{id}] is not defined',
   'check.deckFolder': '(deck folder)',
@@ -460,6 +469,7 @@ const LOCALE_EN = {
   'lib.local': 'Local library',
   'lib.eyebrow': '{kind} · {topics} topics · {decks} decks',
   'lib.search': 'Search titles and tags…',
+  'lib.found': 'Showing {n} of {total} decks',
   'lib.noResults': 'No decks match “{q}”',
   'lib.check': '✓ Check',
   'lib.checkTitle': 'Check every deck against the rules',
@@ -468,7 +478,7 @@ const LOCALE_EN = {
   'lib.all': 'All',
   'lib.issues': '⚠ {n} config problems',
   'lib.empty': 'No decks in this topic yet',
-  'lib.chapters': '{n} sections',
+  'lib.chapters': 'Sections: {n}',
 
   // ---------- Check panel ----------
   'checkp.aria': 'Check results',
@@ -1770,6 +1780,7 @@ function inline(text, ctx, slots = []) {
 
 
 
+
 const MAX_SLIDES = 45;
 
 /** 檔案是否存在:列出上一層資料夾來確認(本機來源會快取清單,不會重複讀)。 */
@@ -1782,6 +1793,65 @@ async function exists(source, path) {
 }
 
 /**
+ * 同一層的排序前綴:數字重複(`01-a`、`1-b`)或位數混用(`2-`、`10-`)。
+ * 日期前綴(`2026-11-…`)不是排序數字,不檢查。
+ * @param {string[]} names 同一層、同一種類(都是檔案或都是資料夾)的名稱
+ * @returns {{ kind: 'dup' | 'width', prefix?: string, names: string[] }[]}
+ */
+function prefixProblems(names) {
+  const out = [];
+  const nums = names
+    .filter(n => !/^\d{4}-\d{2}(-\d{2})?[\s._-]/.test(n))
+    .map(n => ({ name: n, m: n.match(/^(\d+)[\s._-]/) }))
+    .filter(x => x.m);
+  const byNum = new Map();
+  for (const x of nums) {
+    const k = Number(x.m[1]);
+    byNum.set(k, [...(byNum.get(k) || []), x.name]);
+  }
+  for (const [, list] of byNum) if (list.length > 1) out.push({ kind: 'dup', prefix: list[0].match(/^\d+/)[0], names: list });
+  // 位數混用:已經回報為重複的不再算一次;依數字排序,每種位數只列第一個,訊息不會太長
+  const rest = nums.filter(x => byNum.get(Number(x.m[1])).length === 1).sort((a, b) => Number(a.m[1]) - Number(b.m[1]));
+  const widths = new Set(rest.map(x => x.m[1].length));
+  if (widths.size > 1) {
+    const seen = new Set();
+    out.push({ kind: 'width', names: rest.filter(x => !seen.has(x.m[1].length) && seen.add(x.m[1].length)).map(x => x.name) });
+  }
+  return out;
+}
+
+const visibleDirs = entries => entries.filter(e => e.kind === 'dir' && !isHidden(e.name) && !RESERVED_DIRS.has(e.name.toLowerCase())).map(e => e.name);
+const mdNames = entries => entries.filter(e => e.kind === 'file' && isMarkdown(e.name)).map(e => e.name);
+
+/** 檢查簡報資料夾與各章節資料夾裡的前綴。 */
+async function orderProblems(source, project) {
+  const problems = [];
+  const report = (path, list) => {
+    for (const p of prefixProblems(list)) {
+      problems.push({ path: path || t('check.deckFolder'), message: p.kind === 'dup'
+        ? t('check.dupPrefix', { prefix: p.prefix, names: p.names.join(t('check.sep')) })
+        : t('check.mixedPrefix', { names: p.names.join(t('check.sep')) }) });
+    }
+  };
+  let entries;
+  try { entries = await source.list(project.path); } catch { return problems; }
+  const dirs = visibleDirs(entries);
+  report(project.path, mdNames(entries));
+  report(project.path, dirs);
+  for (const d of dirs) {
+    const path = project.path ? project.path + '/' + d : d;
+    try { report(path, mdNames(await source.list(path))); } catch { /* 讀不到的資料夾由其他規則回報 */ }
+  }
+  return problems;
+}
+
+/** 只有設定、沒有內容的投影片(自動產生的標題頁、章節頁、結尾頁不算)。 */
+function isEmptySlide(sl) {
+  if (sl.auto || ['title', 'section', 'end'].includes(sl.layout)) return false;
+  return !sl.body.trim() && !sl.media.length && !sl.meta?.background;
+}
+
+/**
  * 檢查一份簡報。
  * @returns {{ title, date, hasConfig, total, noted, layouts: string[], sections: {title, count}[], slides: {layout, title, notes: boolean, auto: boolean}[], problems: {path, message}[] }}
  */
@@ -1790,7 +1860,10 @@ async function checkDeck(source, project) {
   const problems = [...deck.issues];
   const all = deck.sections.flatMap(s => s.slides);
 
+  problems.push(...await orderProblems(source, project));
+
   for (const sl of all) {
+    if (isEmptySlide(sl)) problems.push({ path: sl.file, message: t('check.emptySlide', { n: sl.index + 1 }) });
     if (sl.layout === 'chart') {
       const tbl = parseChartTable(sl.body);
       if (!tbl) problems.push({ path: sl.file, message: t('check.noTable') });
