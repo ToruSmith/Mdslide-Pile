@@ -25,7 +25,9 @@ export async function hydrate(root, source, { full = false } = {}) {
     s.dataset.ready = '1';
     const p = s.dataset.bg;
     jobs.push((isURL(p) ? Promise.resolve(p) : source.mediaURL(p)).then(url => {
-      s.style.background = `linear-gradient(color-mix(in srgb, var(--slide-bg) 78%, transparent), color-mix(in srgb, var(--slide-bg) 78%, transparent)), url("${url}") center / cover`;
+      // 遮罩:auto = 主題底色淡化(預設);dark / light = 深色或淺色遮罩(字會自動反白或變深);none = 不加
+      const tint = { dark: 'rgba(14, 16, 20, .6)', light: 'rgba(255, 253, 248, .8)', none: '' }[s.dataset.overlay] ?? 'color-mix(in srgb, var(--slide-bg) 78%, transparent)';
+      s.style.background = `${tint ? `linear-gradient(${tint}, ${tint}), ` : ''}url("${url}") center / cover`;
     }, () => {}));
   }
   if (full) {

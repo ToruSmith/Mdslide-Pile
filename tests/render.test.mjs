@@ -108,9 +108,41 @@ test('brand:不合法的字型名稱會回報並忽略', async () => {
 test('size: compact:每張、整份與 normal 取消', () => {
   const deck = { path: 'd', title: 'T', sections: [{ title: 'S', color: '#4f73a6' }] };
   const one = (meta, d = deck, layout = 'text') => renderSlide({ layout, meta, body: '# A', media: [], sec: 0, title: 'A' }, { deck: d, mode: 'full', globalIndex: 0, total: 1 });
-  assert.match(one({ size: 'compact' }), /class="slide l-text compact"/);
+  assert.match(one({ size: "compact" }), /class="slide l-text size-small compact"/);
   assert.doesNotMatch(one({}), /compact/);
   assert.match(one({}, { ...deck, size: 'compact' }), /compact/, 'deck.yml 的 size 整份套用');
   assert.doesNotMatch(one({ size: 'normal' }, { ...deck, size: 'compact' }), /compact/, 'size: normal 取消整份的設定');
   assert.doesNotMatch(one({ size: 'compact' }, deck, 'section'), /compact/, '章節頁不縮');
+});
+
+test('外觀設定:驗證與輸出', async () => {
+  const { parseSlideFile } = await import('../app/core/slide.js');
+  const { readSlideStyle, parseRatio, luminance, safeFonts } = await import('../app/core/style.js');
+  const deck2 = { path: 'p', title: 'T', sections: [{ title: 'S', color: '#4f73a6' }] };
+  const one = src => { const { slides, issues } = parseSlideFile(src, { path: 'p/a.md' }); return { html: renderSlide({ ...slides[0], sec: 0 }, { deck: deck2, mode: 'full', globalIndex: 0, total: 1 }), issues }; };
+
+  let r = one('<!-- background: "#14213d" -->\n# Dark');
+  assert.match(r.html, /on-dark/); assert.match(r.html, /--slide-bg:#14213d/); assert.doesNotMatch(r.html, /data-bg/);
+  r = one('<!-- background: "#f7f3ea" -->\n# Light');
+  assert.match(r.html, /on-light/);
+  r = one('<!-- background: media/a.jpg -->\n<!-- overlay: dark -->\n# Photo');
+  assert.match(r.html, /data-bg="p\/media\/a.jpg" data-overlay="dark"/); assert.match(r.html, /on-dark/);
+  r = one('<!-- size: xl -->\n<!-- align: center -->\n<!-- text: "#222" -->\n<!-- font: Noto Serif TC -->\n# Big');
+  assert.match(r.html, /size-xl/); assert.match(r.html, /align-center/); assert.match(r.html, /--slide-ink:#222/);
+  assert.match(r.html, /--brand-body:&quot;Noto Serif TC&quot;,/);
+  r = one('<!-- layout: split -->\n<!-- ratio: 2:1 -->\n# T\n\n![a](media/a.jpg)');
+  assert.match(r.html, /--ratio:2fr 1fr/);
+
+  // 不合法的值:忽略並回報,不會進到 style
+  r = one('<!-- size: huge -->\n<!-- font: x;background:url(evil) -->\n<!-- text: red;color:blue -->\n<!-- ratio: 9:1 -->\n<!-- align: middle -->\n# Bad');
+  assert.equal(r.issues.length, 5, r.issues.map(i => i.message).join('\n'));
+  assert.doesNotMatch(r.html, /evil|blue|9fr|size-huge|align-middle/);
+
+  assert.equal(parseRatio('1:1:2'), '1fr 1fr 2fr');
+  assert.equal(parseRatio('3'), null);
+  assert.ok(luminance('#000') < 0.01 && luminance('#fff') > 0.99);
+  assert.equal(luminance('hsl(10, 50%, 50%)'), null);
+  assert.equal(safeFonts('Arial, "x"'), null);
+  assert.deepEqual(readSlideStyle({ background: 'rgba(0,0,0,.5)' }).bgColor, 'rgba(0,0,0,.5)');
+  assert.equal(readSlideStyle({ background: 'cover.jpg' }).bgImage, 'cover.jpg');
 });

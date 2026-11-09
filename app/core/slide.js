@@ -3,6 +3,7 @@
 import { parseYaml, YamlError } from './yaml.js';
 import { classifyMedia } from './media.js';
 import { safeColor } from './color.js';
+import { readSlideStyle } from './style.js';
 import { t } from './i18n.js';
 
 /** 所有支援的版型。新增版型時,記得同步更新 製作專案指南.md 與 app/player/render.js。 */
@@ -90,6 +91,8 @@ function parseSegment(seg, { path, index, fileMeta, issues }) {
     delete meta.color;
   }
 
+  const style = readSlideStyle(meta, { path, issues, t });
+
   let layout = String(meta.layout || 'auto').toLowerCase();
   if (!LAYOUTS.includes(layout)) {
     issues.push({ path, message: t('issue.layout', { layout, list: LAYOUTS.join(', ') }) });
@@ -101,7 +104,7 @@ function parseSegment(seg, { path, index, fileMeta, issues }) {
   const firstLine = body.split('\n').find(l => l.trim())?.replace(/^\s*(>|[-*+]|\d+[.)])\s*/, '').replace(/[*_`~=#]/g, '').trim() || '';
   const title = String(meta.title || (heading ? heading[1].replace(/[*_`~=]/g, '').trim() : (media[0]?.caption || firstLine.slice(0, 40))));
 
-  return { file: path, index, meta, layout, body, notes, media, title };
+  return { file: path, index, meta, style, layout, body, notes, media, title };
 }
 
 function autoLayout(body, media) {

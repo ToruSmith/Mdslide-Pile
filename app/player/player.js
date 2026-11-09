@@ -521,7 +521,7 @@ export class Player {
       for (const [i, sl] of this.slides.entries()) {
         box.innerHTML = renderSlide(sl, { deck: this.deck, mode: 'full', globalIndex: i, total: this.slides.length });
         const over = measureOverflow(box.firstElementChild);
-        if (over) out.push({ path: sl.file || this.deck.path, message: t(sl.meta?.size === 'compact' || this.deck.size === 'compact' ? 'check.overflowCompact' : 'check.overflow', { n: i + 1, px: over }) });
+        if (over) out.push({ path: sl.file || this.deck.path, message: t(/^(small|compact)$/i.test(String(sl.style?.size || this.deck.size || '')) ? 'check.overflowCompact' : 'check.overflow', { n: i + 1, px: over }) });
       }
     } finally { box.remove(); }
     return out;

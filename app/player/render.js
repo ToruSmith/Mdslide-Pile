@@ -52,13 +52,28 @@ export function renderSlide(slide, ctx) {
   const foot = showFoot ? `<div class="foot"><span class="foot-brand">${logo}${esc(brand.footer || sec || deck.title)}</span><span class="page">${ctx.globalIndex + 1} / ${ctx.total}</span></div>` : '';
   // 品牌字型:只接受已驗證的字型名稱(library.js),接在主題字型前面
   const fonts = (brand.fontDisplay ? `;--brand-display:${brand.fontDisplay},` : '') + (brand.fontBody ? `;--brand-body:${brand.fontBody},` : '');
-  const bg = meta.background ? ` data-bg="${esc(resolveMediaPath(String(meta.background), pathCtx))}"` : '';
   inner = inner.replace(/<p>((?:資料來源|來源|資料截至|註|備考|Source|Sources|Data as of|Note)\s*[:：]?)/g, '<p class="source">$1'); // i18n-ok:語法關鍵字
-  // 緊湊:字縮小約兩成、留白收窄,給資料多的投影片用。每張的設定優先,其次是 deck.yml(normal 可以取消整份的設定)
-  const size = String(meta.size ?? deck.size ?? '').toLowerCase();
-  const compact = size === 'compact' && !['title', 'section'].includes(layout) ? ' compact' : '';
-  const extra = (layout === 'title' && deck.coverImage ? ' has-image' : '') + compact + (meta.class ? ' ' + esc(meta.class) : '');
-  return `<div class="slide l-${layout}${extra}" lang="${esc(lang)}" style="--c:${esc(c)}${esc(fonts)}"${bg}>${inner}${foot}</div>`;
+
+  // 每張的外觀設定(已在 core/style.js 驗證過):字級、背景、遮罩、文字色、字型、對齊、欄寬比例
+  const st = slide.style || {};
+  const plain = ['title', 'section'].includes(layout);
+  const sizeName = String(st.size || meta.size || deck.size || '').toLowerCase().replace('compact', 'small');
+  const cls = [];
+  if (!plain && ['small', 'large', 'xl'].includes(sizeName)) cls.push(`size-${sizeName}`, ...(sizeName === 'small' ? ['compact'] : []));
+  if (st.tone) cls.push(`on-${st.tone}`);
+  if (st.align) cls.push(`align-${st.align}`);
+  if (layout === 'title' && deck.coverImage) cls.push('has-image');
+  if (meta.class) cls.push(esc(meta.class));
+  let css = `--c:${c}${fonts}`;
+  if (st.bgColor) css += `;--slide-bg:${st.bgColor}`;
+  if (st.bgImage && st.overlay === 'dark') css += ';--slide-bg:#1b1d22'; // 圖還沒載入前先用深色,淺色字才看得見
+  if (st.bgImage && st.overlay === 'light') css += ';--slide-bg:#fbf8f2';
+  if (st.text) css += `;--slide-ink:${st.text}`;
+  if (st.font) css += `;--brand-display:${st.font},;--brand-body:${st.font},`;
+  if (st.ratio) css += `;--ratio:${st.ratio}`;
+  const bgPath = st.bgImage || (!st.bgColor && meta.background ? String(meta.background) : '');
+  const bg = bgPath ? ` data-bg="${esc(resolveMediaPath(bgPath, pathCtx))}"${st.overlay ? ` data-overlay="${st.overlay}"` : ''}` : '';
+  return `<div class="slide l-${layout}${cls.length ? ' ' + cls.join(' ') : ''}" lang="${esc(lang)}" style="${esc(css)}"${bg}>${inner}${foot}</div>`;
 }
 
 function titleSlide(deck, ctx, image) {

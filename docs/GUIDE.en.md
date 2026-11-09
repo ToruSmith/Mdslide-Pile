@@ -79,7 +79,7 @@ kicker: Book club · Session 12  # small text at the top of the title slide
 author: Toru
 event: Taipei Book Club
 date: 2026-11-20
-size: compact                  # compact text for the whole deck (data-heavy reports; optional)
+size: small                    # smaller text for the whole deck (data-heavy reports; optional)
 theme: paper                   # paper / ink (dark) / slate
 lang: en                       # language of generated text (Thank you, Agenda…): zh-Hant / en; detected from the title when omitted
 accent: "#b4654a"              # accent color when a section has none
@@ -198,9 +198,14 @@ Or put settings at the **start of each slide**; they apply to that slide only (h
 | `layout` | Layout, see the next section; default `auto` |
 | `step: true` | Step-by-step reveal: list items, stat cards, timeline items, columns and agenda items appear one at a time |
 | `color` | Accent color for this slide |
-| `background` | Background image (a light overlay keeps text readable) |
+| `background` | Background: a file name is a background image (`media/photo.jpg`), a color is a background color (`"#1f3a5f"`, quoted). Text turns light on dark backgrounds and dark on light ones; use `#hex` colors so the brightness can be detected |
+| `overlay` | Overlay on a background image: `auto` (default, fades toward the theme background) / `dark` (dark overlay, light text) / `light` / `none`. Photo backgrounds suit slides with little text: covers, quotes, big numbers |
+| `text` | Text color (usually unnecessary; it follows the background) |
 | `fit: contain` | Show media whole, without cropping |
-| `size: compact` | Compact: about 20% smaller text and tighter margins, for data-heavy slides (put it in `deck.yml` for the whole deck; `size: normal` undoes it) |
+| `size` | Text size: `small` (about 80% with tighter margins, for data-heavy slides; `compact` also works) / `normal` / `large` (about 115%) / `xl` (about 130%). Put it in `deck.yml` for the whole deck; `normal` on a slide undoes it |
+| `font` | Font name for this slide, e.g. `Noto Serif TC` (must be installed; separate several with commas) |
+| `align` | Text alignment: `left` (default) / `center` / `right` |
+| `ratio` | Column widths as seen on screen (left:right): `2:1` for `split` and `split-left`; `columns` can use `1:1:2` |
 | `footer: false` | Hide the footer |
 | `hidden: true` | Do not play this slide |
 | `title` | Title for the presenter view and overview (defaults to the first heading) |
@@ -375,18 +380,31 @@ node mdslide-check.mjs <deck-or-library-folder> --slides --lang en   # the singl
 
 If no command line is available, ask the user to open the folder on the website, press "✓ Check" and paste the result back.
 
+### When no layout fits: make a small HTML file
+
+When the built-in layouts and settings can't express something (a flow chart, an architecture diagram, an interactive calculator, a special infographic), put an `.html` file in `media/` and embed it on its own line with `![caption](media/xxx.html)` (see "Interactive pages" in section 4). It runs in an isolated frame and can't reach the user's folder.
+
+- **Built-in layouts first.** Only make HTML when no layout can do it; text, lists, tables and ordinary charts never need it.
+- **One file.** Put the CSS and JavaScript inside the HTML; don't reference other files.
+- **No network.** No external fonts, libraries or images; it must work offline.
+- **Fit 16:9.** Design for 1280×720, use relative units, text at least 20px; transparent background or the deck theme's colors.
+- **Store nothing.** No localStorage or cookies, no forms that submit anywhere.
+- **Clear file names**, e.g. `media/flow-rollout.html`; explain in the speaker notes how to use it.
+- **Know the limits.** In the pile and thumbnails it shows only a placeholder and runs when the slide is zoomed; exported single HTML files can't play it. Keep the key message in the slide text or notes, not only inside the HTML.
+
 ### Acceptance checklist
 
 - [ ] The check reports "✓ No problems found"
 - [ ] Every slide heading is a conclusion
 - [ ] No list longer than 5 items, no invented numbers
 - [ ] Every section has a title and color; section and slide counts fit the talk length
-- [ ] Nothing runs past the slide (the editor preview and the player's Check warn about it; split the slide or use `size: compact`)
+- [ ] Nothing runs past the slide (the editor preview and the player's Check warn about it; split the slide or use `size: small`)
 - [ ] No empty slides (settings but no content; the checker warns about them)
 - [ ] Every slide has speaker notes (the checker shows note coverage)
 - [ ] Every slide with numbers has a "Source:" footer, and the deck ends with a sources slide
 - [ ] Time-sensitive decks date their data in `kicker`; sensitive topics have a disclaimer
 - [ ] Media paths are correct and online videos are publicly viewable
+- [ ] Any custom HTML file is a single file with no network access
 
 ### Ready-to-use prompt
 

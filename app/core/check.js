@@ -103,7 +103,7 @@ export async function checkDeck(source, project) {
       const path = resolveMediaPath(m.src, { projectPath: project.path, filePath: sl.file });
       if (!(await exists(source, path))) problems.push({ path: sl.file, message: t('check.missingMedia', { src: m.src, path: path || t('check.deckFolder') }) });
     }
-    const bg = sl.meta?.background;
+    const bg = sl.style ? sl.style.bgImage : sl.meta?.background; // 背景色不是檔案,不用檢查
     if (bg && !/^(https?:|data:)/.test(String(bg))) {
       const path = resolveMediaPath(String(bg), { projectPath: project.path, filePath: sl.file });
       if (!(await exists(source, path))) problems.push({ path: sl.file, message: t('check.missingBg', { src: bg }) });

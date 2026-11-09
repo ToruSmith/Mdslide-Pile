@@ -248,7 +248,7 @@ export function openEditor(player, { onSaved, onClose }) {
     requestAnimationFrame(() => {
       const over = box.firstElementChild ? measureOverflow(box.firstElementChild) : 0;
       $('.eissues .overflow')?.remove();
-      if (over) $('.eissues').insertAdjacentHTML('afterbegin', `<p class="warn overflow">${esc(t(slide?.meta?.size === 'compact' ? 'editor.overflowCompact' : 'editor.overflow', { px: over }))}</p>`);
+      if (over) $('.eissues').insertAdjacentHTML('afterbegin', `<p class="warn overflow">${esc(t(/^(small|compact)$/i.test(String(slide?.style?.size || player.deck.size || '')) ? 'editor.overflowCompact' : 'editor.overflow', { px: over }))}</p>`);
     });
     updatePosition();
   }

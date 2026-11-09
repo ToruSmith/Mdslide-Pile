@@ -11,6 +11,7 @@
 //   readText(path) → Promise<string>
 //   mediaURL(path) → Promise<string>
 
+import { safeFonts } from './style.js';
 import { parseYaml, YamlError } from './yaml.js';
 import { join, isHidden, isMarkdown, RESERVED_DIRS, splitOrder, byOrder } from './names.js';
 import { parseSlideFile } from './slide.js';
@@ -164,17 +165,15 @@ async function readProject(source, path, folder, topicId, issues) {
   };
 }
 
-/** 字型名稱白名單:只允許文字、數字、空白、連字號、底線、點(不能放引號、括號、url())。 */
-const FONT_NAME = /^[\p{L}\p{N} ._-]{1,60}$/u;
 
 /** deck.yml 的 brand 欄位:logo、footer、font_display、font_body。不合法的字型名稱會回報並忽略。 */
 function readBrand(b, path, issues) {
   if (!b || typeof b !== 'object') return null;
   const font = v => {
     if (v == null || v === '') return '';
-    const names = String(v).split(',').map(s => s.trim()).filter(Boolean);
-    if (!names.length || names.some(n => !FONT_NAME.test(n))) { issues.push({ path, message: t('issue.brandFont', { value: v }) }); return ''; }
-    return names.map(n => `"${n}"`).join(', ');
+    const f = safeFonts(v);
+    if (!f) { issues.push({ path, message: t('issue.brandFont', { value: v }) }); return ''; }
+    return f;
   };
   return { logo: str(b.logo), footer: str(b.footer), fontDisplay: font(b.font_display), fontBody: font(b.font_body) };
 }
@@ -276,7 +275,7 @@ export async function loadDeck(source, project) {
     sections: built,
     stage: str(layout.stage || layout.default || 'pile'),
     transition: str(layout.transition || 'shuffle'),
-    size: str(conf.size || ''),
+    size: /^(small|compact|normal|large|xl)$/i.test(str(conf.size)) ? str(conf.size).toLowerCase() : '',
     issues,
   };
 }

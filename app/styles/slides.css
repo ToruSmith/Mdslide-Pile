@@ -85,8 +85,8 @@
 .l-center .md { height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
 .l-center .md ul, .l-center .md ol { text-align: left; }
 
-.l-split, .l-split-left { display: grid; grid-template-columns: 1fr 1.08fr; gap: 64px; align-items: center; }
-.l-split-left { grid-template-columns: 1.08fr 1fr; }
+.l-split, .l-split-left { display: grid; grid-template-columns: var(--ratio, 1fr 1.08fr); gap: 64px; align-items: center; }
+.l-split-left { grid-template-columns: var(--ratio, 1.08fr 1fr); } /* ratio 是畫面上的左:右 */
 .l-split-left .media { order: -1; }
 .l-split .media, .l-split-left .media { height: 500px; }
 .l-split .md, .l-split-left .md { font-size: 29px; }
@@ -126,7 +126,7 @@
 .l-timeline .tl-item span { display: block; font-size: 24px; line-height: 1.5; }
 .l-timeline .tl-item span small { display: block; color: var(--slide-muted); font-size: 20px; margin-top: 6px; }
 
-.l-columns .cols { display: grid; grid-template-columns: repeat(var(--n, 2), 1fr); gap: 40px; }
+.l-columns .cols { display: grid; grid-template-columns: var(--ratio, repeat(var(--n, 2), 1fr)); gap: 40px; }
 .l-columns .col { background: var(--slide-soft); border-radius: 14px; padding: 34px 36px; border-top: 6px solid var(--c); font-size: 28px; min-height: 0; }
 .l-columns .col h2 { font-size: 38px; margin-bottom: 20px; }
 .l-columns .col h3 { font-size: 28px; }
@@ -185,5 +185,17 @@
 /* ---------- 緊湊(size: compact):字縮小約兩成、留白收窄,給資料多的投影片 ---------- */
 .slide.compact { padding: 60px 80px 84px; }
 .slide.compact > :not(.foot):not(figure.media):not(.overlay):not(.chart) { zoom: .8; } /* 圖表本身會填滿剩下的空間,不必縮 */
+.slide.size-large > :not(.foot):not(figure.media):not(.overlay):not(.chart) { zoom: 1.15; }
+.slide.size-xl > :not(.foot):not(figure.media):not(.overlay):not(.chart) { zoom: 1.3; }
+
+/* ---------- 背景色與遮罩:深色背景字自動反白,淺色背景字自動變深(text 設定優先) ---------- */
+.slide.on-dark { --slide-ink: #f4f1ea; --slide-muted: rgba(244, 241, 234, .7); --slide-soft: rgba(255, 255, 255, .09); --line: rgba(255, 255, 255, .2); }
+.slide.on-light { --slide-ink: #2d2a26; --slide-muted: #6f685e; --slide-soft: rgba(0, 0, 0, .05); --line: rgba(0, 0, 0, .14); }
+
+/* ---------- 對齊(align) ---------- */
+.slide.align-center .md { text-align: center; }
+.slide.align-right .md { text-align: right; }
+.slide.align-center .md ul, .slide.align-center .md ol { display: inline-block; text-align: left; }
+.slide.align-center .md table { margin-left: auto; margin-right: auto; }
 .slide.compact .foot { left: 80px; right: 64px; bottom: 26px; }
 [data-theme="slate"] .slide.compact::after { left: 80px; top: 36px; }

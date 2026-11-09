@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Mdslide Pile 書庫檢查工具(單檔版 v1.11.0)
+// Mdslide Pile 書庫檢查工具(單檔版 v1.12.0)
 // 由 scripts/bundle-check.mjs 自動產生,請不要手動修改。原始碼:https://github.com/ToruSmith/Mdslide-Pile
 //
 // 用法(需要 Node.js 18 以上):
@@ -12,6 +12,115 @@
 import * as fsp from 'node:fs/promises';
 import * as nodePath from 'node:path';
 import { fileURLToPath as __toPath } from 'node:url';
+
+// ───────── app/core/color.js ─────────
+// 顏色值白名單。設定檔與投影片裡的顏色會直接放進 style 屬性,
+// 只接受下列格式,避免 `red;background:url(...)` 這類內容注入樣式。
+//   #rgb  #rrggbb  #rrggbbaa   rgb()/rgba()/hsl()/hsla()(只含數字)   英文顏色名稱(red、teal…)
+
+const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+const FUNC = /^(?:rgb|rgba|hsl|hsla)\(\s*[\d.\s,/%+-]+(?:deg)?[\d.\s,/%+-]*\)$/i;
+const NAMED = /^[a-z]{3,24}$/i;
+
+/** 合法就回傳整理過的顏色字串,否則回傳 null。 */
+function safeColor(value) {
+  if (value == null) return null;
+  const v = String(value).trim();
+  if (!v || v.length > 64) return null;
+  return HEX.test(v) || FUNC.test(v) || NAMED.test(v) ? v : null;
+}
+
+// ───────── app/core/style.js ─────────
+// 每張投影片的外觀設定(size、background、overlay、text、font、align、ratio)。
+// 這些值會放進 class 或 style 屬性,所以一律在這裡驗證成固定格式,不合法就忽略並回報。
+// 瀏覽器與 Node(檢查工具)共用,不能用到 DOM。
+
+
+const SIZES = { small: 0.8, compact: 0.8, normal: 1, large: 1.15, xl: 1.3 };
+const OVERLAYS = ['auto', 'dark', 'light', 'none'];
+const ALIGNS = ['left', 'center', 'right'];
+
+/** 字型名稱白名單:只允許文字、數字、空白、連字號、底線、點(不能放引號、括號、url())。 */
+const FONT_NAME = /^[\p{L}\p{N} ._-]{1,60}$/u;
+
+/** 「Noto Sans TC, Arial」→ `"Noto Sans TC", "Arial"`;不合法回傳 null。 */
+function safeFonts(value) {
+  const names = String(value ?? '').split(',').map(s => s.trim()).filter(Boolean);
+  if (!names.length || names.some(n => !FONT_NAME.test(n))) return null;
+  return names.map(n => `"${n}"`).join(', ');
+}
+
+/** 「2:1」「1:1:2」→ `2fr 1fr`;每個數字 0.5–6,最多 4 欄。不合法回傳 null。 */
+function parseRatio(value) {
+  const parts = String(value ?? '').split(/\s*[:/]\s*/);
+  if (parts.length < 2 || parts.length > 4) return null;
+  const nums = parts.map(Number);
+  if (nums.some(n => !Number.isFinite(n) || n < 0.5 || n > 6)) return null;
+  return nums.map(n => `${n}fr`).join(' ');
+}
+
+/** 顏色的相對亮度(0 暗 – 1 亮)。只認得 #色碼 與 rgb();其他格式回傳 null(不自動換字色)。 */
+function luminance(color) {
+  const v = String(color || '').trim();
+  let rgb = null;
+  const hex = v.match(/^#([0-9a-f]{3}|[0-9a-f]{6})(?:[0-9a-f]{2})?$/i);
+  if (hex) {
+    const h = hex[1].length === 3 ? hex[1].replace(/./g, c => c + c) : hex[1];
+    rgb = [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16));
+  } else {
+    const m = v.match(/^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/i);
+    if (m) rgb = [m[1], m[2], m[3]].map(Number);
+  }
+  if (!rgb) {
+    const NAMED = { black: 0, white: 1, navy: 0.016, darkblue: 0.018, maroon: 0.046, darkgreen: 0.09, purple: 0.061, indigo: 0.031, darkslategray: 0.06, midnightblue: 0.02 };
+    return NAMED[v.toLowerCase()] ?? null;
+  }
+  const [r, g, b] = rgb.map(c => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/**
+ * 整理一張投影片的外觀設定。meta 會被就地整理(不合法的值刪掉),問題推進 issues。
+ * 回傳給 render.js 用的結果:{ size, bgColor, bgImage, overlay, text, font, align, ratio }。
+ */
+function readSlideStyle(meta, { path, issues = [], t = k => k } = {}) {
+  const out = {};
+  const bad = (key, value) => { issues.push({ path, message: t('issue.slideStyle', { key, value }) }); delete meta[key]; };
+
+  if (meta.size != null) {
+    const s = String(meta.size).toLowerCase();
+    if (s in SIZES) out.size = s === 'compact' ? 'small' : s; else bad('size', meta.size);
+  }
+  if (meta.background != null && meta.background !== '') {
+    const c = safeColor(meta.background);
+    const v = String(meta.background).trim();
+    if (c && (/^(#|rgb|hsl)/i.test(v) || !/[./]/.test(v))) out.bgColor = c; else out.bgImage = v; // 有 . 或 / 的是檔案路徑
+  }
+  if (meta.overlay != null) {
+    const o = String(meta.overlay).toLowerCase();
+    if (OVERLAYS.includes(o)) out.overlay = o; else bad('overlay', meta.overlay);
+  }
+  if (meta.text != null) {
+    const c = safeColor(meta.text);
+    if (c) out.text = c; else bad('text', meta.text);
+  }
+  if (meta.font != null) {
+    const f = safeFonts(meta.font);
+    if (f) out.font = f; else bad('font', meta.font);
+  }
+  if (meta.align != null) {
+    const a = String(meta.align).toLowerCase();
+    if (ALIGNS.includes(a)) out.align = a; else bad('align', meta.align);
+  }
+  if (meta.ratio != null) {
+    const r = parseRatio(meta.ratio);
+    if (r) out.ratio = r; else bad('ratio', meta.ratio);
+  }
+  // 背景是深色或淺色:決定字要不要反白(背景色看亮度;背景圖看遮罩)
+  if (out.bgColor) { const l = luminance(out.bgColor); if (l != null) out.tone = l < 0.35 ? 'dark' : 'light'; }
+  if (out.bgImage && (out.overlay === 'dark' || out.overlay === 'light')) out.tone = out.overlay;
+  return out;
+}
 
 // ───────── app/core/locales/zh-Hant.js ─────────
 // 繁體中文字串表。新增任何使用者看得到的文字時,必須同時加進 en.js(tests/i18n.test.mjs 會檢查)。
@@ -30,6 +139,7 @@ const LOCALE_ZH_HANT = {
   // ---------- 解析時的提醒 ----------
   'lib.defaultLabel': '書庫',
   'issue.color': '顏色「{value}」格式不正確,已改用預設顏色',
+  'issue.slideStyle': '設定 {key} 的值「{value}」看不懂,已忽略。可用的寫法見製作專案指南第 4 節',
   'issue.slideColor': '顏色「{value}」格式不正確,已改用章節顏色',
   'issue.readFailed': '讀取失敗',
   'issue.noSlides': '這個資料夾裡沒有找到任何投影片(.md 檔)',
@@ -49,8 +159,8 @@ const LOCALE_ZH_HANT = {
   'check.mixedPrefix': '前綴位數不一致:{names}。檔案總管裡的順序可能和播放順序不同,建議統一用兩位數(01-、02-)',
   'check.emptySlide': '第 {n} 張是空白投影片(只有設定、沒有內容)',
   'check.sep': '、',
-  'check.overflow': '第 {n} 張的內容超出投影片約 {px} 像素,下面會被切掉。可以拆成兩張,或加上 size: compact',
-  'check.overflowCompact': '第 {n} 張已經是緊湊模式,內容仍超出約 {px} 像素,請拆成兩張',
+  'check.overflow': '第 {n} 張的內容超出投影片約 {px} 像素,下面會被切掉。可以拆成兩張,或加上 size: small',
+  'check.overflowCompact': '第 {n} 張已經是小字級,內容仍超出約 {px} 像素,請拆成兩張',
   'check.missingLogo': '找不到 brand.logo {src}',
   'check.missingFootnote': '腳註 [^{id}] 沒有定義',
   'check.deckFolder': '(簡報資料夾)',
@@ -359,8 +469,8 @@ const LOCALE_ZH_HANT = {
   'layoutName.title': "標題頁",
   'layoutName.section': "章節頁",
   'editor.autoSaved': '已自動儲存 {name}',
-  'editor.overflow': '內容超出投影片約 {px} 像素,下面會被切掉。可以用「新的一張」拆開,或在這張開頭加上 <!-- size: compact -->(字縮小約兩成)',
-  'editor.overflowCompact': '已經是緊湊模式,內容仍超出約 {px} 像素。請拆成兩張',
+  'editor.overflow': '內容超出投影片約 {px} 像素,下面會被切掉。可以用「新的一張」拆開,或在這張開頭加上 <!-- size: small -->(字縮小約兩成)',
+  'editor.overflowCompact': '已經是小字級,內容仍超出約 {px} 像素。請拆成兩張',
   'editor.label': '編輯 Markdown',
   'editor.close': '‹ 關閉',
   'editor.save': '儲存',
@@ -416,6 +526,7 @@ const LOCALE_EN = {
   // ---------- Parse warnings ----------
   'lib.defaultLabel': 'Library',
   'issue.color': 'Invalid color "{value}"; using the default color',
+  'issue.slideStyle': 'Could not understand {key}: "{value}"; ignored. See section 4 of the guide for valid values',
   'issue.slideColor': 'Invalid color "{value}"; using the section color',
   'issue.readFailed': 'Could not read file',
   'issue.noSlides': 'No slides (.md files) found in this folder',
@@ -435,8 +546,8 @@ const LOCALE_EN = {
   'check.mixedPrefix': 'Prefixes have different widths: {names}. Your file manager may sort them differently from the player; use two digits (01-, 02-)',
   'check.emptySlide': 'Slide {n} is empty (settings only, no content)',
   'check.sep': ', ',
-  'check.overflow': 'Slide {n} runs about {px}px past the slide and will be cut off. Split it, or add size: compact',
-  'check.overflowCompact': 'Slide {n} is already compact but still runs about {px}px over. Split it into two slides',
+  'check.overflow': 'Slide {n} runs about {px}px past the slide and will be cut off. Split it, or add size: small',
+  'check.overflowCompact': 'Slide {n} is already small but still runs about {px}px over. Split it into two slides',
   'check.missingLogo': 'Missing brand.logo {src}',
   'check.missingFootnote': 'Footnote [^{id}] is not defined',
   'check.deckFolder': '(deck folder)',
@@ -745,8 +856,8 @@ const LOCALE_EN = {
   'layoutName.title': "Title",
   'layoutName.section': "Section",
   'editor.autoSaved': 'Saved {name} automatically',
-  'editor.overflow': 'Content runs about {px}px past the slide and will be cut off. Split it with "New slide", or add <!-- size: compact --> at the top of this slide (about 20% smaller text)',
-  'editor.overflowCompact': 'Already compact, but content still runs about {px}px past the slide. Split it into two slides',
+  'editor.overflow': 'Content runs about {px}px past the slide and will be cut off. Split it with "New slide", or add <!-- size: small --> at the top of this slide (about 20% smaller text)',
+  'editor.overflowCompact': 'Already small, but content still runs about {px}px past the slide. Split it into two slides',
   'editor.label': 'Edit Markdown',
   'editor.close': '‹ Close',
   'editor.save': 'Save',
@@ -1125,25 +1236,9 @@ function resolveMediaPath(src, { projectPath, filePath }) {
   return parts.join('/');
 }
 
-// ───────── app/core/color.js ─────────
-// 顏色值白名單。設定檔與投影片裡的顏色會直接放進 style 屬性,
-// 只接受下列格式,避免 `red;background:url(...)` 這類內容注入樣式。
-//   #rgb  #rrggbb  #rrggbbaa   rgb()/rgba()/hsl()/hsla()(只含數字)   英文顏色名稱(red、teal…)
-
-const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
-const FUNC = /^(?:rgb|rgba|hsl|hsla)\(\s*[\d.\s,/%+-]+(?:deg)?[\d.\s,/%+-]*\)$/i;
-const NAMED = /^[a-z]{3,24}$/i;
-
-/** 合法就回傳整理過的顏色字串,否則回傳 null。 */
-function safeColor(value) {
-  if (value == null) return null;
-  const v = String(value).trim();
-  if (!v || v.length > 64) return null;
-  return HEX.test(v) || FUNC.test(v) || NAMED.test(v) ? v : null;
-}
-
 // ───────── app/core/slide.js ─────────
 // 把一個 MD 檔解析成一張或多張投影片的資料(還不是 HTML)。
+
 
 
 
@@ -1234,6 +1329,8 @@ function parseSegment(seg, { path, index, fileMeta, issues }) {
     delete meta.color;
   }
 
+  const style = readSlideStyle(meta, { path, issues, t });
+
   let layout = String(meta.layout || 'auto').toLowerCase();
   if (!LAYOUTS.includes(layout)) {
     issues.push({ path, message: t('issue.layout', { layout, list: LAYOUTS.join(', ') }) });
@@ -1245,7 +1342,7 @@ function parseSegment(seg, { path, index, fileMeta, issues }) {
   const firstLine = body.split('\n').find(l => l.trim())?.replace(/^\s*(>|[-*+]|\d+[.)])\s*/, '').replace(/[*_`~=#]/g, '').trim() || '';
   const title = String(meta.title || (heading ? heading[1].replace(/[*_`~=]/g, '').trim() : (media[0]?.caption || firstLine.slice(0, 40))));
 
-  return { file: path, index, meta, layout, body, notes, media, title };
+  return { file: path, index, meta, style, layout, body, notes, media, title };
 }
 
 function autoLayout(body, media) {
@@ -1278,6 +1375,7 @@ function coerce(v) {
 //   list(path)     → Promise<{ name, kind: 'file'|'dir' }[]>   path '' 代表根目錄
 //   readText(path) → Promise<string>
 //   mediaURL(path) → Promise<string>
+
 
 
 
@@ -1431,17 +1529,15 @@ async function readProject(source, path, folder, topicId, issues) {
   };
 }
 
-/** 字型名稱白名單:只允許文字、數字、空白、連字號、底線、點(不能放引號、括號、url())。 */
-const FONT_NAME = /^[\p{L}\p{N} ._-]{1,60}$/u;
 
 /** deck.yml 的 brand 欄位:logo、footer、font_display、font_body。不合法的字型名稱會回報並忽略。 */
 function readBrand(b, path, issues) {
   if (!b || typeof b !== 'object') return null;
   const font = v => {
     if (v == null || v === '') return '';
-    const names = String(v).split(',').map(s => s.trim()).filter(Boolean);
-    if (!names.length || names.some(n => !FONT_NAME.test(n))) { issues.push({ path, message: t('issue.brandFont', { value: v }) }); return ''; }
-    return names.map(n => `"${n}"`).join(', ');
+    const f = safeFonts(v);
+    if (!f) { issues.push({ path, message: t('issue.brandFont', { value: v }) }); return ''; }
+    return f;
   };
   return { logo: str(b.logo), footer: str(b.footer), fontDisplay: font(b.font_display), fontBody: font(b.font_body) };
 }
@@ -1543,7 +1639,7 @@ async function loadDeck(source, project) {
     sections: built,
     stage: str(layout.stage || layout.default || 'pile'),
     transition: str(layout.transition || 'shuffle'),
-    size: str(conf.size || ''),
+    size: /^(small|compact|normal|large|xl)$/i.test(str(conf.size)) ? str(conf.size).toLowerCase() : '',
     issues,
   };
 }
@@ -1994,7 +2090,7 @@ async function checkDeck(source, project) {
       const path = resolveMediaPath(m.src, { projectPath: project.path, filePath: sl.file });
       if (!(await exists(source, path))) problems.push({ path: sl.file, message: t('check.missingMedia', { src: m.src, path: path || t('check.deckFolder') }) });
     }
-    const bg = sl.meta?.background;
+    const bg = sl.style ? sl.style.bgImage : sl.meta?.background; // 背景色不是檔案,不用檢查
     if (bg && !/^(https?:|data:)/.test(String(bg))) {
       const path = resolveMediaPath(String(bg), { projectPath: project.path, filePath: sl.file });
       if (!(await exists(source, path))) problems.push({ path: sl.file, message: t('check.missingBg', { src: bg }) });
