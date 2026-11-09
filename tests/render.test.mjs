@@ -104,3 +104,13 @@ test('brand:不合法的字型名稱會回報並忽略', async () => {
   assert.equal(b.fontBody, '"Inter", "Noto Sans TC"');
   assert.equal(lib.issues.length, 1);
 });
+
+test('size: compact:每張、整份與 normal 取消', () => {
+  const deck = { path: 'd', title: 'T', sections: [{ title: 'S', color: '#4f73a6' }] };
+  const one = (meta, d = deck, layout = 'text') => renderSlide({ layout, meta, body: '# A', media: [], sec: 0, title: 'A' }, { deck: d, mode: 'full', globalIndex: 0, total: 1 });
+  assert.match(one({ size: 'compact' }), /class="slide l-text compact"/);
+  assert.doesNotMatch(one({}), /compact/);
+  assert.match(one({}, { ...deck, size: 'compact' }), /compact/, 'deck.yml 的 size 整份套用');
+  assert.doesNotMatch(one({ size: 'normal' }, { ...deck, size: 'compact' }), /compact/, 'size: normal 取消整份的設定');
+  assert.doesNotMatch(one({ size: 'compact' }, deck, 'section'), /compact/, '章節頁不縮');
+});

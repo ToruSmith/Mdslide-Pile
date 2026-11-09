@@ -79,6 +79,7 @@ kicker: Book club · Session 12  # small text at the top of the title slide
 author: Toru
 event: Taipei Book Club
 date: 2026-11-20
+size: compact                  # compact text for the whole deck (data-heavy reports; optional)
 theme: paper                   # paper / ink (dark) / slate
 lang: en                       # language of generated text (Thank you, Agenda…): zh-Hant / en; detected from the title when omitted
 accent: "#b4654a"              # accent color when a section has none
@@ -199,6 +200,7 @@ Or put settings at the **start of each slide**; they apply to that slide only (h
 | `color` | Accent color for this slide |
 | `background` | Background image (a light overlay keeps text readable) |
 | `fit: contain` | Show media whole, without cropping |
+| `size: compact` | Compact: about 20% smaller text and tighter margins, for data-heavy slides (put it in `deck.yml` for the whole deck; `size: normal` undoes it) |
 | `footer: false` | Hide the footer |
 | `hidden: true` | Do not play this slide |
 | `title` | Title for the presenter view and overview (defaults to the first heading) |
@@ -379,6 +381,7 @@ If no command line is available, ask the user to open the folder on the website,
 - [ ] Every slide heading is a conclusion
 - [ ] No list longer than 5 items, no invented numbers
 - [ ] Every section has a title and color; section and slide counts fit the talk length
+- [ ] Nothing runs past the slide (the editor preview and the player's Check warn about it; split the slide or use `size: compact`)
 - [ ] No empty slides (settings but no content; the checker warns about them)
 - [ ] Every slide has speaker notes (the checker shows note coverage)
 - [ ] Every slide with numbers has a "Source:" footer, and the deck ends with a sources slide

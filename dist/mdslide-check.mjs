@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Mdslide Pile 書庫檢查工具(單檔版 v1.10.0)
+// Mdslide Pile 書庫檢查工具(單檔版 v1.11.0)
 // 由 scripts/bundle-check.mjs 自動產生,請不要手動修改。原始碼:https://github.com/ToruSmith/Mdslide-Pile
 //
 // 用法(需要 Node.js 18 以上):
@@ -49,6 +49,8 @@ const LOCALE_ZH_HANT = {
   'check.mixedPrefix': '前綴位數不一致:{names}。檔案總管裡的順序可能和播放順序不同,建議統一用兩位數(01-、02-)',
   'check.emptySlide': '第 {n} 張是空白投影片(只有設定、沒有內容)',
   'check.sep': '、',
+  'check.overflow': '第 {n} 張的內容超出投影片約 {px} 像素,下面會被切掉。可以拆成兩張,或加上 size: compact',
+  'check.overflowCompact': '第 {n} 張已經是緊湊模式,內容仍超出約 {px} 像素,請拆成兩張',
   'check.missingLogo': '找不到 brand.logo {src}',
   'check.missingFootnote': '腳註 [^{id}] 沒有定義',
   'check.deckFolder': '(簡報資料夾)',
@@ -357,6 +359,8 @@ const LOCALE_ZH_HANT = {
   'layoutName.title': "標題頁",
   'layoutName.section': "章節頁",
   'editor.autoSaved': '已自動儲存 {name}',
+  'editor.overflow': '內容超出投影片約 {px} 像素,下面會被切掉。可以用「新的一張」拆開,或在這張開頭加上 <!-- size: compact -->(字縮小約兩成)',
+  'editor.overflowCompact': '已經是緊湊模式,內容仍超出約 {px} 像素。請拆成兩張',
   'editor.label': '編輯 Markdown',
   'editor.close': '‹ 關閉',
   'editor.save': '儲存',
@@ -431,6 +435,8 @@ const LOCALE_EN = {
   'check.mixedPrefix': 'Prefixes have different widths: {names}. Your file manager may sort them differently from the player; use two digits (01-, 02-)',
   'check.emptySlide': 'Slide {n} is empty (settings only, no content)',
   'check.sep': ', ',
+  'check.overflow': 'Slide {n} runs about {px}px past the slide and will be cut off. Split it, or add size: compact',
+  'check.overflowCompact': 'Slide {n} is already compact but still runs about {px}px over. Split it into two slides',
   'check.missingLogo': 'Missing brand.logo {src}',
   'check.missingFootnote': 'Footnote [^{id}] is not defined',
   'check.deckFolder': '(deck folder)',
@@ -739,6 +745,8 @@ const LOCALE_EN = {
   'layoutName.title': "Title",
   'layoutName.section': "Section",
   'editor.autoSaved': 'Saved {name} automatically',
+  'editor.overflow': 'Content runs about {px}px past the slide and will be cut off. Split it with "New slide", or add <!-- size: compact --> at the top of this slide (about 20% smaller text)',
+  'editor.overflowCompact': 'Already compact, but content still runs about {px}px past the slide. Split it into two slides',
   'editor.label': 'Edit Markdown',
   'editor.close': '‹ Close',
   'editor.save': 'Save',
@@ -1535,6 +1543,7 @@ async function loadDeck(source, project) {
     sections: built,
     stage: str(layout.stage || layout.default || 'pile'),
     transition: str(layout.transition || 'shuffle'),
+    size: str(conf.size || ''),
     issues,
   };
 }

@@ -54,7 +54,10 @@ export function renderSlide(slide, ctx) {
   const fonts = (brand.fontDisplay ? `;--brand-display:${brand.fontDisplay},` : '') + (brand.fontBody ? `;--brand-body:${brand.fontBody},` : '');
   const bg = meta.background ? ` data-bg="${esc(resolveMediaPath(String(meta.background), pathCtx))}"` : '';
   inner = inner.replace(/<p>((?:資料來源|來源|資料截至|註|備考|Source|Sources|Data as of|Note)\s*[:：]?)/g, '<p class="source">$1'); // i18n-ok:語法關鍵字
-  const extra = (layout === 'title' && deck.coverImage ? ' has-image' : '') + (meta.class ? ' ' + esc(meta.class) : '');
+  // 緊湊:字縮小約兩成、留白收窄,給資料多的投影片用。每張的設定優先,其次是 deck.yml(normal 可以取消整份的設定)
+  const size = String(meta.size ?? deck.size ?? '').toLowerCase();
+  const compact = size === 'compact' && !['title', 'section'].includes(layout) ? ' compact' : '';
+  const extra = (layout === 'title' && deck.coverImage ? ' has-image' : '') + compact + (meta.class ? ' ' + esc(meta.class) : '');
   return `<div class="slide l-${layout}${extra}" lang="${esc(lang)}" style="--c:${esc(c)}${esc(fonts)}"${bg}>${inner}${foot}</div>`;
 }
 
@@ -240,3 +243,24 @@ function splitList(body) {
 }
 
 export { classifyMedia };
+
+/**
+ * 投影片內容是否超出畫面(會被切掉或壓到頁尾)。slideEl 必須已經在畫面上(可以在看不見的位置)。
+ * 回傳超出的像素(以 1280×720 為準),沒有超出回傳 0。
+ */
+export function measureOverflow(slideEl) {
+  const box = slideEl.getBoundingClientRect();
+  if (!box.height) return 0;
+  const k = box.height / 720; // 縮圖或預覽可能有縮放
+  const foot = slideEl.querySelector(':scope > .foot');
+  const limit = foot ? foot.getBoundingClientRect().top - 6 * k : box.bottom;
+  let over = 0;
+  for (const child of slideEl.children) {
+    if (child === foot || child.matches('figure.media, .overlay')) continue;
+    // 子元素本身可能被撐高,也可能內容溢出它的框(overflow: hidden 的情況)
+    const r = child.getBoundingClientRect();
+    const bottom = Math.max(r.bottom, r.top + child.scrollHeight * (r.height / (child.offsetHeight || r.height || 1)));
+    over = Math.max(over, bottom - limit);
+  }
+  return over > 4 * k ? Math.round(over / k) : 0;
+}

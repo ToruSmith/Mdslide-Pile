@@ -276,6 +276,7 @@ export async function loadDeck(source, project) {
     sections: built,
     stage: str(layout.stage || layout.default || 'pile'),
     transition: str(layout.transition || 'shuffle'),
+    size: str(conf.size || ''),
     issues,
   };
 }

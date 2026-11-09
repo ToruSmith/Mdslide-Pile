@@ -2,7 +2,7 @@
 
 import { flatten } from '../core/library.js';
 import { escapeHTML as esc, renderMarkdown } from '../core/markdown.js';
-import { renderSlide } from './render.js';
+import { renderSlide, measureOverflow } from './render.js';
 import { hydrate, playMedia, stopMedia } from './hydrate.js';
 import { STAGES, STAGE_ORDER, CW, poseTransform, worldTransform } from './layouts.js';
 import { THEMES, themeName, applyTheme, currentTheme } from './themes.js';
@@ -505,8 +505,26 @@ export class Player {
     const d = this.deck;
     openCheckPanel(this.el.player, async () => {
       const r = await checkDeck(this.source, d);
+      r.problems.push(...await this.overflowProblems());
       return { kind: 'deck', title: d.title, topics: [{ title: '', decks: [r] }], problems: r.problems };
     });
+  }
+
+  /** 逐張在看不見的地方算繪,找出內容超出投影片的張數(檢查工具在命令列量不到,只有瀏覽器做得到)。 */
+  async overflowProblems() {
+    const box = document.createElement('div');
+    box.style.cssText = 'position:fixed;left:-20000px;top:0;width:1280px;height:720px;visibility:hidden;pointer-events:none';
+    document.body.append(box);
+    const out = [];
+    try {
+      await document.fonts?.ready;
+      for (const [i, sl] of this.slides.entries()) {
+        box.innerHTML = renderSlide(sl, { deck: this.deck, mode: 'full', globalIndex: i, total: this.slides.length });
+        const over = measureOverflow(box.firstElementChild);
+        if (over) out.push({ path: sl.file || this.deck.path, message: t(sl.meta?.size === 'compact' || this.deck.size === 'compact' ? 'check.overflowCompact' : 'check.overflow', { n: i + 1, px: over }) });
+      }
+    } finally { box.remove(); }
+    return out;
   }
 
   async reload() {

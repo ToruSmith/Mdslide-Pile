@@ -181,3 +181,9 @@
 /* ---------- 逐步顯示 ---------- */
 .slide .step { transition: opacity .35s ease, transform .35s ease; }
 .slide .step.hidden { opacity: 0; transform: translateY(14px); }
+
+/* ---------- 緊湊(size: compact):字縮小約兩成、留白收窄,給資料多的投影片 ---------- */
+.slide.compact { padding: 60px 80px 84px; }
+.slide.compact > :not(.foot):not(figure.media):not(.overlay):not(.chart) { zoom: .8; } /* 圖表本身會填滿剩下的空間,不必縮 */
+.slide.compact .foot { left: 80px; right: 64px; bottom: 26px; }
+[data-theme="slate"] .slide.compact::after { left: 80px; top: 36px; }

@@ -8,7 +8,7 @@
 
 import { escapeHTML as esc } from '../core/markdown.js';
 import { parseSlideFile, LAYOUTS } from '../core/slide.js';
-import { renderSlide } from './render.js';
+import { renderSlide, measureOverflow } from './render.js';
 import { hydrate, stopMedia } from './hydrate.js';
 import { t } from '../core/i18n.js';
 import { splitOrder } from '../core/names.js';
@@ -244,6 +244,12 @@ export function openEditor(player, { onSaved, onClose }) {
     sel.title = explicit === 'auto' && slide ? t('editor.layoutAuto', { name: t('layoutName.' + slide.layout) }) : '';
     const extra = slides.length > 1 ? t('editor.segment', { n: state.seg + 1, total: slides.length }) : '';
     $('.eissues').innerHTML = [...issues.map(i => `<p class="warn">${esc(i.message)}</p>`), extra ? `<p>${esc(extra)}</p>` : ''].join('');
+    // 內容超出投影片:下面會被切掉,提醒拆張或改用緊湊
+    requestAnimationFrame(() => {
+      const over = box.firstElementChild ? measureOverflow(box.firstElementChild) : 0;
+      $('.eissues .overflow')?.remove();
+      if (over) $('.eissues').insertAdjacentHTML('afterbegin', `<p class="warn overflow">${esc(t(slide?.meta?.size === 'compact' ? 'editor.overflowCompact' : 'editor.overflow', { px: over }))}</p>`);
+    });
     updatePosition();
   }
   const schedule = () => { clearTimeout(timer); timer = setTimeout(preview, PREVIEW_DELAY); };
