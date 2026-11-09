@@ -86,6 +86,7 @@ export class Player {
             ${this.source.list ? `<button class="pbtn" data-act="check" title="${esc(t('player.checkTitle'))}">${esc(t('player.check'))}</button>` : ''}
             ${this.onExport ? `<button class="pbtn" data-act="export" title="${esc(t('player.exportTitle'))}">${esc(t('player.export'))}</button>` : ''}
             <button class="pbtn" data-act="read" title="${esc(t('player.readTitle'))}">${esc(t('player.read'))}</button>
+            ${this.source.readText ? `<button class="pbtn" data-act="edit" title="${esc(t('player.editTitle'))}">${esc(t('player.edit'))}</button>` : ''}
             <button class="pbtn" data-act="ink" title="${esc(t('player.inkTitle'))}" aria-label="${esc(t('player.inkTitle'))}">✎</button>
             <button class="pbtn" data-act="present" title="${esc(t('player.presentTitle'))}" aria-label="${esc(t('player.presentTitle'))}">▶</button>
             <button class="pbtn" data-act="help" title="${esc(t('player.helpTitle'))}" aria-label="${esc(t('player.helpTitle'))}">?</button>
@@ -178,6 +179,7 @@ export class Player {
       if (act === 'theme') this.cycleTheme();
       if (act === 'present') this.viewing ? this.closeViewer() : this.openViewer();
       if (act === 'read') this.openReading();
+      if (act === 'edit') this.openEditing();
       if (act === 'ink') this.toggleInk();
       if (act === 'help') this.toggleHelp();
       if (act === 'check') this.openCheck();

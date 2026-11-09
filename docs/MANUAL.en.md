@@ -130,13 +130,14 @@ Pause here and ask the audience to guess why.
 
 ## 5. Editing
 
-Press `E` while presenting (or "Edit" in the toolbar). Edit on the left, see the result on the right.
+Press `E` while presenting, or tap "Edit" in the toolbar (use this on phones and tablets). Edit on the left, see the result on the right.
 
 ### Top row
 
 | Button | Action |
 |---|---|
 | `‹ Close` | Back to presenting (asks first if there are unsaved changes) |
+| `↶` `↷` | Undo / redo (for phones and tablets without `Ctrl+Z`) |
 | `‹` `Slide 3 / 30` `›` | Previous / next slide without closing. **Saves first when switching files** |
 | `+ New slide` | New file in the same section, numbered automatically |
 | `Archive` | Moves the file to `_封存/` (**never deleted**; move it back any time) |
@@ -183,10 +184,19 @@ When the slide has an image, **drag on the image on the right** to draw a red bo
 | Key | Action |
 |---|---|
 | `Ctrl+S` | Save |
+| `Ctrl+Z` | Undo (typing, toolbar, Look panel and highlights) |
+| `Ctrl+Shift+Z` or `Ctrl+Y` | Redo |
 | `Tab` / `Shift+Tab` | Indent / outdent (several lines at once) |
 | `Enter` in a list | Continues the list; on an empty item it ends the list |
 | `Alt+PageUp` / `Alt+PageDown` | Previous / next slide |
 | `Esc` | Close the editor |
+
+### Editing on phones and tablets
+
+- Open it with "Edit" at the top of the player. Holding a phone upright first shows a rotate hint; tap "Got it" to continue.
+- Undo and redo with `↶` `↷` at the top left.
+- Saving: most phone and tablet browsers **can't write back to a folder** yet, so "Save" **downloads the edited file** for you to put back. To save straight into the folder, use Chrome or Edge on a computer.
+- On narrow screens the editor is on top and the preview below.
 
 ### Saving is safe
 

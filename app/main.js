@@ -17,7 +17,7 @@ import { startPresenter } from './player/presenter.js';
 import { applyUITheme } from './player/themes.js';
 import { t, setLang, getLang, normalizeLang } from './core/i18n.js';
 
-export const VERSION = '1.14.0';
+export const VERSION = '1.14.1';
 const REPO_URL = 'https://github.com/ToruSmith/Mdslide-Pile';
 
 const app = document.getElementById('app');

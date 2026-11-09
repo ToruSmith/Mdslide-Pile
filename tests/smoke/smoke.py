@@ -93,6 +93,10 @@ def main():
         assert page.locator('.escale .slide.size-large').count() == 1, '外觀面板沒有反映在預覽'
         page.select_option('[data-look=size]', ''); page.wait_for_timeout(400)
         assert 'size:' not in page.input_value('.etext'), '選回預設應該刪掉設定'
+        page.click('.etext'); page.click('[data-e=undo]'); page.wait_for_timeout(300)  # 復原按鈕(手機、平板用)
+        assert '<!-- size: large -->' in page.input_value('.etext'), '復原按鈕沒有作用'
+        page.click('[data-e=redo]'); page.wait_for_timeout(300)
+        assert 'size:' not in page.input_value('.etext'), '重做按鈕沒有作用'
         page.select_option('[data-t=layout]', 'center'); page.wait_for_timeout(400)
         assert '<!-- layout: center -->' in page.input_value('.etext'), '版型選單沒有寫入設定'
         assert page.locator('.escale .l-center').count() == 1, '版型選單沒有反映在預覽'

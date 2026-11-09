@@ -134,7 +134,7 @@ body.dragging::after { content: attr(data-drop); position: fixed; inset: 16px; z
 .card::after { content: ""; position: absolute; inset: 0; background: var(--slide-soft); transform: rotateY(180deg); backface-visibility: hidden; } /* 卡片背面:轉到背後時顯示素色,不顯示鏡像文字 */
 
 .pbar { position: absolute; z-index: 5; top: 0; left: 0; right: 0; padding: 18px 28px; display: grid; grid-template-columns: auto 1fr auto auto; gap: 20px; align-items: center; transition: opacity .4s; }
-.pbtn { border: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 80%, transparent); border-radius: 9px; padding: 7px 12px; cursor: pointer; font-size: 14px; color: var(--muted); min-width: 36px; }
+.pbtn { white-space: nowrap; flex-shrink: 0; border: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 80%, transparent); border-radius: 9px; padding: 7px 12px; cursor: pointer; font-size: 14px; color: var(--muted); min-width: 36px; }
 .pbtn:hover { color: var(--ink); }
 .ptitle { min-width: 0; }
 .deck-name { font-size: 12px; color: var(--muted); letter-spacing: .08em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -391,6 +391,9 @@ body.dragging::after { content: attr(data-drop); position: fixed; inset: 16px; z
 .ebar .egrow { flex: 1; }
 .pbtn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 .pbtn.primary:hover { color: #fff; filter: brightness(1.06); }
+.ehist { display: flex; gap: 4px; }
+.ehist .pbtn { min-width: 34px; justify-content: center; font-size: 16px; }
+.ehist .pbtn:disabled { opacity: .35; cursor: default; }
 .enav { display: flex; align-items: center; gap: 4px; }
 .enav .pbtn { min-width: 34px; justify-content: center; }
 .enav .pbtn:disabled { opacity: .35; cursor: default; }

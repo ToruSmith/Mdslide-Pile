@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Mdslide Pile 書庫檢查工具(單檔版 v1.14.0)
+// Mdslide Pile 書庫檢查工具(單檔版 v1.14.1)
 // 由 scripts/bundle-check.mjs 自動產生,請不要手動修改。原始碼:https://github.com/ToruSmith/Mdslide-Pile
 //
 // 用法(需要 Node.js 18 以上):
@@ -506,6 +506,8 @@ const LOCALE_ZH_HANT = {
   'editor.lookHidden': "播放時跳過這張",
   'editor.lookFooter': "顯示頁尾",
   'editor.lookNote': "每個選擇都會在這一張開頭寫一行設定註解;改回「預設」就刪掉那一行。背景色深時字自動變淺。",
+  'editor.undoTitle': '復原(Ctrl+Z)',
+  'editor.redoTitle': '重做(Ctrl+Shift+Z 或 Ctrl+Y)',
   'editor.label': '編輯 Markdown',
   'editor.close': '‹ 關閉',
   'editor.save': '儲存',
@@ -928,6 +930,8 @@ const LOCALE_EN = {
   'editor.lookHidden': "Skip this slide when playing",
   'editor.lookFooter': "Show footer",
   'editor.lookNote': "Each choice writes a settings comment at the top of this slide; choosing Default removes it. Text turns light on dark backgrounds.",
+  'editor.undoTitle': 'Undo (Ctrl+Z)',
+  'editor.redoTitle': 'Redo (Ctrl+Shift+Z or Ctrl+Y)',
   'editor.label': 'Edit Markdown',
   'editor.close': '‹ Close',
   'editor.save': 'Save',

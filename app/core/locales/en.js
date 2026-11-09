@@ -381,6 +381,8 @@ export const LOCALE_EN = {
   'editor.lookHidden': "Skip this slide when playing",
   'editor.lookFooter': "Show footer",
   'editor.lookNote': "Each choice writes a settings comment at the top of this slide; choosing Default removes it. Text turns light on dark backgrounds.",
+  'editor.undoTitle': 'Undo (Ctrl+Z)',
+  'editor.redoTitle': 'Redo (Ctrl+Shift+Z or Ctrl+Y)',
   'editor.label': 'Edit Markdown',
   'editor.close': '‹ Close',
   'editor.save': 'Save',

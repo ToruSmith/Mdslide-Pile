@@ -381,6 +381,8 @@ export const LOCALE_ZH_HANT = {
   'editor.lookHidden': "播放時跳過這張",
   'editor.lookFooter': "顯示頁尾",
   'editor.lookNote': "每個選擇都會在這一張開頭寫一行設定註解;改回「預設」就刪掉那一行。背景色深時字自動變淺。",
+  'editor.undoTitle': '復原(Ctrl+Z)',
+  'editor.redoTitle': '重做(Ctrl+Shift+Z 或 Ctrl+Y)',
   'editor.label': '編輯 Markdown',
   'editor.close': '‹ 關閉',
   'editor.save': '儲存',

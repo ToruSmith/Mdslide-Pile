@@ -129,6 +129,10 @@ export function openEditor(player, { onSaved, onClose }) {
   el.innerHTML = `
     <header class="ebar">
       <button class="pbtn" data-e="close">${esc(t('editor.close'))}</button>
+      <div class="ehist">
+        <button class="pbtn" data-e="undo" title="${esc(t('editor.undoTitle'))}" aria-label="${esc(t('editor.undoTitle'))}" disabled>↶</button>
+        <button class="pbtn" data-e="redo" title="${esc(t('editor.redoTitle'))}" aria-label="${esc(t('editor.redoTitle'))}" disabled>↷</button>
+      </div>
       <div class="enav">
         <button class="pbtn" data-e="prev" title="${esc(t('editor.prevTitle'))}" aria-label="${esc(t('editor.prevTitle'))}">‹</button>
         <span class="epos"></span>
@@ -173,6 +177,39 @@ export function openEditor(player, { onSaved, onClose }) {
   const state = { path: null, stat: null, original: '', seg: 0 };
 
   const dirty = () => ta.value !== state.original;
+
+  // ---- 復原 / 重做:按鈕(手機、平板沒有 Ctrl+Z)與鍵盤 Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y 共用這份紀錄 ----
+  // 記錄整段文字的快照:連續打字約 0.8 秒算一步;工具列、外觀面板、標註等每次修改各算一步。
+  const hist = { undo: [], redo: [], last: null, timer: 0 };
+  const snap = () => ({ value: ta.value, a: ta.selectionStart, b: ta.selectionEnd });
+  function updateHistButtons() {
+    $('[data-e="undo"]').disabled = !hist.undo.length;
+    $('[data-e="redo"]').disabled = !hist.redo.length;
+  }
+  /** 修改之前呼叫:把目前的內容存成一步(同一段連續打字只存一次)。 */
+  function remember(grouped = false) {
+    if (grouped && hist.timer) { clearTimeout(hist.timer); hist.timer = setTimeout(() => { hist.timer = 0; }, 800); return; }
+    const cur = hist.last || snap();
+    if (!hist.undo.length || hist.undo.at(-1).value !== cur.value) hist.undo.push(cur);
+    if (hist.undo.length > 200) hist.undo.shift();
+    hist.redo = [];
+    if (grouped) hist.timer = setTimeout(() => { hist.timer = 0; }, 800);
+    updateHistButtons();
+  }
+  function restore(from, to) {
+    const s = from.pop();
+    if (!s) return;
+    to.push(snap());
+    ta.value = s.value;
+    ta.focus();
+    ta.setSelectionRange(s.a, s.b);
+    hist.last = snap();
+    clearTimeout(hist.timer); hist.timer = 0;
+    schedule();
+    setStatus(dirty() ? t('editor.unsaved') : (canWrite ? t('editor.ready') : t('editor.readOnly')), dirty() ? 'warn' : '');
+    updateHistButtons();
+  }
+  const resetHistory = () => { hist.undo = []; hist.redo = []; hist.last = snap(); clearTimeout(hist.timer); hist.timer = 0; updateHistButtons(); };
   const isYaml = () => /\.ya?ml$/i.test(state.path || '');
   const setStatus = (msg, kind = '') => { $('.estatus').textContent = msg; $('.estatus').className = `estatus ${kind}`; };
 
@@ -198,8 +235,11 @@ export function openEditor(player, { onSaved, onClose }) {
   }
   const confirmBox = (message, okLabel = t('editor.ok')) => ask(message, { buttons: [{ label: okLabel, value: true, primary: true }, { label: t('editor.cancel'), value: false }] });
 
-  // ---- 編輯框:用 insertText 修改,Ctrl+Z 才復原得回來 ----
+  // ---- 編輯框:用 insertText 修改(保留瀏覽器的輸入法與捲動行為);復原由上面的紀錄負責 ----
   function replaceRange(from, to, text, select = 'end') {
+    remember();
+    clearTimeout(hist.timer); hist.timer = 0;
+    hist.inTool = true;
     ta.focus();
     ta.setSelectionRange(from, to);
     const ok = document.execCommand?.('insertText', false, text);
@@ -207,6 +247,7 @@ export function openEditor(player, { onSaved, onClose }) {
     if (select === 'all') ta.setSelectionRange(from, from + text.length);
     else if (Array.isArray(select)) ta.setSelectionRange(from + select[0], from + select[1]);
     ta.dispatchEvent(new Event('input'));
+    hist.inTool = false;
   }
   const insert = (text, select) => replaceRange(ta.selectionStart, ta.selectionEnd, text, select);
 
@@ -338,6 +379,7 @@ export function openEditor(player, { onSaved, onClose }) {
     state.stat = source.stat ? await source.stat(path) : null;
     ta.value = text;
     ta.scrollTop = 0;
+    resetHistory(); // 換了檔案:復原紀錄從頭開始
     moveTo(segment);
     $('.efile').textContent = path;
     $('.ebar').dataset.yaml = isYaml() ? '1' : ''; // deck.yml:不提供新增 / 封存
@@ -612,6 +654,8 @@ export function openEditor(player, { onSaved, onClose }) {
     if (k === 'save') save();
     if (k === 'add') addSlide();
     if (k === 'archive') archive();
+    if (k === 'undo') restore(hist.undo, hist.redo);
+    if (k === 'redo') restore(hist.redo, hist.undo);
     if (k === 'prev') step(-1);
     if (k === 'next') step(1);
     if (k === 'revert') (async () => { if (!dirty() || (await confirmBox(t('editor.revertAsk'), t('editor.revert')))) { replaceRange(0, ta.value.length, state.original, 'end'); ta.setSelectionRange(0, 0); preview(); setStatus(t('editor.reverted')); } })();
@@ -625,11 +669,23 @@ export function openEditor(player, { onSaved, onClose }) {
     if (!inside('[data-t="look"], .esettings, .emedia')) $('.esettings').hidden = true;
   });
   $('[data-t="layout"]').addEventListener('change', e => setLayout(e.target.value));
+  // 打字:修改前的內容在 beforeinput 時記下(工具列的修改由 replaceRange 自己記)
+  ta.addEventListener('beforeinput', e => { if (!hist.inTool && e.inputType !== 'historyUndo' && e.inputType !== 'historyRedo') remember(true); });
+  ta.addEventListener('input', () => { hist.last = snap(); });
+  ta.addEventListener('select', () => { hist.last = snap(); });
+  ta.addEventListener('keyup', () => { hist.last = snap(); });
+  ta.addEventListener('click', () => { hist.last = snap(); });
   ta.addEventListener('input', () => { schedule(); setStatus(dirty() ? t('editor.unsaved') : (canWrite ? t('editor.ready') : t('editor.readOnly')), dirty() ? 'warn' : ''); });
   ta.addEventListener('click', schedule);
   ta.addEventListener('keyup', e => { if (e.key.startsWith('Arrow') || e.key.startsWith('Page') || e.key === 'Home' || e.key === 'End') schedule(); });
   el.addEventListener('keydown', e => {
     if ((e.metaKey || e.ctrlKey) && (e.key === 's' || e.key === 'S')) { e.preventDefault(); return save(); }
+    // 復原 / 重做:鍵盤和按鈕用同一份紀錄,混著用也不會亂
+    if (e.target === ta && (e.metaKey || e.ctrlKey) && !e.altKey) {
+      const k = e.key.toLowerCase();
+      if (k === 'z' && !e.shiftKey) { e.preventDefault(); return restore(hist.undo, hist.redo); }
+      if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); return restore(hist.redo, hist.undo); }
+    }
     if (e.altKey && (e.key === 'PageDown' || e.key === 'PageUp')) { e.preventDefault(); return step(e.key === 'PageDown' ? 1 : -1); }
     if (e.key === 'Escape' && e.target === ta) { e.preventDefault(); e.stopPropagation(); return close(); }
   });
