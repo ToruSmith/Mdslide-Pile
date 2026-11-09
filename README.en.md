@@ -30,6 +30,7 @@ Write slides in Markdown, group them into sections with folders, and play them a
 **Making decks**
 - **Folders are the structure**: library → topic → deck → section → slide. Every config file is optional.
 - **Over a dozen layouts**: split, full-bleed, quote, big number, stat cards, timeline, columns, automatic agenda, bar and line charts, and more; footnotes and code highlighting too.
+- **Flow charts, galleries, screenshot highlights**: write a list and get boxes with arrows; several images line up automatically; draw red boxes with labels on screenshots (drag on the image in the editor). A quote plus a photo becomes a portrait quote.
 - **Per-slide look**: text size (small / normal / large / xl), background color or image with an overlay (text adjusts automatically), font, alignment and column ratio; settings are comments, so other Markdown apps don't show them.
 - **Editing** (`E`): Markdown on the left, live preview on the right, `Ctrl+S` saves back to the file in your folder; the toolbar picks layouts and inserts images and columns, so you don't need to remember the syntax; `‹` `›` switch slides; add slides, archive (never delete) and edit notes from the presenter view.
 - **Live reload**: folders opened in Chrome / Edge update on screen as soon as you save a Markdown file (or press `R`).

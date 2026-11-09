@@ -233,6 +233,8 @@ An image on **a line of its own** is the slide's main media:
   - After you click into the page the keyboard goes with it; click outside the page and the arrow keys control the deck again. In an exported single HTML file, `.html` files from the folder cannot play.
 - Prefer online video; compress local video to 1080p and under 100 MB per file.
 - An image inside a paragraph (not on its own line) is shown inline.
+- **Several images side by side**: two or more images on their own lines become a `gallery` automatically (2–3 per row, 4 as 2×2, 5–6 in three columns, up to 8).
+- **Screenshot highlights**: write `<!-- mark: left top width height label -->` at the top of the slide to draw a red box with a label on the main image; the four numbers are percentages of the image (0–100), and you can add several lines. Put `#hex` before the label to change its color, e.g. `<!-- mark: 10 40 30 20 #1e88e5 The fix -->`. No need to work out coordinates: **drag on the image in the editor preview** and the line is inserted for you. Highlighted images are shown whole (not cropped). Other Markdown apps treat the lines as invisible comments.
 
 ### Footnotes
 
@@ -272,7 +274,9 @@ Values derived from other numbers (for example the difference of two closing pri
 
 When `layout` is omitted it is `auto`:
 
+- Two or more media items → `gallery`
 - One media item and no text → `full`
+- A quote plus one photo → `quote` (quote with portrait)
 - Text plus media → `split`
 - Only a quote → `quote`
 - The first line is a short `## number` and there are at most 3 lines → `number`
@@ -285,13 +289,15 @@ When `layout` is omitted it is `auto`:
 | `split` | Text left, media right | Text plus a media line |
 | `split-left` | Media left, text right | Same as split |
 | `full` | Full-bleed image or video | Media only; any text is overlaid at the bottom |
-| `quote` | Quotation | `> quote`, then `— source` on the next line |
+| `quote` | Quotation | `> quote`, then `— source` on the next line; add a photo on its own line for a portrait on the right that fades into the slide |
 | `number` | Big number | `## 68%`, then an explanation |
 | `stats` | Stat cards (2–4) | List items written as `- **68%** label`; long values shrink automatically, keep them under 8 characters |
 | `timeline` | Timeline or steps | `- **2024** event`; sub-items become small text; end an item with `(now)` to mark the current point |
 | `columns` | Side-by-side comparison | Separate columns with `+++` on its own line; a first part with only a heading becomes the slide title |
 | `agenda` | Automatic agenda | Lists every section; nothing to write |
 | `chart` | Chart | Write a table: first column labels, other columns values; `chart: bar / hbar / line`, `unit: pts`. Values may use thousands separators, minus signs (− or -), % and units; write missing values as `—`, `N/A` or leave them blank |
+| `flow` | Flow chart | Each list is a row, with arrows drawn between items. A line on its own just before a list labels that row (a fully bold line = accent label); a fully bold item = accent box; an indented line under an item = line break in the box; indented sub-items = small boxes under it. 3–6 items per row work best |
+| `gallery` | Images side by side | A heading plus two or more images on their own lines; `ratio: 2:1` adjusts column widths |
 | `end` | Closing slide | `# Thank you` plus contact details |
 | `title`, `section` | Automatic title slide and section covers | Usually not written by hand |
 

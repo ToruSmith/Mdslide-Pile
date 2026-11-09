@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Mdslide Pile 書庫檢查工具(單檔版 v1.12.0)
+// Mdslide Pile 書庫檢查工具(單檔版 v1.13.0)
 // 由 scripts/bundle-check.mjs 自動產生,請不要手動修改。原始碼:https://github.com/ToruSmith/Mdslide-Pile
 //
 // 用法(需要 Node.js 18 以上):
@@ -140,6 +140,7 @@ const LOCALE_ZH_HANT = {
   'lib.defaultLabel': '書庫',
   'issue.color': '顏色「{value}」格式不正確,已改用預設顏色',
   'issue.slideStyle': '設定 {key} 的值「{value}」看不懂,已忽略。可用的寫法見製作專案指南第 4 節',
+  'issue.mark': '標註「{value}」看不懂,已忽略。寫法:<!-- mark: 左 上 寬 高 標籤 -->,數字是圖片上的百分比(0–100)',
   'issue.slideColor': '顏色「{value}」格式不正確,已改用章節顏色',
   'issue.readFailed': '讀取失敗',
   'issue.noSlides': '這個資料夾裡沒有找到任何投影片(.md 檔)',
@@ -471,6 +472,8 @@ const LOCALE_ZH_HANT = {
   'editor.autoSaved': '已自動儲存 {name}',
   'editor.overflow': '內容超出投影片約 {px} 像素,下面會被切掉。可以用「新的一張」拆開,或在這張開頭加上 <!-- size: small -->(字縮小約兩成)',
   'editor.overflowCompact': '已經是小字級,內容仍超出約 {px} 像素。請拆成兩張',
+  'editor.markHint': '在右邊的圖上拖曳,可以加紅框標註',
+  'editor.markAdded': '已加上標註。游標停在標籤的位置,直接打字(例如「這裡改內容」);#色碼 可以換顏色',
   'editor.label': '編輯 Markdown',
   'editor.close': '‹ 關閉',
   'editor.save': '儲存',
@@ -527,6 +530,7 @@ const LOCALE_EN = {
   'lib.defaultLabel': 'Library',
   'issue.color': 'Invalid color "{value}"; using the default color',
   'issue.slideStyle': 'Could not understand {key}: "{value}"; ignored. See section 4 of the guide for valid values',
+  'issue.mark': 'Could not understand mark "{value}"; ignored. Use <!-- mark: left top width height label -->, numbers are percentages of the image (0–100)',
   'issue.slideColor': 'Invalid color "{value}"; using the section color',
   'issue.readFailed': 'Could not read file',
   'issue.noSlides': 'No slides (.md files) found in this folder',
@@ -858,6 +862,8 @@ const LOCALE_EN = {
   'editor.autoSaved': 'Saved {name} automatically',
   'editor.overflow': 'Content runs about {px}px past the slide and will be cut off. Split it with "New slide", or add <!-- size: small --> at the top of this slide (about 20% smaller text)',
   'editor.overflowCompact': 'Already small, but content still runs about {px}px past the slide. Split it into two slides',
+  'editor.markHint': 'Drag on the image on the right to add a highlight box',
+  'editor.markAdded': 'Highlight added. The cursor is where the label goes, so just type it; add a #hex color to change its color',
   'editor.label': 'Edit Markdown',
   'editor.close': '‹ Close',
   'editor.save': 'Save',
@@ -1245,7 +1251,7 @@ function resolveMediaPath(src, { projectPath, filePath }) {
 
 
 /** 所有支援的版型。新增版型時,記得同步更新 製作專案指南.md 與 app/player/render.js。 */
-const LAYOUTS = ['auto', 'text', 'center', 'split', 'split-left', 'full', 'quote', 'number', 'stats', 'timeline', 'columns', 'agenda', 'chart', 'title', 'section', 'end'];
+const LAYOUTS = ['auto', 'text', 'center', 'split', 'split-left', 'full', 'quote', 'number', 'stats', 'timeline', 'columns', 'agenda', 'chart', 'flow', 'gallery', 'title', 'section', 'end'];
 
 const MEDIA_LINE = /^\s*!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"([^"]*)")?\s*\)\s*$/;
 const NOTE_LINE = /^\s*(?:note|notes|備註|講者備註)\s*[:：]\s*(.*)$/i; // i18n-ok:語法關鍵字,不是介面文字
@@ -1299,7 +1305,11 @@ function parseSegment(seg, { path, index, fileMeta, issues }) {
   // 段落開頭的 <!-- key: value --> 設定(只影響這一張)
   while (lines.length && (lines[0].trim() === '' || META_LINE.test(lines[0]))) {
     const m = lines[0].match(META_LINE);
-    if (m) meta[m[1]] = coerce(m[2]);
+    if (m && m[1].toLowerCase() === 'mark') { // 標註可以有很多行
+      const mk = parseMark(m[2]);
+      if (mk) (meta.marks ||= []).push(mk);
+      else issues.push({ path, message: t('issue.mark', { value: m[2] }) });
+    } else if (m) meta[m[1]] = coerce(m[2]);
     lines.shift();
   }
 
@@ -1345,9 +1355,28 @@ function parseSegment(seg, { path, index, fileMeta, issues }) {
   return { file: path, index, meta, style, layout, body, notes, media, title };
 }
 
+/**
+ * 截圖標註:`x y w h [#顏色] [標籤文字]`,前四個是在圖片上的百分比位置(左、上、寬、高)。
+ * 例:`52 5 40 25 我說需求`、`10 40 30 20 #1e88e5 AI 給做法`。
+ */
+function parseMark(value) {
+  const parts = String(value).trim().split(/\s+/);
+  const nums = parts.slice(0, 4).map(Number);
+  if (nums.length < 4 || nums.some(n => !Number.isFinite(n) || n < 0 || n > 100)) return null;
+  const [x, y, w, h] = nums;
+  if (w <= 0 || h <= 0 || x + w > 100.5 || y + h > 100.5) return null;
+  let rest = parts.slice(4);
+  let color = null;
+  if (rest[0] && /^#[0-9a-f]{3,8}$/i.test(rest[0])) { color = safeColor(rest[0]); rest = rest.slice(1); }
+  const label = rest.join(' ').replace(/^["']|["']$/g, '').slice(0, 40);
+  return { x, y, w, h, color, label };
+}
+
 function autoLayout(body, media) {
   const text = body.trim();
+  if (media.length > 1) return 'gallery'; // 好幾個單獨一行的圖片 / 影片:並排
   if (media.length && !text) return 'full';
+  if (media.length && text.split('\n').filter(l => l.trim()).every(l => /^\s*>/.test(l) || /^\s*(—|--|──)/.test(l))) return 'quote'; // 引言 + 照片 = 引言加頭像
   if (media.length) return 'split';
   const lines = text.split('\n').filter(l => l.trim());
   if (lines.length && lines.every(l => /^\s*>/.test(l) || /^\s*(—|--|──)/.test(l))) return 'quote';

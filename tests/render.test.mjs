@@ -146,3 +146,30 @@ test('外觀設定:驗證與輸出', async () => {
   assert.deepEqual(readSlideStyle({ background: 'rgba(0,0,0,.5)' }).bgColor, 'rgba(0,0,0,.5)');
   assert.equal(readSlideStyle({ background: 'cover.jpg' }).bgImage, 'cover.jpg');
 });
+
+test('flow、gallery、quote 頭像、mark', async () => {
+  const { parseSlideFile, parseMark } = await import('../app/core/slide.js');
+  const { parseFlow } = await import('../app/player/render.js');
+  const f = parseFlow('# T\n\n以前\n- A\n- **B**\n\n**新做法**\n- C\n  第二行\n  - c1\n  - **c2**\n- D\n\n資料來源:x');
+  assert.equal(f.head, '# T');
+  assert.equal(f.rows.length, 2);
+  assert.deepEqual(f.rows[0], { label: '以前', items: [{ lines: ['A'], subs: [] }, { lines: ['**B**'], subs: [] }] });
+  assert.deepEqual(f.rows[1].items[0], { lines: ['C', '第二行'], subs: ['c1', '**c2**'] });
+  assert.equal(f.rest, '資料來源:x');
+  const flowHTML = render('flow', '# T\n\nX\n- A\n- **B**\n  - s');
+  assert.match(flowHTML, /class="fbox hot">B</); assert.match(flowHTML, /class="fsub">s</); assert.match(flowHTML, /--n:2/);
+
+  const lay = src => parseSlideFile(src, { path: 'p/a.md' }).slides[0].layout;
+  assert.equal(lay('# T\n\n![a](media/a.jpg)\n![b](media/b.jpg)'), 'gallery');
+  assert.equal(lay('> 名言\n\n— 某人\n\n![p](media/p.jpg)'), 'quote');
+  assert.equal(lay('# T\n\n![a](media/a.jpg)'), 'split');
+
+  assert.deepEqual(parseMark('10 20 30 40 看 這裡'), { x: 10, y: 20, w: 30, h: 40, color: null, label: '看 這裡' });
+  assert.equal(parseMark('10 20 30 40 #1e88e5 AI').color, '#1e88e5');
+  assert.equal(parseMark('90 0 30 10'), null, '超出圖片');
+  assert.equal(parseMark('a b c d'), null);
+  const { slides, issues } = parseSlideFile('<!-- mark: 1 2 3 4 一 -->\n<!-- mark: 5 6 7 8 -->\n<!-- mark: 1 2 -->\n# T\n\n![a](media/a.jpg)', { path: 'p/a.md' });
+  assert.equal(slides[0].meta.marks.length, 2); assert.equal(issues.length, 1);
+  const html = renderSlide({ ...slides[0], sec: 0 }, { deck, mode: 'full', globalIndex: 0, total: 1 });
+  assert.match(html, /class="media contain marked"/); assert.match(html, /left:1%;top:2%;width:3%;height:4%/); assert.match(html, /<span>一<\/span>/);
+});

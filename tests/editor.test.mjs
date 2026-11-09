@@ -74,3 +74,14 @@ test('indentLines:多行縮排與反縮排', async () => {
   const r3 = indentLines('x\ny', 0, 0, true);
   assert.equal(r3.replaced, 'x', '沒有縮排可去就不變');
 });
+
+test('addSegmentMeta:可以重複的設定接在設定區最後', async () => {
+  const { addSegmentMeta } = await import('../app/player/editor.js');
+  const text = '# A\n\n---\n\n<!-- layout: split -->\n# B\n';
+  const r = addSegmentMeta(text, 1, 'mark: 1 2 3 4 ');
+  const out = text.slice(0, r.from) + r.replaced + text.slice(r.to);
+  assert.equal(out, '# A\n\n---\n\n<!-- layout: split -->\n<!-- mark: 1 2 3 4  -->\n# B\n');
+  assert.equal(out.slice(r.caret, r.caret + 4), ' -->', '游標停在標籤位置');
+  const r2 = addSegmentMeta('# X\n', 0, 'mark: 5 5 5 5 ');
+  assert.equal(r2.replaced, '<!-- mark: 5 5 5 5  -->\n# X\n');
+});

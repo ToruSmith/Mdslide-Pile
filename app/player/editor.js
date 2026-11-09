@@ -85,6 +85,26 @@ export function setSegmentMeta(fileText, index, key, value) {
   return { text: fileText.slice(0, r.from) + replaced + fileText.slice(r.to), from: r.from, to: r.to, replaced };
 }
 
+/**
+ * 在第 index 張的設定區最後加一行 `<!-- line -->`(可以重複的設定,例如 mark)。
+ * 回傳 { from, to, replaced, caret }:caret 是新的一行裡 ` -->` 之前的位置,方便接著打標籤。
+ */
+export function addSegmentMeta(fileText, index, line) {
+  const ranges = segmentRanges(fileText);
+  const r = ranges[Math.min(index, ranges.length - 1)];
+  const seg = fileText.slice(r.from, r.to);
+  const lines = seg.split('\n');
+  let i = 0, lastMeta = -1;
+  while (i < lines.length && (lines[i].trim() === '' || META_LINE.test(lines[i]))) { if (META_LINE.test(lines[i])) lastMeta = i; i++; }
+  const pos = lastMeta >= 0 ? lastMeta + 1 : Math.max(0, lines.findIndex(l => l.trim() !== ''));
+  const text = `<!-- ${line} -->`;
+  const next = [...lines];
+  next.splice(pos, 0, text);
+  const replaced = next.join('\n');
+  const caret = r.from + next.slice(0, pos).reduce((n, l) => n + l.length + 1, 0) + text.length - 4;
+  return { from: r.from, to: r.to, replaced, caret };
+}
+
 /** 選取範圍涵蓋的整行一起縮排(outdent = 反縮排)。回傳要換上的文字與範圍。 */
 export function indentLines(text, a, b, outdent = false, unit = '  ') {
   const from = text.lastIndexOf('\n', a - 1) + 1;
@@ -242,7 +262,8 @@ export function openEditor(player, { onSaved, onClose }) {
     const explicit = String(slide?.meta?.layout || 'auto').toLowerCase();
     sel.value = layoutOptions.includes(explicit) ? explicit : 'auto';
     sel.title = explicit === 'auto' && slide ? t('editor.layoutAuto', { name: t('layoutName.' + slide.layout) }) : '';
-    const extra = slides.length > 1 ? t('editor.segment', { n: state.seg + 1, total: slides.length }) : '';
+    const canMark = slide?.media[0]?.kind === 'image' && ['full', 'split', 'split-left', 'gallery'].includes(slide.layout);
+    const extra = [slides.length > 1 ? t('editor.segment', { n: state.seg + 1, total: slides.length }) : '', canMark ? t('editor.markHint') : ''].filter(Boolean).join(' · ');
     $('.eissues').innerHTML = [...issues.map(i => `<p class="warn">${esc(i.message)}</p>`), extra ? `<p>${esc(extra)}</p>` : ''].join('');
     // 內容超出投影片:下面會被切掉,提醒拆張或改用緊湊
     requestAnimationFrame(() => {
@@ -253,6 +274,49 @@ export function openEditor(player, { onSaved, onClose }) {
     updatePosition();
   }
   const schedule = () => { clearTimeout(timer); timer = setTimeout(preview, PREVIEW_DELAY); };
+
+  // ---- 截圖標註:在預覽的主要圖片上拖曳,插入一行 <!-- mark: 左 上 寬 高 --> ----
+  /** 圖片在畫面上實際顯示的範圍(考慮 contain / cover 的縮放與裁切)。 */
+  function shownRect(img) {
+    const r = img.getBoundingClientRect();
+    const fit = getComputedStyle(img).objectFit;
+    const k = (fit === 'cover' ? Math.max : Math.min)(r.width / img.naturalWidth, r.height / img.naturalHeight);
+    const w = img.naturalWidth * k, h = img.naturalHeight * k;
+    return { left: r.left + (r.width - w) / 2, top: r.top + (r.height - h) / 2, width: w, height: h, clip: r };
+  }
+  $('.eslide').addEventListener('pointerdown', e => {
+    const img = e.target.closest?.('figure.media img');
+    const first = $('.escale figure.media img');
+    if (!img || img !== first || !img.naturalWidth || isYaml()) return;
+    e.preventDefault();
+    const area = shownRect(img);
+    const host = $('.eslide').getBoundingClientRect();
+    const rect = document.createElement('div');
+    rect.className = 'edraw';
+    $('.eslide').append(rect);
+    const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+    const pt = ev => ({ x: clamp(ev.clientX, area.clip.left, area.clip.right), y: clamp(ev.clientY, area.clip.top, area.clip.bottom) });
+    const p0 = pt(e);
+    let p1 = p0;
+    const draw = () => Object.assign(rect.style, { left: `${Math.min(p0.x, p1.x) - host.left}px`, top: `${Math.min(p0.y, p1.y) - host.top}px`, width: `${Math.abs(p1.x - p0.x)}px`, height: `${Math.abs(p1.y - p0.y)}px` });
+    const move = ev => { p1 = pt(ev); draw(); };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      rect.remove();
+      const pc = (v, a, len) => Math.round(clamp((v - a) / len * 100, 0, 100));
+      const x = pc(Math.min(p0.x, p1.x), area.left, area.width), y = pc(Math.min(p0.y, p1.y), area.top, area.height);
+      const w = Math.min(100 - x, pc(Math.max(p0.x, p1.x), area.left, area.width) - x), h = Math.min(100 - y, pc(Math.max(p0.y, p1.y), area.top, area.height) - y);
+      if (w < 2 || h < 2) return; // 只是點一下,不是拖曳
+      const r = addSegmentMeta(ta.value, state.seg, `mark: ${x} ${y} ${w} ${h} `);
+      replaceRange(r.from, r.to, r.replaced, 'end');
+      ta.setSelectionRange(r.caret, r.caret); // 游標停在標籤的位置,直接打字
+      setStatus(t('editor.markAdded'), 'ok');
+      preview();
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  });
 
   /** 打開某一個檔案。segment = 要先顯示檔案裡的第幾張。 */
   async function load(path, { segment = 0, note = '', kind = 'warn' } = {}) {

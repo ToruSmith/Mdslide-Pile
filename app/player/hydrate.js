@@ -11,7 +11,12 @@ export async function hydrate(root, source, { full = false } = {}) {
     el.dataset.ready = '1';
     const path = el.dataset.media;
     jobs.push((isURL(path) ? Promise.resolve(path) : source.mediaURL(path)).then(url => {
-      if (el.tagName === 'IMG') { el.decoding = 'async'; el.src = url; el.onerror = () => missing(el, path); }
+      if (el.tagName === 'IMG') {
+        el.decoding = 'async';
+        if (el.parentElement?.classList.contains('marked')) el.addEventListener('load', () => placeMarks(el));
+        el.src = url;
+        el.onerror = () => missing(el, path);
+      }
       else { el.preload = full ? 'auto' : 'metadata'; el.src = url; }
     }, () => missing(el, path)));
   }
@@ -139,3 +144,19 @@ export function stopMedia(root) {
   for (const v of root.querySelectorAll('video, audio')) v.pause();
   for (const f of root.querySelectorAll('iframe')) f.src = 'about:blank';
 }
+
+/**
+ * 截圖標註:圖片以 contain 顯示時,算出圖片在框裡的實際位置,讓標註層剛好蓋在圖片上。
+ * 投影片固定 1280×720(外面再整體縮放),所以用 offset 尺寸計算即可,不必跟著視窗大小重算。
+ */
+export function placeMarks(img) {
+  const layer = img.parentElement?.querySelector('.marks');
+  if (!layer || !img.naturalWidth) return;
+  const fw = img.offsetWidth, fh = img.offsetHeight;
+  if (!fw || !fh) { requestAnimationFrame(() => placeMarks(img)); return; } // 還沒排版(例如在隱藏的元素裡)
+  const k = Math.min(fw / img.naturalWidth, fh / img.naturalHeight);
+  const w = img.naturalWidth * k, h = img.naturalHeight * k;
+  Object.assign(layer.style, { left: `${img.offsetLeft + (fw - w) / 2}px`, top: `${img.offsetTop + (fh - h) / 2}px`, width: `${w}px`, height: `${h}px` });
+  layer.classList.add('on');
+}
+

@@ -34,14 +34,27 @@ export function renderSlide(slide, ctx) {
     case 'section': inner = sectionSlide(slide, section, deck); break;
     case 'end': inner = /^#\s/m.test(slide.body) ? `<div class="md">${md(slide.body)}</div>` : `<h1>${esc(slide.title || tl('slide.thanks'))}</h1>${slide.body ? `<div class="md">${md(slide.body)}</div>` : ''}`; break;
     case 'split': case 'split-left':
-      inner = `<div class="md">${md(slide.body)}</div>${mediaFigure(slide.media[0], ctx, pathCtx, meta, true, tl)}`; break;
+      inner = `<div class="md">${md(slide.body)}</div>${mediaFigure(slide.media[0], ctx, pathCtx, meta, true, tl, meta.marks)}`; break;
     case 'full':
-      inner = mediaFigure(slide.media[0], ctx, pathCtx, meta, !slide.body.trim(), tl) + (slide.body.trim() ? `<div class="overlay"><div class="md">${md(slide.body)}</div></div>` : ''); break;
+      inner = mediaFigure(slide.media[0], ctx, pathCtx, meta, !slide.body.trim(), tl, meta.marks) + (slide.body.trim() ? `<div class="overlay"><div class="md">${md(slide.body)}</div></div>` : ''); break;
     case 'stats': inner = statsSlide(slide.body, md); break;
     case 'timeline': inner = timelineSlide(slide.body, md, meta); break;
     case 'columns': inner = columnsSlide(slide.body, md); break;
     case 'agenda': inner = agendaSlide(slide, deck, md, tl); break;
     case 'chart': inner = chartSlide(slide.body, md, meta, c, slide.title); break;
+    case 'flow': inner = flowSlide(slide.body, md); break;
+    case 'gallery': {
+      const list = slide.media.slice(0, 8);
+      const n = list.length;
+      const cols = n <= 3 ? Math.max(n, 1) : n === 4 ? 2 : n <= 6 ? 3 : 4;
+      inner = `${slide.body.trim() ? `<div class="md">${md(slide.body)}</div>` : ''}<div class="gal" style="--gc:${cols}">${list.map((m, k) => mediaFigure(m, ctx, pathCtx, meta, true, tl, k === 0 ? meta.marks : null)).join('') || mediaFigure(null, ctx, pathCtx, meta, true, tl)}</div>`;
+      break;
+    }
+    case 'quote': {
+      const face = slide.media.find(m => m.kind === 'image');
+      inner = `<div class="md">${md(slide.body)}</div>${face ? `<figure class="media avatar"><img data-media="${esc(resolveMediaPath(face.src, pathCtx))}" alt="${esc(face.alt)}"></figure>` : ''}`;
+      break;
+    }
     default: inner = `<div class="md">${md(slide.body)}</div>`;
   }
 
@@ -64,6 +77,7 @@ export function renderSlide(slide, ctx) {
   if (st.align) cls.push(`align-${st.align}`);
   if (layout === 'title' && deck.coverImage) cls.push('has-image');
   if (meta.class) cls.push(esc(meta.class));
+  if (layout === 'quote' && slide.media.some(m => m.kind === 'image')) cls.push('has-avatar');
   let css = `--c:${c}${fonts}`;
   if (st.bgColor) css += `;--slide-bg:${st.bgColor}`;
   if (st.bgImage && st.overlay === 'dark') css += ';--slide-bg:#1b1d22'; // 圖還沒載入前先用深色,淺色字才看得見
@@ -91,7 +105,7 @@ function sectionSlide(slide, section, deck) {
   return `<div class="num">${pad(k || n + 1)}</div><h1>${esc(section.title)}</h1>${section.subtitle ? `<div class="sub">${esc(section.subtitle)}</div>` : ''}`;
 }
 
-function mediaFigure(m, ctx, pathCtx, meta, showCaption = true, tl = key => t(key)) {
+function mediaFigure(m, ctx, pathCtx, meta, showCaption = true, tl = key => t(key), marks = null) {
   if (!m) return `<figure class="media"><div class="missing">${esc(tl('slide.noMedia'))}</div></figure>`;
   const fit = meta.fit === 'contain' ? ' contain' : '';
   const cap = showCaption && m.caption ? `<figcaption>${esc(m.caption)}</figcaption>` : '';
@@ -110,7 +124,67 @@ function mediaFigure(m, ctx, pathCtx, meta, showCaption = true, tl = key => t(ke
   }
   if (m.kind === 'video') return `<figure class="media${fit}"><video data-media="${esc(path)}" muted playsinline loop preload="none"></video>${cap}</figure>`;
   if (m.kind === 'audio') return `<figure class="media"><div class="poster"><div class="play"></div><div class="provider">AUDIO</div></div><audio data-media="${esc(path)}" preload="none"></audio>${cap}</figure>`;
+  if (marks?.length) {
+    // 截圖標註:圖片完整顯示(不裁切),標註層由 hydrate.js 在圖片載入後對齊到圖片的實際位置
+    const boxes = marks.map(k => `<div class="mk${k.y < 9 ? ' below' : ''}" style="left:${k.x}%;top:${k.y}%;width:${k.w}%;height:${k.h}%${k.color ? `;--mk:${esc(k.color)}` : ''}">${k.label ? `<span>${esc(k.label)}</span>` : ''}</div>`).join('');
+    return `<figure class="media contain marked"><img data-media="${esc(path)}" alt="${esc(m.alt)}"><div class="marks">${boxes}</div>${cap}</figure>`;
+  }
   return `<figure class="media${fit}"><img data-media="${esc(path)}" alt="${esc(m.alt)}">${cap}</figure>`;
+}
+
+/**
+ * 流程圖:每一組清單是一列,項目之間自動畫箭頭。
+ *   清單前單獨一行的文字 = 這一列的標籤(整行粗體 = 強調色標籤)
+ *   - 項目            = 方塊(整個項目粗體 = 強調色方塊);縮排的下一行文字 = 方塊裡換行
+ *     - 子項目        = 方塊下方的小方塊
+ * 標題放最上面;最後一組清單之後的文字放在下方(例如資料來源)。
+ */
+export function parseFlow(body) {
+  const lines = body.split('\n');
+  const head = [], rest = [], rows = [];
+  let cur = null, label = null;
+  const nextText = k => { for (let j = k + 1; j < lines.length; j++) if (lines[j].trim()) return lines[j]; return ''; };
+  for (let k = 0; k < lines.length; k++) {
+    const l = lines[k];
+    if (!l.trim()) continue;
+    const top = l.match(/^[-*+]\s+(.*)$/) || l.match(/^\d+[.)]\s+(.*)$/);
+    const sub = l.match(/^\s+(?:[-*+]|\d+[.)])\s+(.*)$/);
+    if (top) {
+      if (!cur) { cur = { label, items: [] }; rows.push(cur); label = null; }
+      cur.items.push({ lines: [top[1].trim()], subs: [] });
+    } else if (sub && cur?.items.length) cur.items.at(-1).subs.push(sub[1].trim());
+    else if (/^\s+\S/.test(l) && cur?.items.length) cur.items.at(-1).lines.push(l.trim());
+    else {
+      cur = null;
+      if (!rows.length && /^#{1,3}\s/.test(l)) head.push(l);
+      else if (/^\s*([-*+]|\d+[.)])\s+/.test(nextText(k))) label = l.trim(); // 下一行是清單:這行是標籤
+      else if (!rows.length) head.push(l);
+      else rest.push(l);
+    }
+  }
+  return { head: head.join('\n'), rows, rest: rest.join('\n') };
+}
+
+const HOT = /^\*\*(.+)\*\*$|^==(.+)==$/;
+function hotText(text) {
+  const m = text.match(HOT);
+  return m ? { hot: true, text: m[1] ?? m[2] } : { hot: false, text };
+}
+
+function flowSlide(body, md) {
+  const { head, rows, rest } = parseFlow(body);
+  const box = (cls, text) => { const h = hotText(text); return `<div class="${cls}${h.hot ? ' hot' : ''}">${renderInline(h.text)}</div>`; };
+  const html = rows.map(row => {
+    const lab = row.label ? hotText(row.label) : null;
+    const steps = row.items.map(it => {
+      const first = hotText(it.lines[0]);
+      const text = [first.text, ...it.lines.slice(1)].map(x => renderInline(x)).join('<br>');
+      const subs = it.subs.length ? `<div class="fsubs">${it.subs.map(x => box('fsub', x)).join('')}</div>` : '';
+      return `<div class="fstep"><div class="fbox${first.hot ? ' hot' : ''}">${text}</div>${subs}</div>`;
+    }).join('');
+    return `<div class="frow">${lab ? `<div class="flabel${lab.hot ? ' hot' : ''}">${renderInline(lab.text)}</div>` : ''}<div class="fsteps" style="--n:${row.items.length}">${steps}</div></div>`;
+  }).join('');
+  return `${head.trim() ? `<div class="md">${md(head)}</div>` : ''}<div class="flow">${html}</div>${rest.trim() ? `<div class="md">${md(rest)}</div>` : ''}`;
 }
 
 /** 清單項目「**數字** 說明」→ 數字卡。清單之外的文字放在下方。 */
