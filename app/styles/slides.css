@@ -244,3 +244,17 @@
 .l-flow .fsub.hot { border-color: var(--c); color: var(--c); }
 .l-flow strong { color: var(--c); }
 .l-quote.has-avatar .foot .page { color: rgba(255, 255, 255, .9); text-shadow: 0 1px 4px rgba(0, 0, 0, .4); }
+
+/* ---------- 多區塊(grid):像簡報軟體的卡片排版,2×2、3×2,區塊裡可以放圖 ---------- */
+.l-grid { display: flex; flex-direction: column; }
+.l-grid > .md h1 { margin-bottom: 24px; }
+.l-grid .cols { flex: 1 1 auto; min-height: 0; display: grid; gap: 22px; grid-template-columns: var(--ratio, repeat(var(--gc, 2), minmax(0, 1fr))); grid-auto-rows: minmax(0, 1fr); }
+.l-grid .col { min-height: 0; overflow: hidden; background: var(--slide-soft); border-radius: 14px; padding: 22px 26px; border-top: 5px solid var(--c); font-size: 24px; line-height: 1.5; display: flex; flex-direction: column; }
+.l-grid .col h2 { font-size: 30px; margin: 0 0 10px; }
+.l-grid .col h3 { font-size: 26px; margin: 0 0 8px; }
+.l-grid .col p, .l-grid .col ul, .l-grid .col ol { margin-bottom: 10px; }
+.l-grid .col li { margin-bottom: 4px; }
+/* 區塊裡單獨一行的圖片:用剩下的高度,完整顯示不裁切 */
+.l-grid .col p:has(> img:only-child), .l-columns .col p:has(> img:only-child) { flex: 1 1 0; min-height: 60px; margin: 4px 0 10px; display: flex; justify-content: center; }
+.l-grid .col p > img:only-child, .l-columns .col p > img:only-child { width: 100%; height: 100%; max-height: none; object-fit: contain; border-radius: 10px; }
+.l-columns .col { display: flex; flex-direction: column; }

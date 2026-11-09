@@ -35,6 +35,10 @@ test('build-starter:範例書庫含檢查工具、不含官方範例,且通過�
   const names = await readdir(out);
   for (const n of ['README.md', '_site.yml', 'mdslide-check.mjs']) assert.ok(names.includes(n), n);
   assert.ok(!names.some(n => n.startsWith('00-')));
+  const docs = await readdir(join(out, '_說明'));
+  for (const n of ['使用手冊.md', '製作專案指南.md', 'MANUAL.en.md', 'GUIDE.en.md']) assert.ok(docs.includes(n), `_說明/${n}`);
+  const manual = await readFile(join(out, '_說明', '使用手冊.md'), 'utf8');
+  assert.doesNotMatch(manual, /\]\((\.\.\/|docs\/)/, '說明文件裡的連結要改成同一層');
   const report = execFileSync(process.execPath, [join(out, 'mdslide-check.mjs'), out, '--lang', 'en'], { encoding: 'utf8' });
   assert.match(report, /No problems found/);
 });

@@ -3,7 +3,7 @@
 // 發布新版時由 .github/workflows/release.yml 執行並打包成 Mdslide-library-vX.Y.Z.zip(解壓後是「Mdslide書庫」資料夾)。
 //   node scripts/build-starter.mjs <輸出資料夾>      例:node scripts/build-starter.mjs build/Mdslide書庫
 
-import { cp, readdir, rm, mkdir } from 'node:fs/promises';
+import { cp, readdir, rm, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 const out = process.argv[2];
@@ -14,4 +14,15 @@ await rm(out, { recursive: true, force: true });
 await mkdir(out, { recursive: true });
 for (const dir of ['starter', 'dist']) await cp(dir, out, { recursive: true });
 for (const name of await readdir('content')) if (!SKIP.has(name)) await cp(join('content', name), join(out, name), { recursive: true });
+
+// 說明文件放在 _說明/(底線開頭不會被當成簡報),離線也能看、AI 也讀得到。連結改成同一層。
+const DOCS = { '製作專案指南.md': '製作專案指南.md', 'docs/使用手冊.md': '使用手冊.md', 'docs/GUIDE.en.md': 'GUIDE.en.md', 'docs/MANUAL.en.md': 'MANUAL.en.md' };
+const docsDir = join(out, '_說明');
+await mkdir(docsDir, { recursive: true });
+for (const [from, to] of Object.entries(DOCS)) {
+  const text = (await readFile(from, 'utf8'))
+    .replace(/\]\((?:\.\.\/)?(?:docs\/)?(製作專案指南\.md|使用手冊\.md|GUIDE\.en\.md|MANUAL\.en\.md)(#[^)]*)?\)/g, '](./$1$2)')
+    .replace(/\]\((?:\.\.\/)?(CONTRIBUTING\.md|AGENTS\.md|SECURITY\.md)\)/g, '](https://github.com/ToruSmith/Mdslide-Pile/blob/main/$1)');
+  await writeFile(join(docsDir, to), text);
+}
 console.log(out);

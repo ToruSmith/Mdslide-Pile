@@ -16,7 +16,11 @@
 在主題資料夾裡新增一個資料夾,例如 `02-工作報告/2026-12-年終成果/`,
 裡面放 `deck.yml` 與章節資料夾,每個 `.md` 檔是一張投影片。
 
-完整規則:https://github.com/ToruSmith/Mdslide-Pile/blob/main/製作專案指南.md
+操作說明與完整規則都在 `_說明/` 資料夾(底線開頭,不會被當成簡報):
+
+- `使用手冊.md`:快捷鍵、編輯模式、設定速查表(可以直接複製)、字型、顏色、請 AI 幫忙
+- `製作專案指南.md`:資料夾、設定檔、版型的完整規則;請 AI 做簡報時,把這份給它讀
+- 英文版:`MANUAL.en.md`、`GUIDE.en.md`
 
 ## 怎麼檢查
 
@@ -39,4 +43,4 @@
 
 ---
 
-**English:** this is a Mdslide Pile library. Open https://torusmith.github.io/Mdslide-Pile/ in Chrome or Edge, choose "Open local folder" and pick this folder. Rules: https://github.com/ToruSmith/Mdslide-Pile/blob/main/docs/GUIDE.en.md
+**English:** this is a Mdslide Pile library. Open https://torusmith.github.io/Mdslide-Pile/ in Chrome or Edge, choose "Open a local folder" and pick this folder. The user manual and full rules are in the `_說明/` folder (`MANUAL.en.md`, `GUIDE.en.md`).

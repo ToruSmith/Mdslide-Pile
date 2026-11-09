@@ -4,6 +4,7 @@
 
 | 我想… | 怎麼做 |
 |---|---|
+| 學會操作 | 讀 [`docs/使用手冊.md`](docs/使用手冊.md)(英文:[`docs/MANUAL.en.md`](docs/MANUAL.en.md)) |
 | 做一份簡報 | 讀 [`製作專案指南.md`](製作專案指南.md)(英文:[`docs/GUIDE.en.md`](docs/GUIDE.en.md)),不需要改程式 |
 | 回報錯誤 | 開一個 Issue,選「錯誤回報」,附上重現步驟 |
 | 建議新功能 | 開一個 Issue,選「功能建議」,說明想解決的問題 |
@@ -35,4 +36,4 @@ python3 -m http.server 8000        # 用瀏覽器開 http://localhost:8000 實�
 
 ---
 
-**English:** to make a deck, read `docs/GUIDE.en.md` (no code changes needed). To report a bug or suggest a feature, open an issue using the templates. For security problems, see `SECURITY.md`. Before changing code, read `AGENTS.md`: no dependencies or build step, never execute user content, all UI text goes through i18n, and existing deck folders must keep working. Run `node --test tests/*.test.mjs` and `node scripts/check.mjs content` before opening a pull request.
+**English:** to learn the basics, read `docs/MANUAL.en.md`; to make a deck, read `docs/GUIDE.en.md` (no code changes needed). To report a bug or suggest a feature, open an issue using the templates. For security problems, see `SECURITY.md`. Before changing code, read `AGENTS.md`: no dependencies or build step, never execute user content, all UI text goes through i18n, and existing deck folders must keep working. Run `node --test tests/*.test.mjs` and `node scripts/check.mjs content` before opening a pull request.

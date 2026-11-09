@@ -3,6 +3,8 @@
 This document explains how to turn a folder into a Mdslide Pile deck. **People and AI follow the same rules**: there is only one rulebook.
 
 > 中文版:[製作專案指南.md](../製作專案指南.md)
+>
+> New here and just want step-by-step instructions? Start with the [user manual](MANUAL.en.md) (operation, a copy-and-paste settings cheat sheet, fonts, colors).
 
 > For AI: read this whole document before you start. When you are done, run `node scripts/check.mjs <folder>`; the job is finished only when it reports no problems. The last section is your workflow and acceptance checklist.
 
@@ -297,6 +299,7 @@ When `layout` is omitted it is `auto`:
 | `agenda` | Automatic agenda | Lists every section; nothing to write |
 | `chart` | Chart | Write a table: first column labels, other columns values; `chart: bar / hbar / line`, `unit: pts`. Values may use thousands separators, minus signs (− or -), % and units; write missing values as `—`, `N/A` or leave them blank |
 | `flow` | Flow chart | Each list is a row, with arrows drawn between items. A line on its own just before a list labels that row (a fully bold line = accent label); a fully bold item = accent box; an indented line under an item = line break in the box; indented sub-items = small boxes under it. 3–6 items per row work best |
+| `grid` | Grid of blocks (card layouts like presentation software) | Like `columns`, separated by `+++` lines, wrapping automatically: 2–3 per row, 4 as 2×2, 5–6 as 3×2, 7–8 as 4×2. A first part with only a heading becomes the slide title; images on their own line stay inside their block |
 | `gallery` | Images side by side | A heading plus two or more images on their own lines; `ratio: 2:1` adjusts column widths |
 | `end` | Closing slide | `# Thank you` plus contact details |
 | `title`, `section` | Automatic title slide and section covers | Usually not written by hand |
@@ -429,7 +432,7 @@ Follow the steps in section 7 of the guide to create the folder and files, then 
 ## 8. FAQ
 
 - **Wrong order on screen?** Check the number prefixes. They sort numerically (`2-` before `10-`), but two digits (`02-`) also keep file explorers in the same order. The checker warns about duplicate prefixes and mixed widths at the same level.
-- **Can I edit the content on the site?** Yes. Zoom into a slide and press `E` (or "Edit" in the toolbar): Markdown on the left, live preview on the right, `Ctrl+S` saves back to the file in your folder (needs a local folder opened in Chrome / Edge; the browser asks once for permission to write). The toolbar picks a layout and inserts headings, lists, images or videos, columns, a new slide and notes, so you don't need to remember the syntax; `‹` `›` (or `Alt+PageUp` / `Alt+PageDown`) move to the previous or next slide and save first when switching files.
+- **Can I edit the content on the site?** Yes. Zoom into a slide and press `E` (or "Edit" in the toolbar): Markdown on the left, live preview on the right, `Ctrl+S` saves back to the file in your folder (needs a local folder opened in Chrome / Edge; the browser asks once for permission to write). The toolbar picks a layout and inserts headings, lists, images or videos, columns, a new slide and notes, so you don't need to remember the syntax; the "Look ▾" panel sets text size, background color or image, overlay, accent and text colors, font, alignment, column ratio, step reveal, hiding and the footer by choosing from menus (written as settings comments at the top of the slide); `‹` `›` (or `Alt+PageUp` / `Alt+PageDown`) move to the previous or next slide and save first when switching files.
   - The toolbar also has "+ New slide" (numbering continues automatically) and "Archive", which moves the file to `_封存/` inside the deck folder — **it is not deleted** and you can move it back yourself.
   - Automatic cover and section pages have no file of their own, so `E` edits `deck.yml` instead.
   - If another program changes the file while you are editing, you are asked which version to keep before anything is overwritten.

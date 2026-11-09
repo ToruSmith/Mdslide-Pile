@@ -7,7 +7,7 @@ import { readSlideStyle } from './style.js';
 import { t } from './i18n.js';
 
 /** 所有支援的版型。新增版型時,記得同步更新 製作專案指南.md 與 app/player/render.js。 */
-export const LAYOUTS = ['auto', 'text', 'center', 'split', 'split-left', 'full', 'quote', 'number', 'stats', 'timeline', 'columns', 'agenda', 'chart', 'flow', 'gallery', 'title', 'section', 'end'];
+export const LAYOUTS = ['auto', 'text', 'center', 'split', 'split-left', 'full', 'quote', 'number', 'stats', 'timeline', 'columns', 'agenda', 'chart', 'flow', 'gallery', 'grid', 'title', 'section', 'end'];
 
 const MEDIA_LINE = /^\s*!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"([^"]*)")?\s*\)\s*$/;
 const NOTE_LINE = /^\s*(?:note|notes|備註|講者備註)\s*[:：]\s*(.*)$/i; // i18n-ok:語法關鍵字,不是介面文字
@@ -82,11 +82,13 @@ function parseSegment(seg, { path, index, fileMeta, issues }) {
   const media = [];
   let fence = false;
   const bodyLines = [];
+  // 分欄與多區塊:圖片留在原來的區塊裡顯示(其他版型則抽出來當主要媒體)
+  const inline = ['columns', 'grid'].includes(String(meta.layout || '').toLowerCase());
   for (const l of lines) {
     if (/^\s*(```|~~~)/.test(l)) fence = !fence;
     const m = !fence && l.match(MEDIA_LINE);
     if (m) media.push({ alt: m[1], caption: m[3] || m[1], ...classifyMedia(m[2]) });
-    else bodyLines.push(l);
+    if (!m || inline) bodyLines.push(l);
   }
   const body = bodyLines.join('\n').replace(/^\n+|\n+$/g, '');
 

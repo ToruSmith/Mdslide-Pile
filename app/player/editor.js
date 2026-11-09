@@ -154,8 +154,11 @@ export function openEditor(player, { onSaved, onClose }) {
       <button data-t="columns" title="${esc(t('editor.tColumnsTitle'))}">${esc(t('editor.tColumns'))}</button>
       <button data-t="split" title="${esc(t('editor.tSplitTitle'))}">${esc(t('editor.tSplit'))}</button>
       <button data-t="notes" title="${esc(t('editor.tNotesTitle'))}">${esc(t('editor.tNotes'))}</button>
+      <span class="esep"></span>
+      <button data-t="look" class="elook" title="${esc(t('editor.lookTitle'))}">${esc(t('editor.look'))} ▾</button>
       <a class="ehelp" href="${esc(t('editor.guideURL'))}" target="_blank" rel="noopener">${esc(t('editor.guide'))}</a>
       <div class="emedia" hidden></div>
+      <div class="esettings" hidden></div>
     </div>
     <div class="ebody">
       <div class="epane">
@@ -258,6 +261,8 @@ export function openEditor(player, { onSaved, onClose }) {
     stopMedia(box);
     box.innerHTML = slide ? renderSlide({ ...slide, sec: player.slides[player.focus]?.sec ?? 0 }, { deck: player.deck, mode: 'full', globalIndex: player.focus, total: player.slides.length }) : '';
     hydrate(box, source, { full: false });
+    state.slide = slide;
+    if (!$('.esettings').hidden) fillLook();
     const sel = $('[data-t="layout"]');
     const explicit = String(slide?.meta?.layout || 'auto').toLowerCase();
     sel.value = layoutOptions.includes(explicit) ? explicit : 'auto';
@@ -499,8 +504,58 @@ export function openEditor(player, { onSaved, onClose }) {
       replaceRange(r.from + trimmed.length, r.to, `\n\nNote:\n`);
     }
     if (k === 'media') return toggleMedia();
+    if (k === 'look') { const box = $('.esettings'); box.hidden = !box.hidden; if (!box.hidden) fillLook(); return; }
     schedule();
   }
+
+  // ---- 外觀設定面板:不用記設定名稱,選了就寫成這一張開頭的 <!-- 設定 --> ----
+  const FONTS = ['Noto Sans TC', 'Noto Serif TC', 'Microsoft JhengHei', 'PingFang TC', 'DFKai-SB', 'Arial', 'Georgia', 'system-ui'];
+  const RATIOS = ['', '1:1', '2:1', '1:2', '3:2', '2:3', '1:1:2', '2:1:1'];
+  const hex = v => (/^#[0-9a-f]{6}$/i.test(String(v || '')) ? v : /^#[0-9a-f]{3}$/i.test(String(v || '')) ? '#' + String(v).slice(1).replace(/./g, c => c + c) : '');
+  function fillLook() {
+    const m = state.slide?.meta || {};
+    const st = state.slide?.style || {};
+    const lay = state.slide?.layout || 'text';
+    const opt = (key, list) => list.map(([v, label]) => `<option value="${esc(v)}"${String(m[key] ?? '') === v ? ' selected' : ''}>${esc(label)}</option>`).join('');
+    const colorRow = (key, label, value) => `<div class="erow"><label>${esc(label)}</label><span class="ecolor"><input type="color" data-look="${key}" value="${esc(hex(value) || '#888888')}"${hex(value) ? '' : ' class="unset"'}><code>${esc(value || t('editor.lookDefault'))}</code>${value ? `<button data-clear="${key}">${esc(t('editor.lookClear'))}</button>` : ''}</span></div>`;
+    const ratioOK = ['split', 'split-left', 'columns', 'grid', 'gallery'].includes(lay);
+    $('.esettings').innerHTML = `
+      <div class="erow"><label>${esc(t('editor.lookSize'))}</label><select data-look="size">${opt('size', [['', t('editor.lookDefault')], ['small', t('editor.sizeSmall')], ['normal', t('editor.sizeNormal')], ['large', t('editor.sizeLarge')], ['xl', t('editor.sizeXl')]])}</select></div>
+      ${colorRow('background', t('editor.lookBgColor'), st.bgColor)}
+      <div class="erow"><label>${esc(t('editor.lookBgImage'))}</label><span><code>${esc(st.bgImage || t('editor.lookNone'))}</code> <button data-pickbg>${esc(t('editor.lookPick'))}</button>${st.bgImage ? ` <button data-clear="background">${esc(t('editor.lookClear'))}</button>` : ''}</span></div>
+      <div class="erow"${st.bgImage ? '' : ' hidden'}><label>${esc(t('editor.lookOverlay'))}</label><select data-look="overlay">${opt('overlay', [['', t('editor.lookDefault')], ['dark', t('editor.overlayDark')], ['light', t('editor.overlayLight')], ['none', t('editor.overlayNone')]])}</select></div>
+      ${colorRow('color', t('editor.lookAccent'), m.color)}
+      ${colorRow('text', t('editor.lookText'), st.text)}
+      <div class="erow"><label>${esc(t('editor.lookFont'))}</label><span><input type="text" data-look="font" list="efonts" value="${esc(m.font ?? '')}" placeholder="${esc(t('editor.lookDefault'))}"><datalist id="efonts">${FONTS.map(f => `<option value="${f}">`).join('')}</datalist></span></div>
+      <div class="erow"><label>${esc(t('editor.lookAlign'))}</label><select data-look="align">${opt('align', [['', t('editor.lookDefault')], ['left', t('editor.alignLeft')], ['center', t('editor.alignCenter')], ['right', t('editor.alignRight')]])}</select></div>
+      <div class="erow"${ratioOK ? '' : ' hidden'}><label>${esc(t('editor.lookRatio'))}</label><select data-look="ratio">${RATIOS.map(v => `<option value="${v}"${String(m.ratio ?? '') === v ? ' selected' : ''}>${esc(v || t('editor.lookDefault'))}</option>`).join('')}</select></div>
+      <div class="erow checks">
+        <label><input type="checkbox" data-flag="step"${m.step === true ? ' checked' : ''}> ${esc(t('editor.lookStep'))}</label>
+        <label><input type="checkbox" data-flag="hidden"${m.hidden === true ? ' checked' : ''}> ${esc(t('editor.lookHidden'))}</label>
+        <label><input type="checkbox" data-flag="footer"${m.footer === false ? '' : ' checked'}> ${esc(t('editor.lookFooter'))}</label>
+      </div>
+      <p class="enote">${esc(t('editor.lookNote'))}</p>`;
+  }
+  function setMeta(key, value) {
+    const r = setSegmentMeta(ta.value, state.seg, key, value);
+    if (r.text === ta.value) return;
+    const caret = ta.selectionStart;
+    replaceRange(r.from, r.to, r.replaced, 'end');
+    const at = caret >= r.from ? Math.max(r.from, caret + r.replaced.length - (r.to - r.from)) : caret;
+    ta.setSelectionRange(at, at);
+    preview();
+  }
+  $('.esettings').addEventListener('change', e => {
+    const el = e.target;
+    if (el.dataset.look) setMeta(el.dataset.look, el.value.trim());
+    if (el.dataset.flag === 'footer') setMeta('footer', el.checked ? '' : 'false');
+    else if (el.dataset.flag) setMeta(el.dataset.flag, el.checked ? 'true' : '');
+  });
+  $('.esettings').addEventListener('click', async e => {
+    const c = e.target.closest('[data-clear]')?.dataset.clear;
+    if (c) setMeta(c, '');
+    if (e.target.closest('[data-pickbg]')) { state.pickBg = true; await toggleMedia(); }
+  });
 
   async function toggleMedia() {
     const box = $('.emedia');
@@ -524,6 +579,11 @@ export function openEditor(player, { onSaved, onClose }) {
   }
   function insertMedia(m) {
     $('.emedia').hidden = true;
+    if (state.pickBg) { // 外觀設定面板的「選圖片」:設成背景圖
+      state.pickBg = false;
+      if (!m.startsWith('@')) setMeta('background', m);
+      return;
+    }
     const cap = t('editor.sampleCaption');
     const src = m === '@video' ? 'https://www.youtube.com/watch?v=' : m === '@image' ? 'media/photo.jpg' : m;
     const before = ta.value.slice(0, ta.selectionStart);
@@ -559,7 +619,10 @@ export function openEditor(player, { onSaved, onClose }) {
     if (tk) tool(tk);
     const m = e.target.closest('[data-m]')?.dataset.m;
     if (m) insertMedia(m);
-    if (!e.target.closest('[data-t="media"], .emedia')) $('.emedia').hidden = true;
+    // 面板內容可能已經重畫(按鈕不在畫面上了),所以用事件路徑判斷點的是不是面板裡面
+    const inside = sel => e.composedPath().some(n => n.matches?.(sel));
+    if (!inside('[data-t="media"], .emedia, [data-pickbg]')) { $('.emedia').hidden = true; state.pickBg = false; }
+    if (!inside('[data-t="look"], .esettings, .emedia')) $('.esettings').hidden = true;
   });
   $('[data-t="layout"]').addEventListener('change', e => setLayout(e.target.value));
   ta.addEventListener('input', () => { schedule(); setStatus(dirty() ? t('editor.unsaved') : (canWrite ? t('editor.ready') : t('editor.readOnly')), dirty() ? 'warn' : ''); });

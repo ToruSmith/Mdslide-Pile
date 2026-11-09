@@ -87,6 +87,12 @@ def main():
         assert page.locator('.efile').inner_text().endswith('.md'), f"編輯的不是 MD 檔:{page.locator('.efile').inner_text()}"
         page.fill('.etext', '# 預覽測試\n\n- 一點\n'); page.wait_for_timeout(600)
         assert page.locator('.escale h1').inner_text() == '預覽測試', '預覽沒有跟著更新'
+        page.click('[data-t=look]'); page.wait_for_timeout(300)
+        page.select_option('[data-look=size]', 'large'); page.wait_for_timeout(400)
+        assert '<!-- size: large -->' in page.input_value('.etext'), '外觀面板沒有寫入設定'
+        assert page.locator('.escale .slide.size-large').count() == 1, '外觀面板沒有反映在預覽'
+        page.select_option('[data-look=size]', ''); page.wait_for_timeout(400)
+        assert 'size:' not in page.input_value('.etext'), '選回預設應該刪掉設定'
         page.select_option('[data-t=layout]', 'center'); page.wait_for_timeout(400)
         assert '<!-- layout: center -->' in page.input_value('.etext'), '版型選單沒有寫入設定'
         assert page.locator('.escale .l-center').count() == 1, '版型選單沒有反映在預覽'

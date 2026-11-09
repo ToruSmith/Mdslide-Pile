@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Mdslide Pile 書庫檢查工具(單檔版 v1.13.0)
+// Mdslide Pile 書庫檢查工具(單檔版 v1.14.0)
 // 由 scripts/bundle-check.mjs 自動產生,請不要手動修改。原始碼:https://github.com/ToruSmith/Mdslide-Pile
 //
 // 用法(需要 Node.js 18 以上):
@@ -466,6 +466,9 @@ const LOCALE_ZH_HANT = {
   'layoutName.columns': "分欄比較",
   'layoutName.agenda': "自動大綱",
   'layoutName.chart': "圖表",
+  'layoutName.flow': '流程圖',
+  'layoutName.gallery': '多圖並排',
+  'layoutName.grid': '多區塊',
   'layoutName.end': "結尾頁",
   'layoutName.title': "標題頁",
   'layoutName.section': "章節頁",
@@ -474,6 +477,35 @@ const LOCALE_ZH_HANT = {
   'editor.overflowCompact': '已經是小字級,內容仍超出約 {px} 像素。請拆成兩張',
   'editor.markHint': '在右邊的圖上拖曳,可以加紅框標註',
   'editor.markAdded': '已加上標註。游標停在標籤的位置,直接打字(例如「這裡改內容」);#色碼 可以換顏色',
+  'editor.look': "外觀",
+  'editor.lookTitle': "字級、背景、顏色、字型、對齊等設定(只影響這一張)",
+  'editor.lookDefault': "預設",
+  'editor.lookClear': "清除",
+  'editor.lookNone': "無",
+  'editor.lookPick': "選圖片…",
+  'editor.lookSize': "字級",
+  'editor.sizeSmall': "小(資料多時)",
+  'editor.sizeNormal': "正常",
+  'editor.sizeLarge': "大",
+  'editor.sizeXl': "特大",
+  'editor.lookBgColor': "背景色",
+  'editor.lookBgImage': "背景圖",
+  'editor.lookOverlay': "圖片遮罩",
+  'editor.overlayDark': "深色(字反白)",
+  'editor.overlayLight': "淺色",
+  'editor.overlayNone': "不加",
+  'editor.lookAccent': "強調色",
+  'editor.lookText': "文字色",
+  'editor.lookFont': "字型",
+  'editor.lookAlign': "對齊",
+  'editor.alignLeft': "靠左",
+  'editor.alignCenter': "置中",
+  'editor.alignRight': "靠右",
+  'editor.lookRatio': "欄寬比例",
+  'editor.lookStep': "逐步顯示",
+  'editor.lookHidden': "播放時跳過這張",
+  'editor.lookFooter': "顯示頁尾",
+  'editor.lookNote': "每個選擇都會在這一張開頭寫一行設定註解;改回「預設」就刪掉那一行。背景色深時字自動變淺。",
   'editor.label': '編輯 Markdown',
   'editor.close': '‹ 關閉',
   'editor.save': '儲存',
@@ -856,6 +888,9 @@ const LOCALE_EN = {
   'layoutName.columns': "Columns",
   'layoutName.agenda': "Agenda",
   'layoutName.chart': "Chart",
+  'layoutName.flow': 'Flow chart',
+  'layoutName.gallery': 'Images side by side',
+  'layoutName.grid': 'Grid of blocks',
   'layoutName.end': "Closing",
   'layoutName.title': "Title",
   'layoutName.section': "Section",
@@ -864,6 +899,35 @@ const LOCALE_EN = {
   'editor.overflowCompact': 'Already small, but content still runs about {px}px past the slide. Split it into two slides',
   'editor.markHint': 'Drag on the image on the right to add a highlight box',
   'editor.markAdded': 'Highlight added. The cursor is where the label goes, so just type it; add a #hex color to change its color',
+  'editor.look': "Look",
+  'editor.lookTitle': "Text size, background, colors, font, alignment (this slide only)",
+  'editor.lookDefault': "Default",
+  'editor.lookClear': "Clear",
+  'editor.lookNone': "None",
+  'editor.lookPick': "Choose image…",
+  'editor.lookSize': "Text size",
+  'editor.sizeSmall': "Small (data-heavy)",
+  'editor.sizeNormal': "Normal",
+  'editor.sizeLarge': "Large",
+  'editor.sizeXl': "Extra large",
+  'editor.lookBgColor': "Background color",
+  'editor.lookBgImage': "Background image",
+  'editor.lookOverlay': "Image overlay",
+  'editor.overlayDark': "Dark (light text)",
+  'editor.overlayLight': "Light",
+  'editor.overlayNone': "None",
+  'editor.lookAccent': "Accent color",
+  'editor.lookText': "Text color",
+  'editor.lookFont': "Font",
+  'editor.lookAlign': "Alignment",
+  'editor.alignLeft': "Left",
+  'editor.alignCenter': "Center",
+  'editor.alignRight': "Right",
+  'editor.lookRatio': "Column ratio",
+  'editor.lookStep': "Reveal step by step",
+  'editor.lookHidden': "Skip this slide when playing",
+  'editor.lookFooter': "Show footer",
+  'editor.lookNote': "Each choice writes a settings comment at the top of this slide; choosing Default removes it. Text turns light on dark backgrounds.",
   'editor.label': 'Edit Markdown',
   'editor.close': '‹ Close',
   'editor.save': 'Save',
@@ -1251,7 +1315,7 @@ function resolveMediaPath(src, { projectPath, filePath }) {
 
 
 /** 所有支援的版型。新增版型時,記得同步更新 製作專案指南.md 與 app/player/render.js。 */
-const LAYOUTS = ['auto', 'text', 'center', 'split', 'split-left', 'full', 'quote', 'number', 'stats', 'timeline', 'columns', 'agenda', 'chart', 'flow', 'gallery', 'title', 'section', 'end'];
+const LAYOUTS = ['auto', 'text', 'center', 'split', 'split-left', 'full', 'quote', 'number', 'stats', 'timeline', 'columns', 'agenda', 'chart', 'flow', 'gallery', 'grid', 'title', 'section', 'end'];
 
 const MEDIA_LINE = /^\s*!\[([^\]]*)\]\(\s*<?([^)\s>]+)>?(?:\s+"([^"]*)")?\s*\)\s*$/;
 const NOTE_LINE = /^\s*(?:note|notes|備註|講者備註)\s*[:：]\s*(.*)$/i; // i18n-ok:語法關鍵字,不是介面文字
@@ -1326,11 +1390,13 @@ function parseSegment(seg, { path, index, fileMeta, issues }) {
   const media = [];
   let fence = false;
   const bodyLines = [];
+  // 分欄與多區塊:圖片留在原來的區塊裡顯示(其他版型則抽出來當主要媒體)
+  const inline = ['columns', 'grid'].includes(String(meta.layout || '').toLowerCase());
   for (const l of lines) {
     if (/^\s*(```|~~~)/.test(l)) fence = !fence;
     const m = !fence && l.match(MEDIA_LINE);
     if (m) media.push({ alt: m[1], caption: m[3] || m[1], ...classifyMedia(m[2]) });
-    else bodyLines.push(l);
+    if (!m || inline) bodyLines.push(l);
   }
   const body = bodyLines.join('\n').replace(/^\n+|\n+$/g, '');
 

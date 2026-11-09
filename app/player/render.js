@@ -40,6 +40,7 @@ export function renderSlide(slide, ctx) {
     case 'stats': inner = statsSlide(slide.body, md); break;
     case 'timeline': inner = timelineSlide(slide.body, md, meta); break;
     case 'columns': inner = columnsSlide(slide.body, md); break;
+    case 'grid': inner = columnsSlide(slide.body, md, true); break;
     case 'agenda': inner = agendaSlide(slide, deck, md, tl); break;
     case 'chart': inner = chartSlide(slide.body, md, meta, c, slide.title); break;
     case 'flow': inner = flowSlide(slide.body, md); break;
@@ -215,12 +216,15 @@ function timelineSlide(body, md, meta) {
 }
 
 /** 以單獨一行的 +++ 分欄;第一段若只有標題,就當成整張的標題。 */
-function columnsSlide(body, md) {
+/** 分欄(columns)與多區塊(grid):單獨一行 +++ 分開;第一段只有標題時當整張標題。grid 會自動換行排成 2×2、3×2…… */
+function columnsSlide(body, md, grid = false) {
   const parts = body.split(/^\+\+\+\s*$/m);
   let head = '';
   if (parts.length > 1 && /^#{1,2}\s[^\n]+$/.test(parts[0].trim())) head = parts.shift();
   else if (parts.length > 1 && !parts[0].trim()) parts.shift();
-  return `<div class="md">${md(head)}</div><div class="cols" style="--n:${parts.length}">${parts.map(p => `<div class="col md">${md(p.trim())}</div>`).join('')}</div>`;
+  const n = parts.length;
+  const gc = n <= 3 ? n : n === 4 ? 2 : n <= 6 ? 3 : 4;
+  return `<div class="md">${md(head)}</div><div class="cols" style="--n:${n}${grid ? `;--gc:${gc}` : ''}">${parts.map(p => `<div class="col md">${md(p.trim())}</div>`).join('')}</div>`;
 }
 
 function agendaSlide(slide, deck, md, tl) {

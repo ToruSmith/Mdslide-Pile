@@ -76,3 +76,13 @@ test('簡報語言判斷', () => {
   assert.equal(t('slide.thanks', null, 'en'), 'Thank you');
   assert.equal(t('slide.thanks', null, 'zh-Hant'), '謝謝');
 });
+
+test('每個版型在編輯模式的選單裡都有名稱(鍵是動態組出來的,一般檢查抓不到)', async () => {
+  const { LAYOUTS } = await import('../app/core/slide.js');
+  const { LOCALE_ZH_HANT } = await import('../app/core/locales/zh-Hant.js');
+  const { LOCALE_EN } = await import('../app/core/locales/en.js');
+  for (const l of LAYOUTS) {
+    assert.ok(LOCALE_ZH_HANT['layoutName.' + l], `zh-Hant 缺少 layoutName.${l}`);
+    assert.ok(LOCALE_EN['layoutName.' + l], `en 缺少 layoutName.${l}`);
+  }
+});
