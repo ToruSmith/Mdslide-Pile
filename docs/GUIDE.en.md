@@ -402,7 +402,7 @@ Follow the steps in section 7 of the guide to create the folder and files, then 
 ## 8. FAQ
 
 - **Wrong order on screen?** Check the number prefixes. They sort numerically (`2-` before `10-`), but two digits (`02-`) also keep file explorers in the same order. The checker warns about duplicate prefixes and mixed widths at the same level.
-- **Can I edit the content on the site?** Yes. Zoom into a slide and press `E` (or "Edit" in the toolbar): Markdown on the left, live preview on the right, `Ctrl+S` saves back to the file in your folder (needs a local folder opened in Chrome / Edge; the browser asks once for permission to write).
+- **Can I edit the content on the site?** Yes. Zoom into a slide and press `E` (or "Edit" in the toolbar): Markdown on the left, live preview on the right, `Ctrl+S` saves back to the file in your folder (needs a local folder opened in Chrome / Edge; the browser asks once for permission to write). The toolbar picks a layout and inserts headings, lists, images or videos, columns, a new slide and notes, so you don't need to remember the syntax; `‹` `›` (or `Alt+PageUp` / `Alt+PageDown`) move to the previous or next slide and save first when switching files.
   - The toolbar also has "+ New slide" (numbering continues automatically) and "Archive", which moves the file to `_封存/` inside the deck folder — **it is not deleted** and you can move it back yourself.
   - Automatic cover and section pages have no file of their own, so `E` edits `deck.yml` instead.
   - If another program changes the file while you are editing, you are asked which version to keep before anything is overwritten.

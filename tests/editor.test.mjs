@@ -42,3 +42,35 @@ test('replaceNotes:只動指定那一段的備註,內容不受影響', () => {
   assert.equal(parseSlideFile(second, { path: 'x.md' }).slides[0].notes, '舊備註');
   assert.equal(parseSlideFile(second, { path: 'x.md' }).slides[1].notes, 'B 的備註');
 });
+
+test('setSegmentMeta:新增、修改、移除這一張的設定', async () => {
+  const { setSegmentMeta } = await import('../app/player/editor.js');
+  const text = '# A\n\n---\n\n<!-- color: #333 -->\n# B\n\n---\n\n# C\n';
+  let r = setSegmentMeta(text, 1, 'layout', 'center');
+  assert.equal(r.text, '# A\n\n---\n\n<!-- color: #333 -->\n<!-- layout: center -->\n# B\n\n---\n\n# C\n');
+  r = setSegmentMeta(r.text, 1, 'layout', 'quote');
+  assert.match(r.text, /<!-- layout: quote -->\n# B/);
+  assert.doesNotMatch(r.text, /center/);
+  r = setSegmentMeta(r.text, 1, 'layout', '');
+  assert.equal(r.text, text, '設成自動就移除那一行');
+  r = setSegmentMeta(text, 0, 'layout', 'end');
+  assert.ok(r.text.startsWith('<!-- layout: end -->\n# A'));
+  // 有 front matter 的檔案:放在 front matter 之後
+  r = setSegmentMeta('---\ntitle: x\n---\n# A\n', 0, 'layout', 'center');
+  assert.equal(r.text, '---\ntitle: x\n---\n<!-- layout: center -->\n# A\n');
+  // 替換範圍和全文一致(編輯框只換這一段)
+  const r2 = setSegmentMeta(text, 2, 'layout', 'end');
+  assert.equal(text.slice(0, r2.from) + r2.replaced + text.slice(r2.to), r2.text);
+});
+
+test('indentLines:多行縮排與反縮排', async () => {
+  const { indentLines } = await import('../app/player/editor.js');
+  const text = 'a\n- b\n- c\nd';
+  const r = indentLines(text, 3, 8);
+  assert.equal(text.slice(0, r.from) + r.replaced + text.slice(r.to), 'a\n  - b\n  - c\nd');
+  const back = 'a\n  - b\n  - c\nd';
+  const r2 = indentLines(back, 4, 12, true);
+  assert.equal(back.slice(0, r2.from) + r2.replaced + back.slice(r2.to), text);
+  const r3 = indentLines('x\ny', 0, 0, true);
+  assert.equal(r3.replaced, 'x', '沒有縮排可去就不變');
+});

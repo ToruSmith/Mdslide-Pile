@@ -21,8 +21,8 @@ const pad = n => String(n).padStart(2, '0');
 const ROTATE_KEY = 'mdslide-rotate-hint'; // 這次瀏覽只提示一次
 const KEYS = [
   ['← →', 'key.prevNext'], ['↑ ↓', 'key.section'], ['Enter', 'key.enter'],
-  ['Esc', 'key.esc'], ['1–9', 'key.jump'], ['Home End', 'key.homeEnd'],
-  ['O', 'key.overview'], ['V', 'key.side'], ['D', 'key.ink'], ['M', 'key.read'], ['L', 'key.stage'], ['T', 'key.theme'], ['B', 'key.black'], ['F', 'key.full'],
+  ['Esc', 'key.esc'], ['1–9', 'key.jump'], ['G', 'key.goto'], ['Home End', 'key.homeEnd'],
+  ['O', 'key.overview'], ['V', 'key.side'], ['D', 'key.ink'], ['X', 'key.clear'], ['M', 'key.read'], ['E', 'key.edit'], ['L', 'key.stage'], ['T', 'key.theme'], ['B', 'key.black'], ['F', 'key.full'],
   ['S', 'key.presenter'], ['P', 'key.print'], ['K', 'key.video'], ['R', 'key.reload'], ['?', 'key.help'],
 ];
 
@@ -103,12 +103,13 @@ export class Player {
         </div>
         <footer class="pfoot"><div class="progress"></div><div class="hint">${esc(t('player.hint'))}</div></footer>
         <div class="black"></div>
+        <form class="jump" hidden><label>${esc(t('jump.label'))} <input type="number" min="1" inputmode="numeric" enterkeyhint="go"> <span class="jump-total"></span></label></form>
         <div class="help-panel"><div class="help-card"><h2>${esc(t('help.title'))}</h2><dl>${KEYS.map(([k, v]) => `<dt>${k.split(' ').map(x => `<kbd>${x}</kbd>`).join('')}</dt><dd>${esc(t(v))}</dd>`).join('')}</dl><p>${esc(t('help.foot'))}</p><div class="motion-row"><span>${esc(t('help.motion'))}</span><button data-motion="full">${esc(t('help.motionFull'))}</button><button data-motion="reduced">${esc(t('help.motionReduced'))}</button></div></div></div>
         <div class="sr-only" aria-live="polite"></div>
         <div class="issues"></div>
       </div>`;
     const $ = s => this.root.querySelector(s);
-    this.el = { player: $('.player'), world: $('.world'), stage: $('.stage'), viewer: $('.viewer'), frame: $('.frame'), tabs: $('.tabs'), secName: $('.sec-name'), progress: $('.progress'), select: $('.stage-select'), black: $('.black'), help: $('.help-panel'), issues: $('.issues'), live: $('.sr-only') };
+    this.el = { player: $('.player'), world: $('.world'), stage: $('.stage'), viewer: $('.viewer'), frame: $('.frame'), tabs: $('.tabs'), secName: $('.sec-name'), progress: $('.progress'), select: $('.stage-select'), black: $('.black'), jump: $('.jump'), help: $('.help-panel'), issues: $('.issues'), live: $('.sr-only') };
 
     this.buildCards();
     this.buildNav();
@@ -456,6 +457,7 @@ export class Player {
       return this.readerKey(k);
     }
     if (this.closeLight) { this.closeLight(); return true; }
+    if (remote && (k === 'g' || k === 'G')) return false; // 輸入框會出現在投影畫面上,講者視窗不轉送
     return this.command(k);
   }
 
@@ -482,6 +484,7 @@ export class Player {
       case 'x': case 'X': if (!this.ink.enabled) return false; this.ink.clear(); break;
       case 'm': case 'M': this.openReading(); break;
       case 'e': case 'E': this.openEditing(); break;
+      case 'g': case 'G': this.openJump(); break;
       case 'l': case 'L': this.cycleStage(); break;
       case 't': case 'T': this.cycleTheme(); break;
       case 'b': case 'B': case '.': this.el.black.classList.add('on'); break;
@@ -718,14 +721,41 @@ export class Player {
     }
   }
 
+  // ---------------- 跳到第幾張(G) ----------------
+  /** 輸入頁碼跳過去(問答時找某一張數據很好用)。數字鍵 1–9 仍是跳章節。 */
+  openJump() {
+    const form = this.el.jump, input = form.querySelector('input');
+    form.querySelector('.jump-total').textContent = t('jump.total', { total: this.slides.length });
+    input.max = this.slides.length;
+    input.value = '';
+    form.hidden = false;
+    input.focus();
+    const done = () => { form.hidden = true; form.onsubmit = input.onkeydown = input.onblur = null; this.el.player.focus?.(); };
+    form.onsubmit = e => {
+      e.preventDefault();
+      const n = parseInt(input.value, 10);
+      done();
+      if (n >= 1) this.goTo(Math.min(n, this.slides.length) - 1);
+    };
+    input.onkeydown = e => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(); } };
+    input.onblur = () => setTimeout(() => { if (!form.hidden) done(); }, 0);
+  }
+
   // ---------------- 編輯模式(E) ----------------
+  /** 第 gi 張投影片要編輯哪個檔案、檔案裡的第幾段。
+   *  自動產生的封面與章節頁沒有自己的 MD 檔,改成編輯 deck.yml(標題就寫在那裡)。 */
+  editTarget(gi) {
+    const slide = this.slides[gi];
+    if (!slide) return null;
+    const auto = !(slide.index >= 0) || !/\.md$/i.test(slide.file || '');
+    return { path: auto ? `${this.deck.path}/deck.yml` : slide.file, segment: auto ? 0 : slide.index, auto };
+  }
+
   async openEditing() {
     if (this.editor || !this.source.readText) return;
-    const slide = this.slides[this.focus];
-    if (!slide) return;
-    // 自動產生的封面與章節頁沒有自己的 MD 檔,改成編輯 deck.yml(標題就寫在那裡)
-    const auto = !(slide.index >= 0) || !/\.md$/i.test(slide.file || '');
-    const path = auto ? `${this.deck.path}/deck.yml` : slide.file;
+    const target = this.editTarget(this.focus);
+    if (!target) return;
+    const { path, auto } = target;
     this.reader?.close();
     if (this.ink.enabled) this.toggleInk(false);
     this.closeLight?.();
@@ -734,7 +764,7 @@ export class Player {
       onSaved: () => this.onReload && this.reload().then(d => d && this.replaceDeck(d)),
       onClose: () => { this.editor = null; this.el.player.classList.remove('editing'); },
     });
-    if (!(await this.editor.load(path, { segment: auto ? 0 : slide.index, note: auto ? t('editor.autoSlide') : '' }))) this.editor.close();
+    if (!(await this.editor.load(path, { segment: target.segment, note: auto ? t('editor.autoSlide') : '' }))) this.editor.close();
   }
 
   /** 閱讀模式的按鍵:捲動類交給閱讀模式;黑屏、全螢幕、主題、講者視窗等照常;
@@ -742,7 +772,7 @@ export class Player {
   readerKey(k) {
     if (this.reader.key(k)) return true;
     if (['b', 'B', '.', 'f', 'F', 't', 'T', 's', 'S', 'k', 'K', '?'].includes(k)) return this.command(k);
-    if (['Enter', 'd', 'D', 'v', 'V', 'o', 'O', 'l', 'L'].includes(k) || /^[1-9]$/.test(k)) {
+    if (['Enter', 'd', 'D', 'v', 'V', 'o', 'O', 'l', 'L', 'g', 'G'].includes(k) || /^[1-9]$/.test(k)) {
       this.reader.close();
       return this.command(k);
     }

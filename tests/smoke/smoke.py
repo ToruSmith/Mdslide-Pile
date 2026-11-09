@@ -87,9 +87,20 @@ def main():
         assert page.locator('.efile').inner_text().endswith('.md'), f"編輯的不是 MD 檔:{page.locator('.efile').inner_text()}"
         page.fill('.etext', '# 預覽測試\n\n- 一點\n'); page.wait_for_timeout(600)
         assert page.locator('.escale h1').inner_text() == '預覽測試', '預覽沒有跟著更新'
-        page.once('dialog', lambda d: d.accept())
+        page.select_option('[data-t=layout]', 'center'); page.wait_for_timeout(400)
+        assert '<!-- layout: center -->' in page.input_value('.etext'), '版型選單沒有寫入設定'
+        assert page.locator('.escale .l-center').count() == 1, '版型選單沒有反映在預覽'
+        pos = page.locator('.epos').inner_text()
+        page.click('[data-e=next]'); page.wait_for_timeout(500)
+        if page.locator('.edialog').count():  # 下一張在別的檔案:唯讀模式要先問(同一個檔案就直接移動游標)
+            page.locator('.edialog .pbtn.primary').click(); page.wait_for_timeout(800)  # 不儲存,換到下一張
+        assert page.locator('.epos').inner_text() != pos, '下一張按鈕沒有換張'
         page.keyboard.press('Escape'); page.wait_for_timeout(800)
         assert page.locator('.editor').count() == 0, '編輯模式沒有關閉'
+        # 輸入頁碼跳轉(G)
+        page.keyboard.press('g'); page.wait_for_timeout(200)
+        page.keyboard.type('3'); page.keyboard.press('Enter'); page.wait_for_timeout(1000)
+        assert page.url.rstrip('/').endswith('/3'), f'G 跳頁後網址應該是第 3 張:{page.url}'
 
         # 閱讀模式(M)
         page.keyboard.press('m'); page.wait_for_timeout(1000)
