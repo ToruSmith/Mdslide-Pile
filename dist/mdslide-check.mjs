@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Mdslide Pile 書庫檢查工具(單檔版 v1.14.1)
+// Mdslide Pile 書庫檢查工具(單檔版 v1.14.2)
 // 由 scripts/bundle-check.mjs 自動產生,請不要手動修改。原始碼:https://github.com/ToruSmith/Mdslide-Pile
 //
 // 用法(需要 Node.js 18 以上):
